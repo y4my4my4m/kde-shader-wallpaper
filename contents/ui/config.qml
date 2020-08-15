@@ -25,7 +25,6 @@ ColumnLayout {
                   ListElement { name: "SIG2014"; path: "./Shader/Shader_SIG2014.qml"}
                   ListElement { name: "Earthbound"; path: "./Shader/Shader_Earthbound.qml"}
                   ListElement { name: "Earthbound2"; path: "./Shader/Shader_Earthbound2.qml"}
-                  ListElement { name: "Abstract"; path: "./Shader/Shader_Abstract.qml"}
                   ListElement { name: "Sanctuary"; path: "./Shader/Shader_Sanctuary.qml"}
                   ListElement { name: "Snail"; path: "./Shader/Shader_Snail.qml"}
                   ListElement { name: "Wolfenstein"; path: "./Shader/Shader_Wolfenstein.qml"}
