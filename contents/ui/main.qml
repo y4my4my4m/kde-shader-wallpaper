@@ -9,8 +9,8 @@ import "./Comp"
 Item {
     Loader {
         id: toyLoader
+        source: wallpaper.configuration.SelectedShader
         anchors.fill: parent
-        source: "./Shader/Shader_Earthbound.qml"
         onLoaded: {
             toy.pixelShader = item.pixelShader
             if (item.iChannel0) {
@@ -31,6 +31,6 @@ Item {
       TShaderToy {
           id: toy
           anchors.fill: parent
-          running: true
+          running: false
       }
 }

@@ -6,17 +6,9 @@
   <kcfgfile name=""/>
 
   <group name="General">
-    <entry name="DisplayPage" type="String">
-      <label>Page to display</label>
-      <default>https://kde.org/</default>
-    </entry>
-    <entry name="ZoomFactor" type="Double">
-      <label>Factor to zoom content</label>
-      <default>1.0</default>
-    </entry>
-    <entry name="EnableInputFocus" type="Bool">
-      <label>Enables the plugin to handle mouse input</label>
-      <default>false</default>
+    <entry name="SelectedShader" type="String">
+      <label>SelectedShader</label>
+      <default>./Shader/Shader_Waves</default>
     </entry>
   </group>
 
