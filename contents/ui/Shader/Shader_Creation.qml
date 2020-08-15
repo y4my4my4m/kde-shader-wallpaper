@@ -2,7 +2,8 @@ import QtQuick 2.12
 import QtQuick.Controls 2.12
 Item {
     property string pixelShader: "
-      //credits to 'Danilo Guanabara'
+      // From https://www.shadertoy.com/view/XsXXDn
+      // Credits to 'Danilo Guanabara'
 
       #define t iTime
       #define r iResolution.xy

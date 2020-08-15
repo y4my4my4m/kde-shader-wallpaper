@@ -2,7 +2,8 @@ import QtQuick 2.12
 import QtQuick.Controls 2.12
 Item {
     property string pixelShader: "
-// Interesting findings from original NES Super Mario Bros.:
+    // From https://www.shadertoy.com/view/XtlSD7
+    // Credits to knarkowicz
 // -Clouds and brushes of all sizes are drawn using the same small sprite (32x24)
 // -Hills, clouds and bushes weren't placed manually. Every background object type is repeated after 768 pixels.
 // -Overworld (main theme) drum sound uses only the APU noise generator

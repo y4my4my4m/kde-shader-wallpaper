@@ -2,6 +2,11 @@ import QtQuick 2.12
 import QtQuick.Controls 2.12
 Item {
     property string pixelShader: "
+    // From https://www.shadertoy.com/view/XdtfRB
+    // Credits to sangwhan
+    // Modified by @y4my4my4m
+    //TODO: will make this customizable via GUI
+    
     vec3 C = vec3(0.12, 0.11, 0.37);
     float GWM = 1.15;
     float TM = 0.25;

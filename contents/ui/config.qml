@@ -20,19 +20,19 @@ ColumnLayout {
               id: selectedShader
               model: ListModel{
                   ListElement { name: "Waves"; path: "./Shader/Shader_Waves.qml"}
-                  ListElement { name: "Earthbound"; path: "./Shader/Shader_Earthbound.qml"}
+                  ListElement { name: "Protean"; path: "./Shader/Shader_Protean.qml"}
                   ListElement { name: "Creation"; path: "./Shader/Shader_Creation.qml"}
+                  ListElement { name: "SIG2014"; path: "./Shader/Shader_SIG2014.qml"}
+                  ListElement { name: "Earthbound"; path: "./Shader/Shader_Earthbound.qml"}
+                  ListElement { name: "Earthbound2"; path: "./Shader/Shader_Earthbound2.qml"}
+                  ListElement { name: "Abstract"; path: "./Shader/Shader_Abstract.qml"}
+                  ListElement { name: "Sanctuary"; path: "./Shader/Shader_Sanctuary.qml"}
+                  ListElement { name: "Snail"; path: "./Shader/Shader_Snail.qml"}
                   ListElement { name: "Wolfenstein"; path: "./Shader/Shader_Wolfenstein.qml"}
                   ListElement { name: "Journey"; path: "./Shader/Shader_Journey.qml"}
                   ListElement { name: "Fovea"; path: "./Shader/Shader_Fovea.qml"}
-                  ListElement { name: "Rhodium"; path: "./Shader/Shader_Rhodium.qml"}
-                  ListElement { name: "SIG2014"; path: "./Shader/Shader_SIG2014.qml"}
                   ListElement { name: "Kirby"; path: "./Shader/Shader_Kirby.qml"}
-                  ListElement { name: "Abstract"; path: "./Shader/Shader_Abstract.qml"}
-                  ListElement { name: "NeonLit"; path: "./Shader/Shader_NeonLit.qml"}
-                  ListElement { name: "3I23Rh"; path: "./Shader/Shader_3I23Rh.qml"}
-                  ListElement { name: "4ddfwx"; path: "./Shader/Shader_4ddfWX.qml"}
-                  ListElement { name: "Id3Gz2"; path: "./Shader/Shader_Id3Gz2.qml"}
+                  ListElement { name: "Super Plumber"; path: "./Shader/Shader_SuperPlumber.qml"}
               }
               textRole: "name"
               onCurrentTextChanged: {
@@ -41,6 +41,8 @@ ColumnLayout {
                   // main.toyLoader.source = model.get(currentIndex).path
               }
           }
+
+          // TODO: Add FPS/Pause GUI options
           // ImageBtn {
           //     width: 32
           //     height: 32
@@ -93,13 +95,57 @@ ColumnLayout {
               Layout.maximumWidth: width
               width: formAlignment - units.largeSpacing
               horizontalAlignment: Text.AlignRight
-              text: "Selected Shader Path:"
+              text: "Load Shader from Path:"
           }
           TextField {
             id: selectedShaderField
             Layout.minimumWidth: width
             Layout.maximumWidth: width
             width: 435
+          }
+      }
+
+      RowLayout {
+          spacing: units.largeSpacing
+      }
+
+      RowLayout {
+          spacing: units.largeSpacing / 2
+          Label {
+              Layout.minimumWidth: width
+              Layout.maximumWidth: width
+              width: formAlignment - units.largeSpacing
+              horizontalAlignment: Text.AlignRight
+              text: "Roadmap:"
+          }
+          Label {
+              Layout.minimumWidth: width
+              Layout.maximumWidth: width
+              width: formAlignment - units.largeSpacing
+              horizontalAlignment: Text.AlignLeft
+              text: "Version 1.0 - Simply load shaders (current version)\nVersion 2.0 - Customize shaders via GUI\nVersion 3.0 - Directly load shaders from shadertoy.com or file"
+          }
+      }
+
+      RowLayout {
+          spacing: units.largeSpacing / 2
+      }
+
+      RowLayout {
+          spacing: units.largeSpacing / 2
+          Label {
+              Layout.minimumWidth: width
+              Layout.maximumWidth: width
+              width: formAlignment - units.largeSpacing
+              horizontalAlignment: Text.AlignRight
+              text: "Notice:"
+          }
+          Label {
+              Layout.minimumWidth: width
+              Layout.maximumWidth: width
+              width: formAlignment - units.largeSpacing
+              horizontalAlignment: Text.AlignLeft
+              text: "Some high quality wallpapers have poor performance on high resolution (2k+)\nor depending on your GPU.\n\nIn case of emergency, delete folder in\n\"~/.local/share/plasma/wallpaper/online.knowmad.shaderwallpaper\",\nthen run: \"pkill plasmashell && plasmashell &\" to relaunch it.\n\nUse with caution."
           }
       }
 

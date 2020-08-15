@@ -1,12 +1,16 @@
 import QtQuick 2.12
 import QtQuick.Controls 2.12
 Item {
-    property string pixelShader: "/*
-	Before you continue reading, feast your eyes on these beautiful Color Schemes (0,1,2)
-*/
+    property string pixelShader: "
+    // From https://www.shadertoy.com/view/ldlcRf
+    // Credits to Shakemayster
+    /*
+    	Before you continue reading, feast your eyes on these beautiful Color Schemes (0,1,2)
+    */
 
 // Modify the number to 0,1,2 or 3 and press play button at bottom for different schemes.
-#define COLOR_SCHEME 1
+// TODO: make this modifiable from GUI - @y4my4my4m
+#define COLOR_SCHEME 0
 
 /*
 	This shader is just a tribute to 'Journey' game by That Game Company. Some answers:

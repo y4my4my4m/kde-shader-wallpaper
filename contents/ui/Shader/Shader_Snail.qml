@@ -1,7 +1,9 @@
 import QtQuick 2.12
 import QtQuick.Controls 2.12
 Item {
-    property string pixelShader: "// Created by inigo quilez - 2015
+    property string pixelShader: "
+    // From https://www.shadertoy.com/view/ld3Gz2
+    // Created by inigo quilez - 2015
     // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0
 
 

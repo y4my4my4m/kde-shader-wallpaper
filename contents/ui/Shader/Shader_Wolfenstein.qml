@@ -1,7 +1,8 @@
 import QtQuick 2.12
 import QtQuick.Controls 2.12
 Item {
-    property string pixelShader: "// Wolfenstein. Created by Reinder Nijhoff 2013
+    property string pixelShader: "
+// Wolfenstein. Created by Reinder Nijhoff 2013
 // Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 // @reindernijhoff
 //

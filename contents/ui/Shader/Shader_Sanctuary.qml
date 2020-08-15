@@ -2,6 +2,7 @@ import QtQuick 2.12
 import QtQuick.Controls 2.12
 Item {
     property string pixelShader: "
+// From https://www.shadertoy.com/view/4ddfWX
 // srtuss, 2018
 //
 // This began as an elaborate soundshader-experiment. I tried to create very clear-sounding

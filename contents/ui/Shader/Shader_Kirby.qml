@@ -2,6 +2,8 @@ import QtQuick 2.12
 import QtQuick.Controls 2.12
 Item {
     property string pixelShader: "
+    // From https://www.shadertoy.com/view/lt2fD3
+    // Credits to fizzer
     // polynomial smooth min (from IQ)
     float smin( float a, float b, float k )
     {

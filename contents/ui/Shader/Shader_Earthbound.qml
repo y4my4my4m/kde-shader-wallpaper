@@ -2,6 +2,9 @@ import QtQuick 2.12
 import QtQuick.Controls 2.12
 Item {
     property string pixelShader: "
+    // From https://www.shadertoy.com/view/wlsczH
+    // Credits to thefox231
+    // Modified by @y4my4my4m
     const float thickness = 0.02;
     const vec3 mainColor = vec3(0.32, .51, .75);
 

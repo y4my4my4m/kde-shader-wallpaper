@@ -1,7 +1,9 @@
 import QtQuick 2.12
 import QtQuick.Controls 2.12
 Item {
-    property string pixelShader: "//Human fovea detector by nimitz (twitter: @stormoid)
+    property string pixelShader: "
+    // From https://www.shadertoy.com/view/4dsXzM
+    // Human fovea detector by nimitz (twitter: @stormoid)
 
 /*
 I was playing with procedural texture generation when I came across this.
