@@ -10,7 +10,7 @@ Item {
     Loader {
         id: toyLoader
         anchors.fill: parent
-        source: "./Shader/Shader_Waves.qml"
+        source: "./Shader/Shader_Earthbound.qml"
         onLoaded: {
             toy.pixelShader = item.pixelShader
             if (item.iChannel0) {

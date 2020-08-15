@@ -38,10 +38,11 @@ ColumnLayout {
         }
         ComboBox {
             model: ListModel{
+                ListElement { name: "Waves"; path: "./Shader/Shader_Waves.qml"}
+                ListElement { name: "Waves"; path: "./Shader/Shader_Earthbound.qml"}
                 ListElement { name: "3I23Rh"; path: "./Shader/Shader_3I23Rh.qml"}
                 ListElement { name: "4ddfwx"; path: "./Shader/Shader_4ddfWX.qml"}
                 ListElement { name: "Id3Gz2"; path: "./Shader/Shader_Id3Gz2.qml"}
-                ListElement { name: "Waves"; path: "./Shader/Shader_Waves.qml"}
             }
             textRole: "name"
             onCurrentTextChanged: {
