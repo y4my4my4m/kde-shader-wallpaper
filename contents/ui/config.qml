@@ -19,12 +19,26 @@ ColumnLayout {
 
           ComboBox {
               id: selectedShader
+              Layout.minimumWidth: width
+              Layout.maximumWidth: width
+              width: 435
+
               model: FolderListModel {
                   id: folderListModel
+                  showDirs: false
                   nameFilters: ["*.qml"]
                   folder: "./Shader"
               }
-              textRole: "fileName"
+              delegate: Component {
+                  id: folderListDelegate
+                  ItemDelegate {
+                      text: fileBaseName.replace("_"," ")
+                   }
+              }
+
+              textRole: "fileBaseName"
+              displayText: currentText.replace("_"," ")
+
               onCurrentTextChanged: {
                   selectedShaderField.text = "./Shader/" + model.get(currentIndex, "fileName")
                   // console.debug(JSON.stringify(main.Loader))
