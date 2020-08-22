@@ -1,6 +1,7 @@
 import QtQuick 2.12
 import QtQuick.Layouts 1
 import QtQuick.Controls 2.12
+import Qt.labs.folderlistmodel 2
 
 ColumnLayout {
 
@@ -18,24 +19,14 @@ ColumnLayout {
 
           ComboBox {
               id: selectedShader
-              model: ListModel{
-                  ListElement { name: "Waves"; path: "./Shader/Shader_Waves.qml"}
-                  ListElement { name: "Protean"; path: "./Shader/Shader_Protean.qml"}
-                  ListElement { name: "Creation"; path: "./Shader/Shader_Creation.qml"}
-                  ListElement { name: "SIG2014"; path: "./Shader/Shader_SIG2014.qml"}
-                  ListElement { name: "Earthbound"; path: "./Shader/Shader_Earthbound.qml"}
-                  ListElement { name: "Earthbound2"; path: "./Shader/Shader_Earthbound2.qml"}
-                  ListElement { name: "Sanctuary"; path: "./Shader/Shader_Sanctuary.qml"}
-                  ListElement { name: "Snail"; path: "./Shader/Shader_Snail.qml"}
-                  ListElement { name: "Wolfenstein"; path: "./Shader/Shader_Wolfenstein.qml"}
-                  ListElement { name: "Journey"; path: "./Shader/Shader_Journey.qml"}
-                  ListElement { name: "Fovea"; path: "./Shader/Shader_Fovea.qml"}
-                  ListElement { name: "Kirby"; path: "./Shader/Shader_Kirby.qml"}
-                  ListElement { name: "Super Plumber"; path: "./Shader/Shader_SuperPlumber.qml"}
+              model: FolderListModel {
+                  id: folderListModel
+                  nameFilters: ["*.qml"]
+                  folder: "./Shader"
               }
-              textRole: "name"
+              textRole: "fileName"
               onCurrentTextChanged: {
-                  selectedShaderField.text = model.get(currentIndex).path
+                  selectedShaderField.text = "./Shader/" + model.get(currentIndex, "fileName")
                   // console.debug(JSON.stringify(main.Loader))
                   // main.toyLoader.source = model.get(currentIndex).path
               }
