@@ -1,13 +1,14 @@
 import QtQuick 2.12
 import QtQuick.Layouts 1
 import QtQuick.Controls 2.12
-import QtQuick.Dialogs 1.2
+import QtQuick.Dialogs 1.3
 import "./Comp"
 
 import org.kde.plasma.core 2.0 as PlasmaCore
 
 Item {
   property alias cfg_SelectedShader: selectedShaderField.text
+  property alias cfg_checkGl3Ver:  checkGl3Ver.checked
   // property alias cfg_checkedSmartPlay: checkedSmartPlay.checked
   // property alias cfg_checkedBusyPlay:  checkedBusyPlay.checked
 
@@ -191,7 +192,10 @@ Item {
           }
           MouseArea {
               anchors.fill: parent
-              onClicked: {fileDialog.open() }
+              onClicked: {
+                fileDialog.folder = fileDialog.shortcuts.home+"/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shader/"
+                fileDialog.open()
+              }
           }
       }
     }
@@ -210,7 +214,7 @@ Item {
         Layout.maximumWidth: width
         width: formAlignment - units.largeSpacing
         horizontalAlignment: Text.AlignLeft
-        text: "Version 1.0 - Simply load shaders\nVersion 1.1 - File Dialog added (current version)\nVersion 2.0 - Customize shaders via GUI\nVersion 3.0 - Directly load shaders from shadertoy.com or file"
+        text: "Version 1.0 - Simply load shaders\nVersion 1.1 - File Dialog added\nVersion 1.2 - iGPU fix (current version)\nVersion 2.0 - Customize shaders via GUI\nVersion 3.0 - Directly load shaders from shadertoy.com or file"
       }
     }
 
@@ -236,28 +240,44 @@ Item {
       }
     }
 
-    // ColumnLayout {
-    //   spacing: units.largeSpacing
-    //   Layout.minimumWidth: width
-    //   Layout.maximumWidth: width
-    //   width: formAlignment - units.largeSpacing
-    //   anchors.verticalCenter: parent.verticalCenter
-    //
-    //   RowLayout {
-    //     spacing: units.largeSpacing / 2
-    //   }
-    //
-    //   RowLayout{
-    //     spacing: units.largeSpacing
-    //     Layout.minimumWidth: width
-    //     Layout.maximumWidth: width
-    //     width: formAlignment - units.largeSpacing
-    //     Rectangle{
-    //       width: 240;
-    //       height: 1
-    //       color: "#555"
-    //     }
-    //   }
+    ColumnLayout {
+      spacing: units.largeSpacing
+      Layout.minimumWidth: width
+      Layout.maximumWidth: width
+      width: formAlignment - units.largeSpacing
+      anchors.verticalCenter: parent.verticalCenter
+
+      RowLayout {
+        spacing: units.largeSpacing / 2
+      }
+
+      RowLayout {
+        spacing: units.largeSpacing
+        Layout.minimumWidth: width
+        Layout.maximumWidth: width
+        width: formAlignment - units.largeSpacing
+        Rectangle{
+          width: 340;
+          height: 1
+          color: "#555"
+        }
+      }
+      RowLayout{
+        spacing: units.largeSpacing / 2
+        Layout.minimumWidth: width
+        Layout.maximumWidth: width
+        width: formAlignment - units.largeSpacing
+        CheckBox {
+          id: checkGl3Ver
+          text: i18n("Change gl3 version for shader compatibility")
+          checked: false
+          onCheckedChanged: {
+            // none of this works...how to reference the main.qml lol
+            // console.log(JSON.stringify(main))
+            // console.log(JSON.stringify(Item.toy))
+          }
+        }
+      }
     //
     //   RowLayout{
     //     spacing: units.largeSpacing / 2
@@ -287,17 +307,18 @@ Item {
     //       // }
     //     }
     //   }
-    //   RowLayout{
-    //     spacing: units.largeSpacing
-    //     Layout.minimumWidth: width
-    //     Layout.maximumWidth: width
-    //     Rectangle{
-    //       width: 240;
-    //       height: 1
-    //       color: "#555"
-    //     }
-    //   }
-    // }
+      RowLayout{
+        spacing: units.largeSpacing
+        Layout.minimumWidth: width
+        Layout.maximumWidth: width
+        Rectangle{
+          width: 340;
+          height: 1
+          color: "#555"
+        }
+      }
+
+    }
 
 
     Item {

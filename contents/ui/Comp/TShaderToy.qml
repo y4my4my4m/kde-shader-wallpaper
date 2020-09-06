@@ -105,6 +105,15 @@ out vec4 fragColor;
 
 out vec4 fragColor;
 "
+readonly property string gl3Ver_igpu: "#version 130
+#define varying in
+#define gl_FragColor fragColor
+#define lowp
+#define mediump
+#define highp
+
+out vec4 fragColor;
+"
     readonly property string gl2Ver: "#version 110
 #define texture texture2D
 "
@@ -117,7 +126,11 @@ out vec4 fragColor;
                 console.log("android gles 2")
                 return gles2Ver
             }
-        } else {
+        }
+        else if (wallpaper.configuration.checkGl3Ver==true){
+          console.log("gl3Ver_igpu")
+          return gl3Ver_igpu
+        }else {
             if (GraphicsInfo.majorVersion === 3 ||GraphicsInfo.majorVersion === 4) {
                 return gl3Ver
             } else {

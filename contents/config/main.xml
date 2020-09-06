@@ -18,6 +18,10 @@
       <label>Pause the video when the desktop is busy.</label>
       <default>true</default>
     </entry>
+    <entry name="checkGl3Ver" type="bool">
+      <label>Change gl3 version for shader compatibility.</label>
+      <default>false</default>
+    </entry>
   </group>
 
 </kcfg>
