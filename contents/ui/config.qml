@@ -2,6 +2,7 @@ import QtQuick 2.12
 import QtQuick.Layouts 1
 import QtQuick.Controls 2.12
 import QtQuick.Dialogs 1.3
+import Qt.labs.folderlistmodel 2
 import "./Comp"
 
 import org.kde.plasma.core 2.0 as PlasmaCore
@@ -36,30 +37,26 @@ Item {
 
       ComboBox {
         id: selectedShader
-        model: ListModel{
-          ListElement { name: "Waves"; path: "./Shader/Shader_Waves.qml"}
-          ListElement { name: "Waves (Slower)"; path: "./Shader/Shader_Waves3.qml"}
-          ListElement { name: "Protean"; path: "./Shader/Shader_Protean.qml"}
-          ListElement { name: "Creation"; path: "./Shader/Shader_Creation.qml"}
-          ListElement { name: "SIG2014"; path: "./Shader/Shader_SIG2014.qml"}
-          ListElement { name: "Earthbound"; path: "./Shader/Shader_Earthbound.qml"}
-          ListElement { name: "Earthbound2"; path: "./Shader/Shader_Earthbound2.qml"}
-          ListElement { name: "Earthbound3"; path: "./Shader/Shader_Earthbound3.qml"}
-          ListElement { name: "Earthbound4"; path: "./Shader/Shader_Earthbound4.qml"}
-          ListElement { name: "Earthbound5"; path: "./Shader/Shader_Earthbound5.qml"}
-          ListElement { name: "Sanctuary"; path: "./Shader/Shader_Sanctuary.qml"}
-          ListElement { name: "Snail"; path: "./Shader/Shader_Snail.qml"}
-          ListElement { name: "Wolfenstein"; path: "./Shader/Shader_Wolfenstein.qml"}
-          ListElement { name: "Journey"; path: "./Shader/Shader_Journey.qml"}
-          ListElement { name: "Fovea"; path: "./Shader/Shader_Fovea.qml"}
-          ListElement { name: "Kirby"; path: "./Shader/Shader_Kirby.qml"}
-          ListElement { name: "Super Plumber"; path: "./Shader/Shader_SuperPlumber.qml"}
-          ListElement { name: "Matrix"; path: "./Shader/Shader_Matrix.qml"}
-          ListElement { name: "Matrix2"; path: "./Shader/Shader_Matrix2.qml"}
+        Layout.minimumWidth: width
+        Layout.maximumWidth: width
+        width: 435
+        model: FolderListModel {
+            id: folderListModel
+            showDirs: false
+            nameFilters: ["*.qml"]
+            folder: "./Shader"
         }
-        textRole: "name"
+        delegate: Component {
+            id: folderListDelegate
+            ItemDelegate {
+                text: fileBaseName.replace("_"," ")
+             }
+        }
+
+        textRole: "fileBaseName"
+        displayText: currentText.replace("_"," ")
         onCurrentTextChanged: {
-          selectedShaderField.text = model.get(currentIndex).path
+          selectedShaderField.text = "./Shader/" + model.get(currentIndex, "fileName")
         }
       }
 
@@ -214,7 +211,7 @@ Item {
         Layout.maximumWidth: width
         width: formAlignment - units.largeSpacing
         horizontalAlignment: Text.AlignLeft
-        text: "Version 1.0 - Simply load shaders\nVersion 1.1 - File Dialog added\nVersion 1.2 - iGPU fix (current version)\nVersion 2.0 - Customize shaders via GUI\nVersion 3.0 - Directly load shaders from shadertoy.com or file"
+        text: "Version 1.2 - iGPU fix\nVersion 1.3 - list all + 70 new shaders(current version)\nVersion 2.0 - Customize shaders via GUI\nVersion 3.0 - Directly load shaders from shadertoy.com or file"
       }
     }
 

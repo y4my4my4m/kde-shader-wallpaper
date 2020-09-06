@@ -19,6 +19,7 @@
  *  This software uses some of the QML code from JaredTao/jared2020@163.com's ToyShader for Android.
  *  See: https://github.com/jaredtao/TaoShaderToy/
  *
+ *  Thanks to @simons-public on github for his contributions
  */
 
 import QtQuick 2.12

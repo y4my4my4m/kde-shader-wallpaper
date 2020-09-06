@@ -20,7 +20,7 @@
     </entry>
     <entry name="checkGl3Ver" type="bool">
       <label>Change gl3 version for shader compatibility.</label>
-      <default>false</default>
+      <default>true</default>
     </entry>
   </group>
 
