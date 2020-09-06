@@ -1,7 +1,7 @@
 /*
  *
  *  Shader Wallpaper
- *  Copyright (C) 2020 @y4my4my4m | github.com/@y4my4my4m
+ *  Copyright (C) 2020 @y4my4my4m | github.com/y4my4my4m
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
  *  This software uses some of the QML code from JaredTao/jared2020@163.com's ToyShader for Android.
  *  See: https://github.com/jaredtao/TaoShaderToy/
  *
- *  Thanks to @simons-public on github for his contributions
+ *  Thanks to github.com/simons-public for his contributions
  */
 
 import QtQuick 2.12
