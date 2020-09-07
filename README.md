@@ -4,6 +4,15 @@
 
 #### Shader Wallpaper is a KDE/Plasma Wallpaper Plugin that allows you to run shaders as your wallpaper.
 
+Installation:
+##### Install through KDE
+- Right click on your desktop > Configure Desktop
+- Click on the "Get New Plugins" button
+- Search and Install the latest version of "Shader Wallpaper"
+
+##### Install from Source
+- clone this repository or [download the latest release](https://github.com/y4my4my4m/kde-shader-wallpaper/releases)
+- `kpackagetool5 -t Plasma/Wallpaper -i kde-shadertoy-wallpaper` or `kpackagetool5 -t Plasma/Wallpaper -i online.knowmad.shaderwallpaper-1.3.tar.gz`
 
 Repo:
 I'll probably maintain it on Github principally for issues/PR but I'll try my best to maintain both, if anything contact me on twitter [@y4my4my4m](https://twitter.com/@y4my4my4m).
@@ -23,6 +32,7 @@ Roadmap:
 Notes:
 - Performance may vary depending of your specs, but it's actually not all that resource intensive, depends on the shader too.
 - This requires 3D Acceleration in order to work. If you are running this in a virtual machine make sure you enable it.
+- If you modify the shaders and want to see the changes, the KDE Wallpaper QtQuick App itself needs to be restart, I recommend simply to pkill plasmashell and restart it.
 
 Videos:
 
