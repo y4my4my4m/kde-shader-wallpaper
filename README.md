@@ -7,7 +7,7 @@
 Installation:
 ##### Install through KDE
 - Right click on your desktop > Configure Desktop
-- Click on the "Get New Plugins" button
+- Click on the "[Get New Plugins](https://user-images.githubusercontent.com/8145020/92334553-c1f1f480-f054-11ea-959d-1017fec92db4.png)" button
 - Search and Install the latest version of "Shader Wallpaper"
 
 ##### Install from Source
