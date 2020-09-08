@@ -31,7 +31,6 @@ Roadmap:
 
 Notes:
 - Performance may vary depending of your specs, but it's actually not all that resource intensive, depends on the shader too.
-- This requires 3D Acceleration in order to work. If you are running this in a virtual machine make sure you enable it.
 - If you modify the shaders and want to see the changes, the KDE Wallpaper QtQuick App itself needs to be restart, I recommend simply to pkill plasmashell and restart it.
 
 Videos:
