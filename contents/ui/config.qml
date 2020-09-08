@@ -77,6 +77,10 @@ Item {
         Layout.minimumWidth: width
         Layout.maximumWidth: width
         width: 435
+        onEditingFinished: {
+          selectedShaderField.text;
+          getShaderContent();
+        }
       }
       Button {
           id: imageButton
@@ -430,14 +434,32 @@ Item {
 
   function getShaderContent(){
     var xhr = new XMLHttpRequest;
-    xhr.open("GET", selectedShaderField.text); // get from "file:///" string
+    var isFile = false;
+    if (selectedShaderField.text.substr(0, 7) === "file://") {
+      isFile = true;
+      xhr.open("GET", selectedShaderField.text);
+    }
+    else {
+      isFile = false;
+      var shaderID = selectedShaderField.text;
+      // console.log(shaderID)
+      shaderID = shaderID.substr(shaderID.length - 6, shaderID.length);
+      // console.log(shaderID)
+      xhr.open("GET", "https://www.shadertoy.com/api/v1/shaders/"+shaderID+"?key=rd8t44"); // using @y4my4my4m's api key, be nice
+    }
+
     xhr.onreadystatechange = function () {
       if(xhr.readyState === XMLHttpRequest.DONE){
         var response = xhr.responseText;
         // console.log("shader content:\n"+response);
+        if(!isFile){
+          response = JSON.parse(response)
+          response = response.Shader.renderpass[0].code
+        }
         wallpaper.configuration.selectedShaderContent = response;
       }
     }
+
     xhr.send();
   }
 
