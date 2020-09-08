@@ -51,3 +51,7 @@ Screenshots:
 [![ShaderWallpaperPreviewImage3](https://cdn.pling.com/img/f/8/2/c/67b57155b2a2a2cd63f6d5545af2f6da3f5298c081c5ab05a72f6c17aa56aee79afd.png)](https://cdn.pling.com/img/f/8/2/c/67b57155b2a2a2cd63f6d5545af2f6da3f5298c081c5ab05a72f6c17aa56aee79afd.png)
 
 [![ShaderWallpaperPreviewImage4](https://cdn.pling.com/img/9/e/c/9/b5026604b9009c3541e25b98bbaa0450d17a52ceee878f8b44383bb5e3570c3f251d.png)](https://cdn.pling.com/img/9/e/c/9/b5026604b9009c3541e25b98bbaa0450d17a52ceee878f8b44383bb5e3570c3f251d.png)
+
+
+#### Donations:
+[![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/I2I525V5R)
