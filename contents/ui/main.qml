@@ -55,7 +55,7 @@ Item {
     ShaderEngine {
       id: shaderEngine
       anchors.fill: parent
-      running: true
+      running: wallpaper.configuration.running
     }
 
     // function doPause(){

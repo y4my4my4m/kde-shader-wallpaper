@@ -10,8 +10,8 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 Item {
   property alias cfg_selectedShader: selectedShaderField.text
   property alias cfg_checkGl3Ver:  checkGl3Ver.checked
-  // property alias cfg_checkedSmartPlay: checkedSmartPlay.checked
-  // property alias cfg_checkedBusyPlay:  checkedBusyPlay.checked
+  property alias cfg_checkedSmartPlay: checkedSmartPlay.checked
+  property alias cfg_checkedBusyPlay:  checkedBusyPlay.checked
   // property bool isPaused: false
 
   RowLayout {
@@ -212,7 +212,7 @@ Item {
 
         Button {
           id: colorDialogCheckbox
-          text: i18n("Change default color")
+          text: i18n("TODO: Change default color")
           onClicked: {
             colorDialog.visible = !colorDialog.visible
           }
@@ -223,12 +223,43 @@ Item {
           height: 1
           color: "#555"
         }
+        // Resume/Pause
+
+        Label {
+          width:100
+          text: i18n("Pause:")
+        }
+
+        ImageBtn {
+            width: 32
+            height: 32
+            imageUrl: isPaused ?  "./Comp/play.svg" : "./Comp/pause.svg"
+            tipText: isPaused ? "Resume" : "Pause"
+            property bool isPaused: false
+            onClicked: {
+                wallpaper.configuration.running = isPaused
+                isPaused = !isPaused;
+            }
+            Rectangle {
+                anchors.fill: parent
+                color: "transparent"
+                border.width: parent.containsMouse ? 1 : 0
+                border.color: "gray"
+            }
+        }
+
+        Rectangle{
+          width: 340;
+          height: 1
+          color: "#555"
+        }
+
       }
     }
 
-    //*********************
-    //*** Compatibility ***
-    //*********************
+    //*******************
+    //*** Performance ***
+    //*******************
 
     RowLayout {
       spacing: units.largeSpacing / 2
@@ -242,12 +273,38 @@ Item {
 
         Label {
           width:100
-          text: i18n("Compatibility:")
+          text: i18n("Performance:")
         }
         CheckBox {
           id: checkGl3Ver
           text: i18n("Change gl3 version\n")
           checked: true
+        }
+        Rectangle{
+          width: 340;
+          height: 1
+          color: "#555"
+        }
+        RadioButton {
+          id: checkedSmartPlay
+          text: i18n("Pause the shader when maximized or full-screen windows.")
+          checked: true
+          // onCheckedChanged: {
+          //   checkedBusyPlay.checked = !checkedSmartPlay.checked
+          // }
+        }
+        Rectangle{
+          width: 340;
+          height: 1
+          color: "#555"
+        }
+        RadioButton {
+          id: checkedBusyPlay
+          // checked: !checkedSmartPlay.checked
+          text: i18n("Pause the shader when the desktop is busy.")
+          // onCheckedChanged: {
+          //   checkedSmartPlay.checked = !checkedBusyPlay.checked
+          // }
         }
         Rectangle{
           width: 340;
@@ -307,38 +364,6 @@ Item {
     //         border.color: "gray"
     //     }
     // }
-    // ImageBtn {
-    //     width: 32
-    //     height: 32
-    //     tipText: "Reset"
-    //     imageUrl: "./Img/reset.png"
-    //     onClicked: {
-    //         // toy.restart()
-    //     }
-    //     Rectangle {
-    //         anchors.fill: parent
-    //         color: "transparent"
-    //         border.width: parent.containsMouse ? 1 : 0
-    //         border.color: "gray"
-    //     }
-    // }
-    //     ImageBtn {
-    //         width: 32
-    //         height: 32
-    //         imageUrl: isPaused ?  "qrc:/Img/resume.png" : "qrc:/Img/pause.png"
-    //         tipText: isPaused ? "Resume" : "Pause"
-    //         property bool isPaused: false
-    //         onClicked: {
-    //             toy.running = isPaused
-    //             isPaused = !isPaused;
-    //         }
-    //         Rectangle {
-    //             anchors.fill: parent
-    //             color: "transparent"
-    //             border.width: parent.containsMouse ? 1 : 0
-    //             border.color: "gray"
-    //         }
-    //     }
     //   RowLayout{
     //     spacing: units.largeSpacing / 2
     //     Layout.minimumWidth: width

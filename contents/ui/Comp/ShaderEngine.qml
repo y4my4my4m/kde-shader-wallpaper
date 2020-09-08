@@ -1,5 +1,7 @@
 ﻿import QtQuick 2.12
 import QtQuick.Controls 2.12
+
+import org.kde.taskmanager 0.1 as TaskManager
 /*
 vec3        iResolution             image/buffer        The viewport resolution (z is pixel aspect ratio, usually 1.0)
 float       iTime                   image/sound/buffer	Current time in seconds
@@ -190,4 +192,76 @@ ShaderEffect {
     property string pixelShader: wallpaper.configuration.selectedShaderContent;
     fragmentShader: forwardString + (pixelShader ? pixelShader : defaultPixelShader) + startCode
 
+
+    // Performance
+    // property bool modePlay: wallpaper.configuration.checkedBusyPlay
+    //
+    // TaskManager.VirtualDesktopInfo { id: virtualDesktopInfo }
+    // TaskManager.ActivityInfo { id: activityInfo }
+    // TaskManager.TasksModel {
+    //     id: tasksModel
+    //     sortMode: TaskManager.TasksModel.SortVirtualDesktop
+    //     groupMode: TaskManager.TasksModel.GroupDisabled
+    //
+    //     activity: activityInfo.currentActivity
+    //     virtualDesktop: virtualDesktopInfo.currentDesktop
+    //     screenGeometry: wallpaper.screenGeometry // Warns "Unable to assign [undefined] to QRect" during init, but works thereafter.
+    //
+    //     filterByActivity: true
+    //     filterByVirtualDesktop: true
+    //     filterByScreen: true
+    //
+    //     // onActiveTaskChanged: updateWindowsinfo(shader.modePlay)
+    //     // onDataChanged: updateWindowsinfo(shader.modePlay)
+    //     Component.onCompleted: {
+    //         maximizedWindowModel.sourceModel = tasksModel
+    //         fullScreenWindowModel.sourceModel = tasksModel
+    //         minimizedWindowModel.sourceModel = tasksModel
+    //         onlyWindowsModel.sourceModel = tasksModel
+    //     }
+    // }
+    //
+    // function updateWindowsinfo(modePlay) {
+    //     if(modePlay){
+    //         playVideoWallpaper = (onlyWindowsModel.count === minimizedWindowModel.count) ? true : false
+    //     }
+    //     else{
+    //         var joinApps  = [];
+    //         var minApps  = [];
+    //         var aObj;
+    //         var i;
+    //         var j;
+    //         // add fullscreen apps
+    //         for (i = 0 ; i < fullScreenWindowModel.count ; i++){
+    //             aObj = fullScreenWindowModel.get(i)
+    //             joinApps.push(aObj.AppPid)
+    //         }
+    //         // add maximized apps
+    //         for (i = 0 ; i < maximizedWindowModel.count ; i++){
+    //             aObj = maximizedWindowModel.get(i)
+    //             joinApps.push(aObj.AppPid)
+    //         }
+    //
+    //         // add minimized apps
+    //         for (i = 0 ; i < minimizedWindowModel.count ; i++){
+    //             aObj = minimizedWindowModel.get(i)
+    //             minApps.push(aObj.AppPid)
+    //         }
+    //
+    //         joinApps = removeDuplicates(joinApps) // for qml Kubuntu 18.04
+    //
+    //         joinApps.sort();
+    //         minApps.sort();
+    //
+    //         var twoStates = 0
+    //         j = 0;
+    //         for(i = 0 ; i < minApps.length ; i++){
+    //             if(minApps[i] === joinApps[j]){
+    //                 twoStates = twoStates + 1;
+    //                 j = j + 1;
+    //             }
+    //         }
+    //         playVideoWallpaper = (fullScreenWindowModel.count + maximizedWindowModel.count - twoStates) == 0 ? true : false
+    //     }
+    // }
 }

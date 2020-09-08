@@ -14,6 +14,10 @@
         <label>selectedShaderContent</label>
         <default></default>
       </entry>
+    <entry name="running" type="bool">
+      <label>Shader is running.</label>
+      <default>true</default>
+    </entry>
     <entry name="checkedSmartPlay" type="bool">
       <label>Pause the video when existing a maximized or full-screen windows.</label>
       <default>false</default>
