@@ -9,25 +9,10 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 
 Item {
   property alias cfg_selectedShader: selectedShaderField.text
-  // property alias cfg_selectedShaderContent: ""
   property alias cfg_checkGl3Ver:  checkGl3Ver.checked
-  // property double cfg_shaderSpeed: shaderSpeedVal
   // property alias cfg_checkedSmartPlay: checkedSmartPlay.checked
   // property alias cfg_checkedBusyPlay:  checkedBusyPlay.checked
-
   // property bool isPaused: false
-  function getShaderContent(){
-    var xhr = new XMLHttpRequest;
-    xhr.open("GET", selectedShaderField.text); // set Method and File
-    xhr.onreadystatechange = function () {
-      if(xhr.readyState === XMLHttpRequest.DONE){ // if request_status == DONE
-        var response = xhr.responseText;
-        // console.log("shader content:\n"+response);
-        wallpaper.configuration.selectedShaderContent = response;
-      }
-    }
-    xhr.send(); // begin the request
-  }
 
   RowLayout {
     spacing: units.largeSpacing / 2
@@ -75,106 +60,7 @@ Item {
           getShaderContent();
         }
       }
-
-      // TODO: Add FPS/Pause GUI options
-      // Image {
-      //     source: "./Img/reset.png"
-      //     width: 32
-      //     height: 32
-      //
-      //     MouseArea {
-      //         anchors.fill: parent
-      //         onClicked: {
-      //           // toy.restart()
-      //           // console.log(root)
-      //         }
-      //     }
-      // }
-      //
-      // Image {
-      //     width: 32
-      //     height: 32
-      //     source: isPaused ?  "./Img/resume.png" : "./Img/pause.png"
-      //
-      //     MouseArea {
-      //         anchors.fill: parent
-      //         onClicked: {
-      //           isPaused = !isPaused;
-      //           // root.toyLoader.doPause(isPaused)
-      //           // toy.running != toy.running
-      //         }
-      //     }
-      //     Rectangle {
-      //         anchors.fill: parent
-      //         color: "transparent"
-      //         border.width: parent.containsMouse ? 1 : 0
-      //         border.color: "gray"
-      //     }
-      // }
-
-
-      // ImageBtn {
-      //     width: 32
-      //     height: 32
-      //     tipText: "Reset"
-      //     imageUrl: "./Img/reset.png"
-      //     onClicked: {
-      //         // toy.restart()
-      //     }
-      //     Rectangle {
-      //         anchors.fill: parent
-      //         color: "transparent"
-      //         border.width: parent.containsMouse ? 1 : 0
-      //         border.color: "gray"
-      //     }
-      // }
-      //     ImageBtn {
-      //         width: 32
-      //         height: 32
-      //         imageUrl: isPaused ?  "qrc:/Img/resume.png" : "qrc:/Img/pause.png"
-      //         tipText: isPaused ? "Resume" : "Pause"
-      //         property bool isPaused: false
-      //         onClicked: {
-      //             toy.running = isPaused
-      //             isPaused = !isPaused;
-      //         }
-      //         Rectangle {
-      //             anchors.fill: parent
-      //             color: "transparent"
-      //             border.width: parent.containsMouse ? 1 : 0
-      //             border.color: "gray"
-      //         }
-      //     }
     }
-
-    // TShaderToy {
-    //   id: toy
-    // }
-    // FPSItem {
-    //     id: fpsItem
-    //     running: toy.running
-    // }
-    // RowLayout {
-    //   spacing: units.largeSpacing / 2
-    //
-    //   Text {
-    //       Layout.minimumWidth: width
-    //       Layout.maximumWidth: width
-    //       width: formAlignment - units.largeSpacing
-    //       horizontalAlignment: Text.AlignRight
-    //       text: toy.iTime.toFixed(2) + ":"
-    //       color: "white"
-    //       anchors.verticalCenter: parent.verticalCenter
-    //   }
-    //   Text {
-    //       Layout.minimumWidth: width
-    //       Layout.maximumWidth: width
-    //       width: formAlignment - units.largeSpacing
-    //       text: fpsItem.fps + " fps"
-    //       color: "white"
-    //       anchors.verticalCenter: parent.verticalCenter
-    //   }
-    // }
 
     RowLayout {
       spacing: units.largeSpacing / 2
@@ -220,14 +106,20 @@ Item {
         Layout.maximumWidth: width
         width: formAlignment - units.largeSpacing
         horizontalAlignment: Text.AlignRight
-        text: "Roadmap:"
+        text: "Support:"
       }
       Label {
         Layout.minimumWidth: width
         Layout.maximumWidth: width
         width: formAlignment - units.largeSpacing
         horizontalAlignment: Text.AlignLeft
-        text: "Version 1.2 - iGPU fix\nVersion 1.3 - list all + 70 new shaders(current version)\nVersion 2.0 - Customize shaders via GUI\nVersion 3.0 - Directly load shaders from shadertoy.com or file"
+        text: "<a href='https://github.com/y4my4my4m'>Github</a> | <a href='https://twitter.com/y4my4my4m'>Twitter</a>"
+        onLinkActivated: Qt.openUrlExternally(link)
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.NoButton // we don't want to eat clicks on the Text
+            cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+        }
       }
     }
 
@@ -236,7 +128,7 @@ Item {
     }
 
     RowLayout {
-      spacing: units.largeSpacing / 2
+      spacing: units.largeSpacing
       Label {
         Layout.minimumWidth: width
         Layout.maximumWidth: width
@@ -249,70 +141,204 @@ Item {
         Layout.maximumWidth: width
         width: formAlignment - units.largeSpacing
         horizontalAlignment: Text.AlignLeft
-        text: "Some high quality wallpapers have poor performance on high resolution (2k+)\nor depending on your GPU.\n\nIn case of emergency, delete folder in\n\"~/.local/share/plasma/wallpaper/online.knowmad.shaderwallpaper\",\nthen run: \"pkill plasmashell && plasmashell &\" to relaunch it.\n\nUse with caution."
+        text: "In case of emergency, delete folder in\n\"~/.local/share/plasma/wallpaper/online.knowmad.shaderwallpaper\",\nthen run: \"pkill plasmashell && plasmashell &\" to relaunch it.\n\nUse with caution."
       }
     }
 
-    ColumnLayout {
-      spacing: units.largeSpacing
-      Layout.minimumWidth: width
-      Layout.maximumWidth: width
-      width: formAlignment - units.largeSpacing
-      anchors.verticalCenter: parent.verticalCenter
+    Item {
+      Layout.fillHeight: true
+    }
 
-      RowLayout {
-        spacing: units.largeSpacing / 2
-      }
+    FileDialog {
+        id: fileDialog
+        selectMultiple : false
+        title: "Pick a shader file"
+        // nameFilters: [ "Video files (*.mp4 *.mpg *.ogg *.mov *.webm *.flv *.matroska *.avi *wmv)", "All files (*)" ]
+        onAccepted: {
+            selectedShaderField.text = fileDialog.fileUrls[0]
+            getShaderContent();
+        }
+    }
+  }
 
-      RowLayout {
+  //********************************
+  //*** GUI Shader Customization ***
+  //********************************
+
+  ColumnLayout {
+
+    spacing: units.largeSpacing
+    // Layout.minimumWidth: width
+    // Layout.maximumWidth: width
+    // width: formAlignment - units.largeSpacing
+    anchors.verticalCenter: parent.verticalCenter
+
+
+    RowLayout {
+      ColumnLayout {
         spacing: units.largeSpacing
         Layout.minimumWidth: width
-        Layout.maximumWidth: width
+        Layout.maximumWidth: 340
         width: formAlignment - units.largeSpacing
+
+        // Shader Speed
         Rectangle{
-          width: 300;
+          width: 340;
+          height: 1
+          color: "#555"
+        }
+        Label {
+          width:100
+          text: i18n("Speed: %1\n(default is 1.0)", wallpaper.configuration.shaderSpeed)
+        }
+        Slider {
+          from: 0.0
+          to: 10.0
+          id: speedSlider
+          stepSize: 0.01
+          Layout.fillWidth: true
+          value: wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0
+          onValueChanged: wallpaper.configuration.shaderSpeed = value
+        }
+
+        // Shader Color 1
+        // TODO: Since the shader is just a long string, it should be possible to conditionally RegEx scan for
+        //       any vec3(double,double,double) and procedurally add color pickers
+        Rectangle{
+          width: 340;
+          height: 1
+          color: "#555"
+        }
+
+        Button {
+          id: colorDialogCheckbox
+          text: i18n("Change default color")
+          onClicked: {
+            colorDialog.visible = !colorDialog.visible
+          }
+        }
+
+        Rectangle{
+          width: 340;
           height: 1
           color: "#555"
         }
       }
-      RowLayout{
-        spacing: units.largeSpacing / 2
-        Layout.minimumWidth: width
-        Layout.maximumWidth: width
+    }
+
+    //*********************
+    //*** Compatibility ***
+    //*********************
+
+    RowLayout {
+      spacing: units.largeSpacing / 2
+    }
+
+    RowLayout {
+
+      ColumnLayout {
+        spacing: units.largeSpacing
         width: formAlignment - units.largeSpacing
+
+        Label {
+          width:100
+          text: i18n("Compatibility:")
+        }
         CheckBox {
           id: checkGl3Ver
-          text: i18n("Change gl3 version\nfor shader compatibility")
-          checked: false
-          onCheckedChanged: {
-            // none of this works...how to reference the main.qml lol
-            // console.log(JSON.stringify(main))
-            // console.log(JSON.stringify(Item.toy))
-          }
+          text: i18n("Change gl3 version\n")
+          checked: true
         }
+        Rectangle{
+          width: 340;
+          height: 1
+          color: "#555"
+        }
+
       }
+    }
+
+    ColorDialog {
+        id: colorDialog
+        title: "(Experimental) Please choose a color"
+        onAccepted: {
+            console.log("You chose: " + colorDialog.color)
+            Qt.quit()
+        }
+        onRejected: {
+            console.log("Canceled")
+            Qt.quit()
+        }
+    }
 
 
-      RowLayout{
-        spacing: units.largeSpacing / 2
-        Layout.minimumWidth: width
-        Layout.maximumWidth: width
-        width: formAlignment - units.largeSpacing
-        Label {
-          // Layout.fillWidth: true
-          width:100
-          text: i18n("Speed: %1", wallpaper.configuration.shaderSpeed)
-        }
-        Slider {
-          Layout.fillWidth: true
-          // value: cfg_shaderSpeed
-          // defaults to a real range of [0..1]
-          // value: previewImage.hue
-          value: wallpaper.configuration.shaderSpeed
-          onValueChanged: wallpaper.configuration.shaderSpeed = value
-        }
-      }
+    // TODO: Add FPS/Pause GUI options
+    // Image {
+    //     source: "./Img/reset.png"
+    //     width: 32
+    //     height: 32
     //
+    //     MouseArea {
+    //         anchors.fill: parent
+    //         onClicked: {
+    //           // toy.restart()
+    //           // console.log(root)
+    //         }
+    //     }
+    // }
+    //
+    // Image {
+    //     width: 32
+    //     height: 32
+    //     source: isPaused ?  "./Img/resume.png" : "./Img/pause.png"
+    //
+    //     MouseArea {
+    //         anchors.fill: parent
+    //         onClicked: {
+    //           isPaused = !isPaused;
+    //           // root.toyLoader.doPause(isPaused)
+    //           // toy.running != toy.running
+    //         }
+    //     }
+    //     Rectangle {
+    //         anchors.fill: parent
+    //         color: "transparent"
+    //         border.width: parent.containsMouse ? 1 : 0
+    //         border.color: "gray"
+    //     }
+    // }
+    // ImageBtn {
+    //     width: 32
+    //     height: 32
+    //     tipText: "Reset"
+    //     imageUrl: "./Img/reset.png"
+    //     onClicked: {
+    //         // toy.restart()
+    //     }
+    //     Rectangle {
+    //         anchors.fill: parent
+    //         color: "transparent"
+    //         border.width: parent.containsMouse ? 1 : 0
+    //         border.color: "gray"
+    //     }
+    // }
+    //     ImageBtn {
+    //         width: 32
+    //         height: 32
+    //         imageUrl: isPaused ?  "qrc:/Img/resume.png" : "qrc:/Img/pause.png"
+    //         tipText: isPaused ? "Resume" : "Pause"
+    //         property bool isPaused: false
+    //         onClicked: {
+    //             toy.running = isPaused
+    //             isPaused = !isPaused;
+    //         }
+    //         Rectangle {
+    //             anchors.fill: parent
+    //             color: "transparent"
+    //             border.width: parent.containsMouse ? 1 : 0
+    //             border.color: "gray"
+    //         }
+    //     }
     //   RowLayout{
     //     spacing: units.largeSpacing / 2
     //     Layout.minimumWidth: width
@@ -341,33 +367,53 @@ Item {
     //       // }
     //     }
     //   }
-      RowLayout{
-        spacing: units.largeSpacing
-        Layout.minimumWidth: width
-        Layout.maximumWidth: width
-        Rectangle{
-          width: 340;
-          height: 1
-          color: "#555"
-        }
-      }
+    // TShaderToy {
+    //   id: toy
+    // }
+    // FPSItem {
+    //     id: fpsItem
+    //     running: toy.running
+    // }
+    // RowLayout {
+    //   spacing: units.largeSpacing / 2
+    //
+    //   Text {
+    //       Layout.minimumWidth: width
+    //       Layout.maximumWidth: width
+    //       width: formAlignment - units.largeSpacing
+    //       horizontalAlignment: Text.AlignRight
+    //       text: toy.iTime.toFixed(2) + ":"
+    //       color: "white"
+    //       anchors.verticalCenter: parent.verticalCenter
+    //   }
+    //   Text {
+    //       Layout.minimumWidth: width
+    //       Layout.maximumWidth: width
+    //       width: formAlignment - units.largeSpacing
+    //       text: fpsItem.fps + " fps"
+    //       color: "white"
+    //       anchors.verticalCenter: parent.verticalCenter
+    //   }
+    // }
 
-    }
-
-
-    Item {
-      Layout.fillHeight: true
-    }
-
-    FileDialog {
-        id: fileDialog
-        selectMultiple : false
-        title: "Pick a shader file"
-        // nameFilters: [ "Video files (*.mp4 *.mpg *.ogg *.mov *.webm *.flv *.matroska *.avi *wmv)", "All files (*)" ]
-        onAccepted: {
-            selectedShaderField.text = fileDialog.fileUrls[0]
-            getShaderContent();
-        }
-    }
   }
+
+
+  //****************************
+  //*** Shader Loading Logic ***
+  //****************************
+
+  function getShaderContent(){
+    var xhr = new XMLHttpRequest;
+    xhr.open("GET", selectedShaderField.text); // get from "file:///" string
+    xhr.onreadystatechange = function () {
+      if(xhr.readyState === XMLHttpRequest.DONE){
+        var response = xhr.responseText;
+        // console.log("shader content:\n"+response);
+        wallpaper.configuration.selectedShaderContent = response;
+      }
+    }
+    xhr.send();
+  }
+
 }

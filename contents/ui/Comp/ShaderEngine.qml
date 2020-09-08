@@ -59,8 +59,7 @@ ShaderEffect {
         interval: 16
         repeat: true
         onTriggered: {
-            // shader.iTimeDelta = shader.iTimeDelta;
-            shader.iTime += 0.016;
+            shader.iTime += 0.016 * wallpaper.configuration.shaderSpeed; // TODO: surely not the right way to do this?.. oh well..
         }
     }
     Timer {
@@ -86,39 +85,42 @@ ShaderEffect {
             shader.iMouse.w = mouseY
         }
     }
+
     readonly property string gles2Ver: "
-#define texture texture2D
-precision mediump float;
-"
+      #define texture texture2D
+      precision mediump float;"
+
     readonly property string gles3Ver: "#version 300 es
-#define varying in
-#define gl_FragColor fragColor
-precision mediump float;
+      #define varying in
+      #define gl_FragColor fragColor
+      precision mediump float;
 
-out vec4 fragColor;
-"
+      out vec4 fragColor;"
 
-    readonly property string gl3Ver: "#version 150
-#define varying in
-#define gl_FragColor fragColor
-#define lowp
-#define mediump
-#define highp
+    readonly property string gl3Ver: "
+      #version 150
+      #define varying in
+      #define gl_FragColor fragColor
+      #define lowp
+      #define mediump
+      #define highp
 
-out vec4 fragColor;
-"
-readonly property string gl3Ver_igpu: "#version 130
-#define varying in
-#define gl_FragColor fragColor
-#define lowp
-#define mediump
-#define highp
+      out vec4 fragColor;"
 
-out vec4 fragColor;
-"
-    readonly property string gl2Ver: "#version 110
-#define texture texture2D
-"
+    readonly property string gl3Ver_igpu: "
+      #version 130
+      #define varying in
+      #define gl_FragColor fragColor
+      #define lowp
+      #define mediump
+      #define highp
+
+      out vec4 fragColor;"
+
+    readonly property string gl2Ver: "
+      #version 110
+      #define texture texture2D"
+
     property string versionString: {
         if (Qt.platform.os === "android") {
             if (GraphicsInfo.majorVersion === 3) {
@@ -152,6 +154,7 @@ out vec4 fragColor;
             gl_Position = qt_Matrix * vertex;
             qt_TexCoord0 = qt_MultiTexCoord0;
         }"
+
     readonly property string forwardString: versionString + "
         varying vec2 qt_TexCoord0;
         varying vec4 vertex;
@@ -170,19 +173,21 @@ out vec4 fragColor;
         uniform sampler2D   iChannel0;
         uniform sampler2D   iChannel1;
         uniform sampler2D   iChannel2;
-        uniform sampler2D   iChannel3;
-    "
+        uniform sampler2D   iChannel3;"
+
     readonly property string startCode: "
         void main(void)
         {
             mainImage(gl_FragColor, vec2(vertex.x, iResolution.y - vertex.y));
         }"
+
     readonly property string defaultPixelShader: "
         void mainImage(out vec4 fragColor, in vec2 fragCoord)
         {
             fragColor = vec4(fragCoord, fragCoord.x, fragCoord.y);
         }"
+
     property string pixelShader: wallpaper.configuration.selectedShaderContent;
     fragmentShader: forwardString + (pixelShader ? pixelShader : defaultPixelShader) + startCode
-    
+
 }

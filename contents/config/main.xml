@@ -28,7 +28,7 @@
     </entry>
     <entry name="shaderSpeed" type="double">
       <label>Change the shader speed</label>
-      <default>1</default>
+      <default>1.0</default>
     </entry>
   </group>
 

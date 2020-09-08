@@ -52,8 +52,8 @@ Item {
     //     toy.restart()
     //   }
     // }
-    TShaderToy {
-      id: toy
+    ShaderEngine {
+      id: shaderEngine
       anchors.fill: parent
       running: true
     }
