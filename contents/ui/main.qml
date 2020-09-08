@@ -28,34 +28,34 @@ import "./Comp"
 
 Item {
     id: main
-    Loader {
-      id: toyLoader
-      source: wallpaper.configuration.selectedShader
-      // source: wallpaper.configuration.selectedShaderContent
-      // source: "file:///home/y4my4m/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders/2D_Clouds.frag"
-      anchors.fill: parent
-      onLoaded: {
-        // toy.shaderSpeed = wallpaper.configuration.shaderSpeed
-        toy.pixelShader = item.pixelShader
-        if (item.iChannel0) {
-          toy.iChannel0 = item.iChannel0
-        }
-        if (item.iChannel1) {
-          toy.iChannel1 = item.iChannel1
-        }
-        if (item.iChannel2) {
-          toy.iChannel2 = item.iChannel2
-        }
-        if (item.iChannel3) {
-          toy.iChannel3 = item.iChannel3
-        }
-        toy.restart()
-      }
-    }
+    // Loader {
+    //   id: toyLoader
+    //   // source: wallpaper.configuration.selectedShader
+    //   // source: wallpaper.configuration.selectedShaderContent
+    //   // source: "file:///home/y4my4m/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders/2D_Clouds.frag"
+    //   anchors.fill: parent
+    //   onLoaded: {
+    //     // toy.shaderSpeed = wallpaper.configuration.shaderSpeed
+    //     // toy.pixelShader = item.pixelShader
+    //     // if (item.iChannel0) {
+    //     //   toy.iChannel0 = item.iChannel0
+    //     // }
+    //     // if (item.iChannel1) {
+    //     //   toy.iChannel1 = item.iChannel1
+    //     // }
+    //     // if (item.iChannel2) {
+    //     //   toy.iChannel2 = item.iChannel2
+    //     // }
+    //     // if (item.iChannel3) {
+    //     //   toy.iChannel3 = item.iChannel3
+    //     // }
+    //     toy.restart()
+    //   }
+    // }
     TShaderToy {
       id: toy
       anchors.fill: parent
-      running: false
+      running: true
     }
 
     // function doPause(){

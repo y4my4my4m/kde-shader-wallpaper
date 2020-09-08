@@ -16,6 +16,18 @@ Item {
   // property alias cfg_checkedBusyPlay:  checkedBusyPlay.checked
 
   // property bool isPaused: false
+  function getShaderContent(){
+    var xhr = new XMLHttpRequest;
+    xhr.open("GET", selectedShaderField.text); // set Method and File
+    xhr.onreadystatechange = function () {
+      if(xhr.readyState === XMLHttpRequest.DONE){ // if request_status == DONE
+        var response = xhr.responseText;
+        // console.log("shader content:\n"+response);
+        wallpaper.configuration.selectedShaderContent = response;
+      }
+    }
+    xhr.send(); // begin the request
+  }
 
   RowLayout {
     spacing: units.largeSpacing / 2
@@ -60,18 +72,7 @@ Item {
 
         onCurrentTextChanged: {
           selectedShaderField.text = Qt.resolvedUrl("./Shaders/"+model.get(currentIndex, "fileName"));
-
-          var xhr = new XMLHttpRequest;
-          xhr.open("GET", selectedShaderField.text); // set Method and File
-          xhr.onreadystatechange = function () {
-            if(xhr.readyState === XMLHttpRequest.DONE){ // if request_status == DONE
-              var response = xhr.responseText;
-              // console.log("ayylmao\n"+response);
-              wallpaper.configuration.selectedShaderContent = response.toString();
-
-            }
-          }
-          xhr.send(); // begin the request
+          getShaderContent();
         }
       }
 
@@ -365,6 +366,7 @@ Item {
         // nameFilters: [ "Video files (*.mp4 *.mpg *.ogg *.mov *.webm *.flv *.matroska *.avi *wmv)", "All files (*)" ]
         onAccepted: {
             selectedShaderField.text = fileDialog.fileUrls[0]
+            getShaderContent();
         }
     }
   }
