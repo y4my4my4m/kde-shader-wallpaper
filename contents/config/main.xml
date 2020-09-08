@@ -6,10 +6,14 @@
   <kcfgfile name=""/>
 
   <group name="General">
-    <entry name="SelectedShader" type="String">
+    <entry name="selectedShader" type="String">
       <label>SelectedShader</label>
-      <default>./Shader/Shader_Waves</default>
+      <default>./Shaders/2D_Clouds/2D_Clouds</default>
     </entry>
+      <entry name="selectedShaderContent" type="String">
+        <label>selectedShaderContent</label>
+        <default></default>
+      </entry>
     <entry name="checkedSmartPlay" type="bool">
       <label>Pause the video when existing a maximized or full-screen windows.</label>
       <default>false</default>
@@ -21,6 +25,10 @@
     <entry name="checkGl3Ver" type="bool">
       <label>Change gl3 version for shader compatibility.</label>
       <default>true</default>
+    </entry>
+    <entry name="shaderSpeed" type="double">
+      <label>Change the shader speed</label>
+      <default>1</default>
     </entry>
   </group>
 

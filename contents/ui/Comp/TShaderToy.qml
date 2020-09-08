@@ -33,6 +33,7 @@ ShaderEffect {
     property real       iTimeDelta: 100
     property int        iFrame: 10
     property real       iFrameRate
+    property double     shaderSpeed: 1.0
     property vector4d   iMouse;
     property var iChannel0; //only Image or ShaderEffectSource
     property var iChannel1; //only Image or ShaderEffectSource
@@ -58,6 +59,7 @@ ShaderEffect {
         interval: 16
         repeat: true
         onTriggered: {
+            // shader.iTimeDelta = shader.iTimeDelta;
             shader.iTime += 0.016;
         }
     }
@@ -128,7 +130,7 @@ out vec4 fragColor;
             }
         }
         else if (wallpaper.configuration.checkGl3Ver==true){
-          console.log("gl3Ver_igpu")
+          // console.log("gl3Ver_igpu")
           return gl3Ver_igpu
         }else {
             if (GraphicsInfo.majorVersion === 3 ||GraphicsInfo.majorVersion === 4) {
@@ -140,16 +142,16 @@ out vec4 fragColor;
     }
 
     vertexShader: "
-              uniform mat4 qt_Matrix;
-              attribute vec4 qt_Vertex;
-              attribute vec2 qt_MultiTexCoord0;
-              varying vec2 qt_TexCoord0;
-              varying vec4 vertex;
-              void main() {
-                  vertex = qt_Vertex;
-                  gl_Position = qt_Matrix * vertex;
-                  qt_TexCoord0 = qt_MultiTexCoord0;
-              }"
+        uniform mat4 qt_Matrix;
+        attribute vec4 qt_Vertex;
+        attribute vec2 qt_MultiTexCoord0;
+        varying vec2 qt_TexCoord0;
+        varying vec4 vertex;
+        void main() {
+            vertex = qt_Vertex;
+            gl_Position = qt_Matrix * vertex;
+            qt_TexCoord0 = qt_MultiTexCoord0;
+        }"
     readonly property string forwardString: versionString + "
         varying vec2 qt_TexCoord0;
         varying vec4 vertex;
@@ -180,6 +182,7 @@ out vec4 fragColor;
         {
             fragColor = vec4(fragCoord, fragCoord.x, fragCoord.y);
         }"
-    property string pixelShader: ""
+    property string pixelShader: wallpaper.configuration.selectedShaderContent;
     fragmentShader: forwardString + (pixelShader ? pixelShader : defaultPixelShader) + startCode
+    
 }

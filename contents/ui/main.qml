@@ -30,9 +30,12 @@ Item {
     id: main
     Loader {
       id: toyLoader
-      source: wallpaper.configuration.SelectedShader
+      source: wallpaper.configuration.selectedShader
+      // source: wallpaper.configuration.selectedShaderContent
+      // source: "file:///home/y4my4m/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders/2D_Clouds.frag"
       anchors.fill: parent
       onLoaded: {
+        // toy.shaderSpeed = wallpaper.configuration.shaderSpeed
         toy.pixelShader = item.pixelShader
         if (item.iChannel0) {
           toy.iChannel0 = item.iChannel0

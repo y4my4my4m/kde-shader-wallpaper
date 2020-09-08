@@ -8,8 +8,10 @@ import "./Comp"
 import org.kde.plasma.core 2.0 as PlasmaCore
 
 Item {
-  property alias cfg_SelectedShader: selectedShaderField.text
+  property alias cfg_selectedShader: selectedShaderField.text
+  // property alias cfg_selectedShaderContent: ""
   property alias cfg_checkGl3Ver:  checkGl3Ver.checked
+  // property double cfg_shaderSpeed: shaderSpeedVal
   // property alias cfg_checkedSmartPlay: checkedSmartPlay.checked
   // property alias cfg_checkedBusyPlay:  checkedBusyPlay.checked
 
@@ -43,8 +45,8 @@ Item {
         model: FolderListModel {
             id: folderListModel
             showDirs: false
-            nameFilters: ["*.qml"]
-            folder: "./Shader"
+            nameFilters: ["*.frag"]
+            folder: "./Shaders"
         }
         delegate: Component {
             id: folderListDelegate
@@ -55,8 +57,21 @@ Item {
 
         textRole: "fileBaseName"
         displayText: currentText.replace("_"," ")
+
         onCurrentTextChanged: {
-          selectedShaderField.text = "./Shader/" + model.get(currentIndex, "fileName")
+          selectedShaderField.text = Qt.resolvedUrl("./Shaders/"+model.get(currentIndex, "fileName"));
+
+          var xhr = new XMLHttpRequest;
+          xhr.open("GET", selectedShaderField.text); // set Method and File
+          xhr.onreadystatechange = function () {
+            if(xhr.readyState === XMLHttpRequest.DONE){ // if request_status == DONE
+              var response = xhr.responseText;
+              // console.log("ayylmao\n"+response);
+              wallpaper.configuration.selectedShaderContent = response.toString();
+
+            }
+          }
+          xhr.send(); // begin the request
         }
       }
 
@@ -190,7 +205,7 @@ Item {
           MouseArea {
               anchors.fill: parent
               onClicked: {
-                fileDialog.folder = fileDialog.shortcuts.home+"/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shader/"
+                fileDialog.folder = fileDialog.shortcuts.home+"/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders/"
                 fileDialog.open()
               }
           }
@@ -254,7 +269,7 @@ Item {
         Layout.maximumWidth: width
         width: formAlignment - units.largeSpacing
         Rectangle{
-          width: 340;
+          width: 300;
           height: 1
           color: "#555"
         }
@@ -266,13 +281,34 @@ Item {
         width: formAlignment - units.largeSpacing
         CheckBox {
           id: checkGl3Ver
-          text: i18n("Change gl3 version for shader compatibility")
+          text: i18n("Change gl3 version\nfor shader compatibility")
           checked: false
           onCheckedChanged: {
             // none of this works...how to reference the main.qml lol
             // console.log(JSON.stringify(main))
             // console.log(JSON.stringify(Item.toy))
           }
+        }
+      }
+
+
+      RowLayout{
+        spacing: units.largeSpacing / 2
+        Layout.minimumWidth: width
+        Layout.maximumWidth: width
+        width: formAlignment - units.largeSpacing
+        Label {
+          // Layout.fillWidth: true
+          width:100
+          text: i18n("Speed: %1", wallpaper.configuration.shaderSpeed)
+        }
+        Slider {
+          Layout.fillWidth: true
+          // value: cfg_shaderSpeed
+          // defaults to a real range of [0..1]
+          // value: previewImage.hue
+          value: wallpaper.configuration.shaderSpeed
+          onValueChanged: wallpaper.configuration.shaderSpeed = value
         }
       }
     //
