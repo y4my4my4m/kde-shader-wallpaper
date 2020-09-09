@@ -233,7 +233,7 @@ Item {
           ImageBtn {
               width: 32
               height: 32
-              imageUrl: isPaused ?  "./Comp/play.svg" : "./Comp/pause.svg"
+              imageUrl: isPaused ?  "./Components/play.svg" : "./Components/pause.svg"
               tipText: isPaused ? "Resume" : "Pause"
               property bool isPaused: false
               onClicked: {
@@ -394,6 +394,8 @@ Item {
     xhr.send();
   }
 
+  // find all vec3 in shader (to create buttons for each)
+  // return int;
   function getShaderVec3s(){
     let vec3regex         = /(vec3\([+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+\))/g;
     let vec3regexSingular = /(vec3\([+-]?([0-9]*[.])?[0-9]+\))/g;
@@ -401,7 +403,7 @@ Item {
     let currentShaderContent = wallpaper.configuration.selectedShaderContent;
     let matches = currentShaderContent.match(vec3regex);
     if (matches.length == 0) matches = currentShaderContent.match(vec3regexSingular);
-    
+
     return matches.length ? matches.length : 0;
   }
 
@@ -409,23 +411,20 @@ Item {
   // int      number   default 0           match case for the vec3 / which variable to hijack color of
   function findAndReplaceColor(color, number = 0){
 
-    let vec3regex         = /(vec3\([+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+\))/g;
-    let vec3regexSingular = /(vec3\([+-]?([0-9]*[.])?[0-9]+\))/g;
-    // console.log("You are choosing: " + color);
+    let vec3regex         = /(vec3\([+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+\))/g; // vec3(0.0, 0.0, 0.0)
+    let vec3regexSingular = /(vec3\([+-]?([0-9]*[.])?[0-9]+\))/g; // vec3(0.0)
+
     let currentShaderContent = wallpaper.configuration.selectedShaderContent;
 
-     // find a vec3(0.0, 0.0, 0.0); spaces may be ignored
     let matches = currentShaderContent.match(vec3regex);
     let replacement = 'vec3('+color+')'
-    // console.log('matches', matches);
 
-    // vec3 may be vec3(0.33) for vec3(0.33,0.33,0.33)
-    if (!matches.length){
-      matches = currentShaderContent.match(vec3regexSingular);
-      replacement = 'vec3('+color+')'
+    let matchesSingular = currentShaderContent.match(vec3regexSingular);
+    for (var i=0; matchesSingular > 0; i++){
+      matches.push(matchesSingular[i])
     }
-    // console.log(`number: ${number}, color: ${matches[number]}`);
 
+    // replace the color in the temp string
     currentShaderContent = currentShaderContent.replace(matches[number], replacement);
 
     // assign modified color to current shader
@@ -439,6 +438,7 @@ Item {
         buttonContainer.children[i-1].destroy();
     }
     for (var i=0; i<getShaderVec3s(); i++) {
+        // should load its own .qml
         let objStr = `import QtQuick 2.0; import QtQuick.Controls 2.12;Button {
             property int number: `+i+`
             id: vec3button_`+i+`
@@ -452,4 +452,8 @@ Item {
     }
   }
 
+    Component.onCompleted: {
+      // getShaderContent();
+      selectedShaderField.text = Qt.resolvedUrl("./Shaders/"+model.get(selectedShader.currentIndex, "fileName"));
+    }
 }

@@ -3,7 +3,7 @@
 // Modified by @y4my4my4m
 // TODO: modify pixelization and colors via GUI
 
-const vec3 mainColor = vec3(.82, .10, 26./255.);
+const vec3 mainColor = vec3(.82, .10, .26);
 
 float sawtooth(float a, float freq) {
     if (mod(a, freq) < freq * 0.5) return mod(a, freq * 0.5);
