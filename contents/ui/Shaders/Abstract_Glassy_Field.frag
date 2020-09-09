@@ -1,10 +1,3 @@
-import QtQuick 2.12
-import QtQuick.Controls 2.12
-Item {
-    property Image iChannel0: Image { source: "./Shadertoy_Pebbles.png" }
-    property Image iChannel1: Image { source: "./Shadertoy_Organic_2.jpg" }
-    property string pixelShader: `
-
 // https://www.shadertoy.com/view/4ttGDH
 // Credits to Shane
 
@@ -372,6 +365,4 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     fragColor = vec4(sqrt(clamp(col, 0., 1.)), 1);
 
 
-}
-`
 }

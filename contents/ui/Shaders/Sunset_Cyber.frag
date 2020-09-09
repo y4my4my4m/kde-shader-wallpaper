@@ -1,13 +1,10 @@
-import QtQuick 2.12
-import QtQuick.Controls 2.12
-Item {
-    property Image iChannel0: Image { source: "./Shadertoy_Pebbles.png" }
-    property Image iChannel1: Image { source: "./Shadertoy_Lichen.jpg" }
-    property Image iChannel2: Image { source: "./Shadertoy_Bayer.png" }
-    property string pixelShader: `
-
 // https://www.shadertoy.com/view/4dt3RX
 // Credits to Flyguy
+
+
+/* property Image iChannel0: Image { source: "./Shadertoy_Pebbles.png" }
+property Image iChannel1: Image { source: "./Shadertoy_Lichen.jpg" }
+property Image iChannel2: Image { source: "./Shadertoy_Bayer.png" } */
 
 //Raymarch settings
 
@@ -77,13 +74,13 @@ float tau = atan(1.0) * 8.0;
 vec3 dither(vec3 color, vec3 bits, vec2 pixel)
 {
     vec3 cmax = exp2(bits)-1.0;
-    
+
     vec3 dithfactor = mod(color, 1.0 / cmax) * cmax;
     float dithlevel = texture(iChannel2,pixel / iChannelResolution[2].xy).r;
-    
+
     vec3 cl = floor(color * cmax)/cmax;
     vec3 ch = ceil(color * cmax)/cmax;
-    
+
     return mix(cl, ch, step(dithlevel, dithfactor));
 }
 
@@ -101,7 +98,7 @@ mat3 Rotate(vec3 angles)
 {
     vec3 c = cos(angles);
     vec3 s = sin(angles);
-    
+
     mat3 rotX = mat3( 1.0, 0.0, 0.0, 0.0,c.x,s.x, 0.0,-s.x, c.x);
     mat3 rotY = mat3( c.y, 0.0,-s.y, 0.0,1.0,0.0, s.y, 0.0, c.y);
     mat3 rotZ = mat3( c.z, s.z, 0.0,-s.z,c.z,0.0, 0.0, 0.0, 1.0);
@@ -139,7 +136,7 @@ vec2 sdColumn(vec3 p, float r, float id)
 vec2 dfRiver(vec3 p, float id)
 {
     float offs = sin(p.y)*0.15 + sin(p.y * 0.2);
-    
+
     return sdColumn(p.xzy + vec3(offs,0,0), 0.4, id);
 }
 
@@ -147,11 +144,11 @@ vec2 dfRiver(vec3 p, float id)
 vec2 Scene(vec3 p)
 {
     vec2 d = vec2(MAX_DIST, SKYDOME);
-    
+
     d = opU(sdPlane(p, vec4(0, 0,-1, 0), FLOOR), d);
-    
+
     d = opS(dfRiver(p, RIVER), d);
-    
+
 	return d;
 }
 
@@ -160,7 +157,7 @@ vec3 Normal(vec3 p)
 {
     vec3 off = vec3(NORMAL_OFFS, 0, 0);
     return normalize
-    ( 
+    (
         vec3
         (
             Scene(p + off.xyz).x - Scene(p - off.xyz).x,
@@ -176,34 +173,34 @@ MarchResult MarchRay(vec3 orig,vec3 dir)
     float steps = 0.0;
     float dist = 0.0;
     float id = 0.0;
-    
+
     for(int i = 0;i < MAX_STEPS;i++)
     {
         vec2 object = Scene(orig + dir * dist);
-        
+
         //Add the sky dome and have it follow the camera.
         object = opU(object, -sdSphere(dir * dist, MAX_DIST, SKYDOME));
-        
+
         dist += object.x * STEP_MULT;
-        
+
         id = object.y;
-        
+
         steps++;
-        
+
         if(abs(object.x) < MIN_DIST * dist)
         {
             break;
         }
     }
-    
+
     MarchResult result;
-    
+
     result.position = orig + dir * dist;
     result.normal = Normal(result.position);
     result.dist = dist;
     result.steps = steps;
     result.id = id;
-    
+
     return result;
 }
 
@@ -214,66 +211,66 @@ vec3 Shade(MarchResult hit, vec3 direction, vec3 camera)
 
     if(hit.id == FLOOR)
     {
-        vec2 uv = abs(mod(hit.position.xy + GRID_SIZE/2.0, GRID_SIZE) - GRID_SIZE/2.0); 
-        
+        vec2 uv = abs(mod(hit.position.xy + GRID_SIZE/2.0, GRID_SIZE) - GRID_SIZE/2.0);
+
         uv /= fwidth(hit.position.xy);
-        
+
         float riverEdge = dfRiver(hit.position, 0.0).x / fwidth(hit.position.xy).x;
-                                                       
+
         float gln = min(min(uv.x, uv.y), riverEdge) / GRID_SIZE;
-        
-    	color = mix(GRID_COLOR_1, GRID_COLOR_2, 1.0 - smoothstep(0.0, GRID_LINE_SIZE / GRID_SIZE, gln));
-    } 
-    
-    if(hit.id == RIVER)
-    {
-        vec2 uv = vec2(hit.position.z, abs(mod(hit.position.y + GRID_SIZE/2.0, GRID_SIZE) - GRID_SIZE/2.0)); 
-        uv /= fwidth(hit.position.xy);
-        
-        float gln = min(uv.x, uv.y) / GRID_SIZE;
-        
+
     	color = mix(GRID_COLOR_1, GRID_COLOR_2, 1.0 - smoothstep(0.0, GRID_LINE_SIZE / GRID_SIZE, gln));
     }
-    
+
+    if(hit.id == RIVER)
+    {
+        vec2 uv = vec2(hit.position.z, abs(mod(hit.position.y + GRID_SIZE/2.0, GRID_SIZE) - GRID_SIZE/2.0));
+        uv /= fwidth(hit.position.xy);
+
+        float gln = min(uv.x, uv.y) / GRID_SIZE;
+
+    	color = mix(GRID_COLOR_1, GRID_COLOR_2, 1.0 - smoothstep(0.0, GRID_LINE_SIZE / GRID_SIZE, gln));
+    }
+
     //Distance fog
     color *= 1.0 - smoothstep(0.0, MAX_DIST*0.9, hit.dist);
-    
+
     //Water
     float waterMix = smoothstep(WATER_LEVEL - WATER_FOG_SIZE, WATER_LEVEL + WATER_FOG_SIZE, hit.position.z);
-    
-    color = mix(color, WATER_COLOR, waterMix);  
-    
+
+    color = mix(color, WATER_COLOR, waterMix);
+
     if(hit.id == SKYDOME)
     {
         //Sky gradient
         //Causes weird position-colored artefacts around the horizon (AMD R9 270)
         //color = mix(SKY_COLOR_1, SKY_COLOR_2, -hit.position.z/16.0);
     	color += mix(SKY_COLOR_1, SKY_COLOR_2, -hit.position.z/16.0);
-        
+
         //Sun
         vec3 sunDir = normalize(SUN_DIRECTION);
-        
+
         float sun = smoothstep(0.950, 0.952, dot(direction, sunDir));
-        
+
         vec3 sunCol = mix(SUN_COLOR_1, SUN_COLOR_2, -hit.position.z/16.0);
 
         color = mix(color, sunCol, sun);
-        
+
         //Clouds
         vec2 cloudUV = CLOUD_SCALE * direction.xy / dot(direction, vec3(0, 0,-1));
         cloudUV += CLOUD_SCROLL * iTime;
-        
+
         color *= smoothstep(0.5, 0.3, texture(iChannel1, cloudUV, CLOUD_BLUR).r) * 0.5 + 0.5;
-        
+
         //Mountains
         float a = atan(hit.position.y, hit.position.x)/tau + 0.5;
         a -= 3.28;
-        
+
         float mountains = MOUNTAIN_SCALE * texture(iChannel0, vec2(a, 0.1),-99.0).r - hit.position.z - MOUNTAIN_SHIFT;
-        
-        color = mix(color, vec3(0.0), 1.0 - smoothstep(0.6, 0.7, mountains));  
+
+        color = mix(color, vec3(0.0), 1.0 - smoothstep(0.6, 0.7, mountains));
     }
-    
+
     return color;
 }
 
@@ -281,10 +278,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 res = iResolution.xy / iResolution.y;
 	vec2 uv = fragCoord.xy / iResolution.y;
-    
-    //Camera stuff   
+
+    //Camera stuff
     vec3 angles = vec3(0);
-    
+
     //Auto mode
     if(iMouse.xy == vec2(0,0))
     {
@@ -292,34 +289,32 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         angles.x = tau * (3.9 / 8.0) + sin(iTime * 0.1) * 0.3;
     }
     else
-    {    
+    {
     	angles = vec3((iMouse.xy / iResolution.xy) * pi, 0);
         angles.xy *= vec2(2.0, 1.0);
     }
-    
+
     angles.y = clamp(angles.y, 0.0, 15.5 * tau / 64.0);
-    
+
     mat3 rotate = Rotate(angles.yzx);
-    
+
     vec3 orig = vec3(0, 0,-2) * rotate;
-    
+
     vec3 dir = normalize(vec3(uv - res / 2.0, FOCAL_LENGTH)) * rotate;
-    
+
     //Ray marching
     MarchResult hit = MarchRay(orig, dir);
-    
+
     //Shading
     vec3 color = Shade(hit, dir, orig);
-    
+
     #ifdef SHOW_RAY_COST
     color = mix(vec3(0,1,0), vec3(1,0,0), hit.steps / float(MAX_STEPS));
     #endif
-    
+
     #ifdef DITHER_ENABLE
     color = dither(color, COLOR_MODE, fragCoord);
     #endif
-    
+
 	fragColor = vec4(color, 1.0);
-}
-`
 }

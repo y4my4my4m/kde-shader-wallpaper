@@ -19,8 +19,6 @@ float getWeight(float f) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-      float iTimeMov = iTime / 6.0;  // speed hack for movement
-      float iTimeCol = iTime * 1.0;  // speed hack for color
       //vec3 backdrop = mix(C, C, C);
       vec3 backdrop;
   	  vec2 uvTrue = fragCoord.xy / iResolution.xy;
@@ -39,15 +37,15 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
       vec3 color = vec3(0.0);
 
 	for(float i = 0.0; i < 5.0; i++) {
-		  uv.x += (0.2 * sin(uv.y + i / 7.0 - iTimeMov * 0.4));
+		  uv.x += (0.2 * sin(uv.y + i / 7.0 - iTime * 0.4));
       float X = uv.x + getWeight(pow(i, 2.0) * 20.0) * (texture(iChannel0, vec2(uvTrue.x, 1)).y - 0.5);
-      li = 0.4 + pow(1.2 * abs(mod(uvTrue.y + i / 1.1 + iTimeMov, 2.0) - 1.0), 2.0);
+      li = 0.4 + pow(1.2 * abs(mod(uvTrue.y + i / 1.1 + iTime, 2.0) - 1.0), 2.0);
 	    gw = abs(li / (150.0 * X));
 
-      ts  = gw * (GWM + sin(iTimeCol * TM));
-      tsr = gw * (GWM + sin(iTimeCol * TM * 1.33));
-      tsg = gw * (GWM + sin(iTimeCol * TM * 1.55));
-      tsb = gw * (GWM + sin(iTimeCol * TM * 1.99));
+      ts  = gw * (GWM + sin(iTime * TM));
+      tsr = gw * (GWM + sin(iTime * TM * 1.33));
+      tsg = gw * (GWM + sin(iTime * TM * 1.55));
+      tsb = gw * (GWM + sin(iTime * TM * 1.99));
 	    color += vec3(tsr, tsg, tsb);
 
       backdrop = mix(C * normalize(color), C * normalize(color), C * normalize(color));

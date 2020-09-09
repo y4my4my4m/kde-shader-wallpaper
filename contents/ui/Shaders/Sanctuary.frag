@@ -1,10 +1,3 @@
-import QtQuick 2.12
-import QtQuick.Controls 2.12
-Item {
-  property Image iChannel0: Image {
-      source: "qrc:/Qml/Shader/4ddfwx.png"
-  }
-    property string pixelShader: "
 // From https://www.shadertoy.com/view/4ddfWX
 // srtuss, 2018
 //
@@ -18,6 +11,8 @@ Item {
 // Music production with a soundshader: :)
 // http://srtuss.thrill-project.com/music/shader.ogg
 //
+
+// property Image iChannel0: Image { source: "qrc:/Qml/Shader/4ddfwx.png" }
 
 vec2 rotate(vec2 p, float a)
 {
@@ -184,7 +179,4 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col *= 2.9;
 
     fragColor = vec4(col,1.0);
-}
-"
-
 }

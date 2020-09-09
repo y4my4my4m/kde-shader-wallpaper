@@ -1,65 +1,45 @@
-// From https://www.shadertoy.com/view/wtlyzH
+// From https://www.shadertoy.com/view/wtXyz4
 // Credits to thefox231
 // Modified by @y4my4my4m
 // TODO: modify pixelization and colors via GUI
+const vec3 mainColor = vec3(.23, .15, .82);
 
-const vec3 mainColor = vec3(.82, .10, .26);
+float spiral(vec2 m, float t) {
+	float r = length(m);
+	float a = atan(m.y, m.x);
+	float v = sin(50.*(sqrt(r)-0.02*a-.3*t));
+	return clamp(v,0.,1.);
 
-float sawtooth(float a, float freq) {
-    if (mod(a, freq) < freq * 0.5) return mod(a, freq * 0.5);
-    return freq * 0.5 - mod(a, freq * 0.5);
 }
 
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
-{
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord/iResolution.xy;
-    float resolutionRatio = iResolution.x / iResolution.y;
 
-    // uv fuckery !
+    // fix aspect ratio
+    float aspectRatio = iResolution.x / iResolution.y;
+    uv.x *= aspectRatio;
+    uv.x -= (aspectRatio - 1.) * .5;
+
     // pixelate
-
-    float pxAmt = 512.0;
+    float pxAmt = 256.;
 
     uv.x = floor(uv.x * pxAmt) / pxAmt;
     uv.y = floor(uv.y * pxAmt) / pxAmt;
 
     // interlacing .
-    float pixAmt = 2.;
-    if (mod(fragCoord.y, pixAmt) < pixAmt * 0.5) {
-        uv += 0.1 + sin(iTime * 0.2 + uv.y * 8.) * 0.05;
+    if (mod(fragCoord.y, 2.) < 1.) {
+        uv += .4 + sin(iTime * .5 + uv.y * 5.) * (.3 + sin(iTime) * .1);
     } else {
-        uv -= 0.1 + sin(iTime * 0.2 + uv.y * 8. + .5) * 0.05;
+        uv -= .4 + sin(iTime * .5 + uv.y * 5. + .5) * (.3 + sin(iTime) * .1);
     }
 
-    vec2 uv2 = uv;
-
-    vec3 color = vec3(0.1);
-
-    // first one (bg-ish thing??)
-
-    color = vec3(mod(abs(sawtooth(uv.x, 0.6) * resolutionRatio + sawtooth(uv.y, 0.6) + iTime * 0.3), 0.4)) * mainColor;
-
-    // second one (stripes-like thing)
-
-    if (uv2.x < 0.5) {
-        uv2.x = 1.0 - uv2.x;
-    }
-    if (uv2.y > 0.5) {
-        uv2.y = 1.0 - uv2.y;
-    }
-
-    uv2.x += sin(uv2.y * 4.0 + iTime) * 0.1;
-
-    if (mod(abs(uv2.x * resolutionRatio + uv2.y + iTime * 0.2), 0.2) < 0.1) {
-        vec3 lines = vec3(cos(uv.x * 2.0 + iTime + uv.y * 3.0)) * mainColor * 0.7;
-        color = mix(color, lines, 0.3);
-    }
+    // spiralllllllllllllll
+    vec3 color = mainColor * spiral(uv - .5, iTime * .2 + sin(uv.y * 7.) * .2);
 
     // color shortening
     // gives it a kind of like snes-like palette
-    float shortAmt = 10.0;
+    float shortAmt = 4.0;
     color = ceil(color * shortAmt) / shortAmt;
 
-    // feed the frag color .
-    fragColor = vec4(color, 1.0);
+    fragColor = vec4(color,1.0);
 }

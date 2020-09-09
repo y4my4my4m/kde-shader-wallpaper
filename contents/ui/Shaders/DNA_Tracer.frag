@@ -1,15 +1,11 @@
-import QtQuick 2.12
-import QtQuick.Controls 2.12
-Item {
-    property Image iChannel0: Image { source: "./Shader_DNA_Tracer_iChannel0.png" }
-    property string pixelShader: `
-
 // https://www.shadertoy.com/view/WtfBzX
 // Credits to evvvil
 
 // DNA tracer - Result of an improvised live coding session on Twitch
-// LIVE SHADER CODING, SHADER SHOWDOWN STYLE, EVERY TUESDAYS 20:00 Uk time: 
+// LIVE SHADER CODING, SHADER SHOWDOWN STYLE, EVERY TUESDAYS 20:00 Uk time:
 // https://www.twitch.tv/evvvvil_
+
+// property Image iChannel0: Image { source: "./Shader_DNA_Tracer_iChannel0.png" }
 
 vec2 z,v,e=vec2(.0035,-.0035);float t,tnoi,tt,b,bb,anim,animInv,g,gg;vec3 np,bp,pp,op,po,no,al,ld;
 float bo(vec3 p,vec3 r){p=abs(p)-r; return max(max(p.x,p.y),p.z);}
@@ -19,20 +15,20 @@ vec4 texNoise(vec2 uv){ float f = 0.; f+=texture(iChannel0, uv*.125).r*.5; f+=te
     f+=texture(iChannel0,uv*.5).r*.125; f+=texture(iChannel0,uv*1.).r*.125; f=pow(f,1.2);return vec4(f*.45+.05);}
 vec2 fb( vec3 p,float size )
 {
-  vec2 h,t=vec2(bo(p,vec3(4)),5);  
+  vec2 h,t=vec2(bo(p,vec3(4)),5);
   t.x=abs(t.x)-.55;
-  t.x=max(t.x,abs(p.y)-1.);  
+  t.x=max(t.x,abs(p.y)-1.);
   t.x=smin(t.x,0.4*length(abs(p.yz+tnoi*1.8)-vec2(0,4.*size))-.6*size,1.);
-  h=vec2(bo(p,vec3(4)),3);  
+  h=vec2(bo(p,vec3(4)),3);
   h.x=abs(h.x)-.3;
-  h.x=max(h.x,abs(p.y)-1.5);    
-  t=t.x<h.x?t:h;  
-  h=vec2(bo(p,vec3(3.5)),6);  
+  h.x=max(h.x,abs(p.y)-1.5);
+  t=t.x<h.x?t:h;
+  h=vec2(bo(p,vec3(3.5)),6);
   h.x=abs(h.x)-.7;
-  h.x=max(h.x,abs(p.y)-.5);  
-  h.x=max(h.x,abs(abs(abs(p.z)-2.)-1.)-.5);  
-  h.x=max(h.x,abs(abs(abs(p.x)-2.)-1.)-.5);  
-  t=t.x<h.x?t:h;  
+  h.x=max(h.x,abs(p.y)-.5);
+  h.x=max(h.x,abs(abs(abs(p.z)-2.)-1.)-.5);
+  h.x=max(h.x,abs(abs(abs(p.x)-2.)-1.)-.5);
+  t=t.x<h.x?t:h;
   h=vec2(.6*length(p.yz)-.1+.0*sin(p.x)*.1,6);
   pp=op; pp.z=mod(pp.z-tt*20.+35.,100.)-50.;
   g+=0.1/(0.1+h.x*h.x*(40.-39.9*sin(pp.z*.05+.2*sin(pp.x*.3))));
@@ -43,23 +39,23 @@ vec2 mp( vec3 p )
 {
     np=bp=p;
     op=p;
-    np.xy*=r2(sin(p.z*.15)*.3);  
-    np.z=mod(np.z+tt*5.,24.)-12.; 
+    np.xy*=r2(sin(p.z*.15)*.3);
+    np.z=mod(np.z+tt*5.,24.)-12.;
     anim = sin(tt*.5+op.z*.03);
     animInv = cos(tt*.5+op.z*.03);
     vec2 h,t=vec2(1000);
     for(int i=0;i<6;i++){
         np.xz=abs(np.xz)-vec2(4,6);
         np.xy*=r2(.17);
-    } 
+    }
     tnoi=texNoise(vec2(np.x,dot(np.xz,vec2(.5)))*vec2(.15,.3)).r;
-    t=fb(np,1.); 
-    np.xz*=r2(.785*sin(np.z*.2));  
-    h=fb(np.xzy,.9);  
-    t=t.x<h.x?t:h; 
+    t=fb(np,1.);
+    np.xz*=r2(.785*sin(np.z*.2));
+    h=fb(np.xzy,.9);
+    t=t.x<h.x?t:h;
     h=fb((np+vec3(4,-4.5,2.))*3.,0.3);h.x/=3.;
     t=t.x<h.x?t:h;
-    np.xz*=r2(-.785); 
+    np.xz*=r2(-.785);
     h=fb((np+vec3(0,-5,1))*5.,0.0);h.x/=5.;
     t=t.x<h.x?t:h;
     bp=p-vec3(0,20,0);
@@ -85,7 +81,7 @@ vec2 tr( vec3 ro,vec3 rd )
     h=mp(ro+rd*t.x);
     if(h.x<.0001||t.x>100.) break;
     t.x+=h.x;t.y=h.y;
-  }  
+  }
   if(t.x>100.) t.y=0.;
   return t;
 }
@@ -99,7 +95,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
   cw=normalize(vec3(0,10,0)-ro),
   cu=normalize(cross(cw,vec3(0,1,0))),
   cv=normalize(cross(cu,cw)),
-  rd=mat3(cu,cv,cw)*normalize(vec3(uv,.5)),co,fo;  
+  rd=mat3(cu,cv,cw)*normalize(vec3(uv,.5)),co,fo;
   co=fo=vec3(.1,.12,.13)-length(uv)*.15;
   ld=normalize(vec3(-.1,.5,.3));
   z=tr(ro,rd);t=z.x;
@@ -113,8 +109,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     fr=pow(1.+dot(no,rd),4.);
     co=mix(al*(a(.05)*a(.1)+.2)*(dif+s(2.)),fo,min(fr,.5));
     co=mix(fo,co,exp(-.000005*t*t*t));
-  }  
+  }
   fragColor = vec4(pow(co+g*.2*vec3(.1,.2,.7)+gg*.2,vec3(.45)),1);
-} 
-`
 }

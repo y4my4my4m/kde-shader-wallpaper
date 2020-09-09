@@ -1,9 +1,3 @@
-import QtQuick 2.12
-import QtQuick.Controls 2.12
-Item {
-    property Image iChannel0: Image { source: "./Shadertoy_London.jpg" }
-    property string pixelShader: `
-
 // https://www.shadertoy.com/view/Mld3Rn
 // Credits to Shane
 
@@ -43,6 +37,8 @@ Item {
     https://www.shadertoy.com/view/ltsXRM
 
 */
+
+// property Image iChannel0: Image { source: "./Shadertoy_London.jpg" }
 
 #define FAR 2.
 
@@ -366,6 +362,4 @@ void mainImage(out vec4 c, vec2 u){
     c = vec4(sqrt(clamp(c.xyz, 0., 1.)), 1.);
 
 
-}
-`
 }

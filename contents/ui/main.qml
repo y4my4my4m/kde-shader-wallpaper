@@ -28,7 +28,6 @@ import "./Components"
 
 Item {
     id: main
-
     ShaderEngine {
       id: shaderEngine
       anchors.fill: parent

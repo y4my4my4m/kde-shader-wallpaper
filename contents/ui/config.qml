@@ -398,6 +398,8 @@ Item {
         }
         wallpaper.configuration.selectedShaderContent = response;
         // create GUI buttons of the containing vec3
+        // main.shaderEngine.iChannel0 = Qt.resolvedUrl("./Resources/Shadertoy_Pebbles.png")
+        console.log(wallpaper)
         createVec3Buttons();
         createVariableFields();
       }
@@ -578,7 +580,7 @@ Item {
   }
 
   Component.onCompleted: {
-    // getShaderContent();
-    selectedShaderField.text = Qt.resolvedUrl("./Shaders/"+model.get(selectedShader.currentIndex, "fileName"));
+    getShaderContent();
+    // selectedShaderField.text = Qt.resolvedUrl("./Shaders/"+model.get(selectedShader.currentIndex, "fileName"));
   }
 }

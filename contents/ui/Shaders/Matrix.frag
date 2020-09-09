@@ -39,7 +39,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     st.y *= iResolution.y/iResolution.x;
 	vec3 fontColorMixed;
     vec3 fontColor;
-    vec3 bgColor = vec3(.20,.05,.15);
+    vec3 bgColor = vec3(.1,.025,.075);
     fontColor = vec3(0.3,0.7,0.5);
     fontColor = mix(matrix(st) * fontColor, matrix(st) * fontColor, matrix(st) * fontColor);
 	fragColor = vec4(fontColor + bgColor,.5);

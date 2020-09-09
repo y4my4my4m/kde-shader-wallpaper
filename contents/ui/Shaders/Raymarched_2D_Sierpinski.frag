@@ -1,8 +1,4 @@
-import QtQuick 2.12
-import QtQuick.Controls 2.12
-Item {
-    property Image iChannel0: Image { source: "./Shadertoy_Rusty_Metal.jpg" }
-    property string pixelShader: `
+// property Image iChannel0: Image { source: "./Shadertoy_Rusty_Metal.jpg" }
 
 // https://www.shadertoy.com/view/MsySWK
 // Credits to Shane
@@ -274,7 +270,4 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 
     // Presenting to the screen.
 	fragColor = vec4(sqrt(clamp(col, 0., 1.)), 1.);
-}
-
-`
 }

@@ -1,26 +1,21 @@
-import QtQuick 2.12
-import QtQuick.Controls 2.12
-Item {
-    property Image iChannel1: Image { source: "./Shadertoy_Stars.jpg" }
-    property Image iChannel0: Image { source: "./Shadertoy_Organic_2.jpg" }
-    property Image iChannel2: Image { source: "./Shadertoy_Gray_Noise_Medium.png" }
-    property string pixelShader: `
-
 // https://www.shadertoy.com/view/llj3Rz
 // Credits to inigo quilez - iq/2015
 
 // Created by inigo quilez - iq/2015
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
 
+// property Image iChannel0: Image { source: "./Shadertoy_Organic_2.jpg" }
+// property Image iChannel1: Image { source: "./Shadertoy_Stars.jpg" }
+// property Image iChannel2: Image { source: "./Shadertoy_Gray_Noise_Medium.png" }
 
 vec3 fancyCube( sampler2D sam, in vec3 d, in float s, in float b )
 {
     vec3 colx = texture( sam, 0.5 + s*d.yz/d.x, b ).xyz;
     vec3 coly = texture( sam, 0.5 + s*d.zx/d.y, b ).xyz;
     vec3 colz = texture( sam, 0.5 + s*d.xy/d.z, b ).xyz;
-    
+
     vec3 n = d*d;
-    
+
     return (colx*n.x + coly*n.y + colz*n.z)/(n.x+n.y+n.z);
 }
 
@@ -72,12 +67,12 @@ float sphSoftShadow( in vec3 ro, in vec3 rd, in vec4 sph, in float k )
     float c = dot( oc, oc ) - sph.w*sph.w;
     float h = b*b - c;
     return (b<0.0) ? 1.0 : 1.0 - smoothstep( 0.0, 1.0, k*h/b );
-}    
-   
+}
+
 
 vec3 sphNormal( in vec3 pos, in vec4 sph )
 {
-    return (pos - sph.xyz)/sph.w;    
+    return (pos - sph.xyz)/sph.w;
 }
 
 //=======================================================
@@ -90,10 +85,10 @@ vec3 background( in vec3 d, in vec3 l )
          col += 0.8*vec3(0.80,0.5,0.6)*pow( fancyCube( iChannel1, d, 0.1, 0.0 ).xxx, vec3(6.0) );
     float stars = smoothstep( 0.3, 0.7, fancyCube( iChannel1, d, 0.91, 0.0 ).x );
 
-    
+
     vec3 n = abs(d);
     n = n*n*n;
-    
+
     vec2 vxy = voronoi( 50.0*d.xy );
     vec2 vyz = voronoi( 50.0*d.yz );
     vec2 vzx = voronoi( 50.0*d.zx );
@@ -106,7 +101,7 @@ vec3 background( in vec3 d, in vec3 l )
     float s = clamp( dot(d,l), 0.0, 1.0 );
     col += 0.4*pow(s,5.0)*vec3(1.0,0.7,0.6)*2.0;
     col += 0.4*pow(s,64.0)*vec3(1.0,0.9,0.8)*2.0;
-    
+
     return col;
 
 }
@@ -130,28 +125,28 @@ float map( in vec3 pos )
 float rayMarch( in vec3 ro, in vec3 rd, float tmax )
 {
     float t = 0.0;
-    
+
     // bounding plane
     float h = (1.0-ro.y)/rd.y;
     if( h>0.0 ) t=h;
 
     // raymarch
-    for( int i=0; i<20; i++ )    
-    {        
+    for( int i=0; i<20; i++ )
+    {
         vec3 pos = ro + t*rd;
         float h = map( pos );
         if( h<0.001 || t>tmax ) break;
         t += h;
     }
-    return t;    
+    return t;
 }
 
 vec3 render( in vec3 ro, in vec3 rd )
 {
     vec3 lig = normalize( vec3(1.0,0.2,1.0) );
     vec3 col = background( rd, lig );
-    
-    // raytrace stuff    
+
+    // raytrace stuff
     float t = rayTrace( ro, rd );
 
     if( t>0.0 )
@@ -159,7 +154,7 @@ vec3 render( in vec3 ro, in vec3 rd )
         vec3 mat = vec3( 0.18 );
         vec3 pos = ro + t*rd;
         vec3 nor = sphNormal( pos, sph1 );
-            
+
         float am = 0.1*iTime;
         vec2 pr = vec2( cos(am), sin(am) );
         vec3 tnor = nor;
@@ -205,17 +200,17 @@ vec3 render( in vec3 ro, in vec3 rd )
         float tspe = pow( spe, 3.0 ) + 0.5*pow( spe, 16.0 );
         col += (1.0-0.5*los)*clamp(1.0-2.0*clouds,0.0,1.0)*0.3*vec3(0.5,0.4,0.3)*tspe*dif;;
     }
-    
-    // raymarch stuff    
+
+    // raymarch stuff
     float tmax = 20.0;
-    if( t>0.0 ) tmax = t; 
-    t = rayMarch( ro, rd, tmax );    
+    if( t>0.0 ) tmax = t;
+    t = rayMarch( ro, rd, tmax );
     if( t<tmax )
     {
             vec3 pos = ro + t*rd;
 
             vec2 scp = sin(2.0*6.2831*pos.xz);
-            
+
             vec3 wir = vec3( 0.0 );
             wir += 1.0*exp(-12.0*abs(scp.x));
             wir += 1.0*exp(-12.0*abs(scp.y));
@@ -224,7 +219,7 @@ vec3 render( in vec3 ro, in vec3 rd )
             wir *= 0.2 + 1.0*sphSoftShadow( pos, lig, sph1, 4.0 );
 
             col += wir*0.5*exp( -0.05*t*t );;
-    }        
+    }
 
     if( dot(rd,sph1.xyz-ro)>0.0 )
     {
@@ -234,8 +229,8 @@ vec3 render( in vec3 ro, in vec3 rd )
     glo += 0.6*vec3(0.6,0.7,1.0)*0.3*exp(-8.0*abs(d));
     glo += 0.6*vec3(0.8,0.9,1.0)*0.4*exp(-100.0*abs(d));
     col += glo*2.0;
-    }        
-    
+    }
+
     col *= smoothstep( 0.0, 6.0, iTime );
 
     return col;
@@ -263,7 +258,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 rd = normalize( cam * vec3( p, -2.0) );
 
     vec3 col = render( ro, rd );
-    
+
     vec2 q = fragCoord.xy / iResolution.xy;
     col *= 0.2 + 0.8*pow( 16.0*q.x*q.y*(1.0-q.x)*(1.0-q.y), 0.1 );
 
@@ -278,10 +273,8 @@ void mainVR( out vec4 fragColor, in vec2 fragCoord, in vec3 fragRayOri, in vec3 
 
     vec3 rt = vec3( 1.0, 0.0, 0.0 );
     mat3 cam = setCamera( ro, rt, 0.35 );
-    
+
     fragColor = vec4( render( ro + cam*fragRayOri,
                                    cam*fragRayDir ), 1.0 );
 
-}
-`
 }

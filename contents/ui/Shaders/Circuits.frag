@@ -1,13 +1,8 @@
-import QtQuick 2.12
-import QtQuick.Controls 2.12
-Item {
-	property Image iChannel1: Image { source: "./Shader_Circuits_iChannel1.jpg" }
-    property string pixelShader: `
-
 // https://www.shadertoy.com/view/XlX3Rj
 // Credits to Kali
 // This content is under the MIT License.
 
+//	property Image iChannel1: Image { source: "./Shader_Circuits_iChannel1.jpg" }
 #define time iTime*.02
 
 #define width .005
@@ -61,7 +56,4 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	vec3 colo=mix(vec3(.15),color,shape)*(1.-length(pos))*min(1.,abs(.5-mod(time+.5,1.))*10.);
 	colo*=vec3(1.2,1.1,1.0);
 	fragColor = vec4(colo,1.0);
-}
-
-`
 }

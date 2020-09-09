@@ -1,8 +1,3 @@
-import QtQuick 2.12
-import QtQuick.Controls 2.12
-Item {
-    property Image iChannel0: Image { source: "./Shadertoy_Rusty_Metal.jpg" }
-    property string pixelShader: `
 /*
     Neon Lit Hexagons
     -----------------
@@ -47,6 +42,7 @@ Item {
 
 */
 
+// property Image iChannel0: Image { source: "./Shadertoy_Rusty_Metal.jpg" }
 
 
 // Hexagon: 0, Dodecahedron: 1, Circle: 2.
@@ -1050,6 +1046,4 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 
     // Clamping the scene color, then presenting to the screen.
     fragColor = vec4(sqrt(clamp(sceneColor, 0.0, 1.0)), 1.0);
-}
-`
 }

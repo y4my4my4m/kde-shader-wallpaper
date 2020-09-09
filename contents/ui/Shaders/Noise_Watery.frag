@@ -1,9 +1,3 @@
-import QtQuick 2.12
-import QtQuick.Controls 2.12
-Item {
-    property Image iChannel0: Image { source: "./Shadertoy_Gray_Noise_Medium.png" }
-    property string pixelShader: `
-
 // https://www.shadertoy.com/view/MssSRS
 
 // Noise animation - Watery by nimitz (twitter: @stormoid)
@@ -18,6 +12,8 @@ Item {
 
 //#define CENTERED
 
+// property Image iChannel0: Image { source: "./Shadertoy_Gray_Noise_Medium.png" }
+
 #define time iTime*0.2
 
 mat2 makem2(in float theta){float c = cos(theta);float s = sin(theta);return mat2(c,-s,s,c);}
@@ -25,7 +21,7 @@ float noise( in vec2 x ){return texture(iChannel0, x*.01).x;}
 
 mat2 m2 = mat2( 0.80,  0.60, -0.60,  0.80 );
 float fbm( in vec2 p )
-{	
+{
 	float z=2.;
 	float rz = 0.;
 	for (float i= 1.;i < 7.;i++ )
@@ -54,13 +50,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	#else
 	p *= makem2(rb*.2+atan(p.y,p.x)*2.);
 	#endif
-	
+
 	//coloring
 	float rz = fbm(p*.9-time*.7);
 	rz *= dot(bp*5.,bp)+.5;
 	rz *= sin(p.x*.5+time*4.)*1.5;
 	vec3 col = vec3(.04,0.07,0.45)/(.1-rz);
 	fragColor = vec4(sqrt(abs(col)),1.0);
-}
-`
 }
