@@ -215,9 +215,25 @@ Item {
         }
 
         Button {
-          id: colorDialogCheckbox
-          text: i18n("TODO: Change default color")
+          text: i18n("Change first color")
           onClicked: {
+            colorDialog.number = 0
+            colorDialog.visible = !colorDialog.visible
+          }
+        }
+
+        Button {
+          text: i18n("Change second color")
+          onClicked: {
+            colorDialog.number = 1
+            colorDialog.visible = !colorDialog.visible
+          }
+        }
+
+        Button {
+          text: i18n("Change third color")
+          onClicked: {
+            colorDialog.number = 2
             colorDialog.visible = !colorDialog.visible
           }
         }
@@ -337,17 +353,18 @@ Item {
         id: colorDialog
         title: "Please choose a color"
         property string previousColor: colorDialog.color.r + ", " + colorDialog.color.g + ", " + colorDialog.color.b;
+        property int number: 0
         onCurrentColorChanged: {
             // console.log("You are choosing: " + colorDialog.currentColor.r, colorDialog.currentColor.g, colorDialog.currentColor.b)
             let color = colorDialog.currentColor.r + ", " + colorDialog.currentColor.g + ", " + colorDialog.currentColor.b;
-            findAndReplaceColor(color);
+            findAndReplaceColor(color, number);
         }
         onAccepted: {
             // console.log("You chose: " + colorDialog.color.r, colorDialog.color.g, colorDialog.color.b)
             Qt.quit()
         }
         onRejected: {
-            findAndReplaceColor(previousColor);
+            findAndReplaceColor(previousColor, number);
             // console.log("Canceled, set previous color back")
             Qt.quit()
         }
@@ -402,16 +419,23 @@ Item {
   // int      number   default 0           match case for the vec3 / which variable to hijack color of
   function findAndReplaceColor(color, number = 0){
 
-    let vec3regex = /(vec3\([+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+\))/;
-
+    let vec3regex         = /(vec3\([+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+\))/;
+    let vec3regexSingular = /(vec3\([+-]?([0-9]*[.])?[0-9]+\))/;
     // console.log("You are choosing: " + color);
     let currentShaderContent = wallpaper.configuration.selectedShaderContent;
 
      // find a vec3(0.0, 0.0, 0.0); spaces may be ignored
     let matches = currentShaderContent.match(vec3regex);
-    console.log('matches:', matches[number]);
+    let replacement = 'vec3('+color+')'
+    // console.log('matches', matches);
+    // vec3 may be vec3(0.33) for vec3(0.33,0.33,0.33)
+    if (!matches.length){
+      matches = currentShaderContent.match(vec3regexSingular);
+      replacement = 'vec3('+color+')'
+    }
+    // console.log(`number: ${number}, color: ${matches[number]}`);
 
-    currentShaderContent = currentShaderContent.replace(matches[number], 'vec3('+color+');');
+    currentShaderContent = currentShaderContent.replace(matches[number], replacement);
 
     // assign modified color to current shader
     wallpaper.configuration.selectedShaderContent = currentShaderContent;
