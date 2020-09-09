@@ -244,7 +244,7 @@ Item {
           ImageBtn {
               width: 32
               height: 32
-              imageUrl: isPaused ?  "./Components/play.svg" : "./Components/pause.svg"
+              imageUrl: isPaused ?  "./Resources/play.svg" : "./Resources/pause.svg"
               tipText: isPaused ? "Resume" : "Pause"
               property bool isPaused: false
               onClicked: {

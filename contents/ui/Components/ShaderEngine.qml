@@ -9,9 +9,9 @@ float       iTimeDelta              image/buffer        Time it takes to render 
 int         iFrame                  image/buffer        Current frame
 float       iFrameRate              image/buffer        Number of frames rendered per second
 float       iChannelTime[4]         image/buffer        Time for channel (if video or sound), in seconds
-vec3        iChannelResolution[4]	image/buffer/sound	Input texture resolution for each channel
+vec3        iChannelResolution[4]	  image/buffer/sound	Input texture resolution for each channel
 vec4        iMouse                  image/buffer        xy = current pixel coords (if LMB is down). zw = click pixel
-sampler2D	iChannel{i}             image/buffer/sound	Sampler for input textures i
+sampler2D	  iChannel{i}             image/buffer/sound	Sampler for input textures i
 vec4        iDate                   image/buffer/sound	Year, month, day, time in seconds in .xyzw
 float       iSampleRate             image/buffer/sound	The sound sample rate (typically 44100)
 */
@@ -37,15 +37,31 @@ ShaderEffect {
     property real       iFrameRate
     property double     shaderSpeed: 1.0
     property vector4d   iMouse;
-    property var iChannel0; //only Image or ShaderEffectSource
-    property var iChannel1; //only Image or ShaderEffectSource
-    property var iChannel2; //only Image or ShaderEffectSource
-    property var iChannel3; //only Image or ShaderEffectSource
+    property var        iChannel0: ich0; //only Image or ShaderEffectSource
+    property var        iChannel1: ich1; //only Image or ShaderEffectSource
+    property var        iChannel2: ich2; //only Image or ShaderEffectSource
+    property var        iChannel3: ich3; //only Image or ShaderEffectSource
     property var        iChannelTime: [0, 1, 2, 3]
     property var        iChannelResolution: [calcResolution(iChannel0), calcResolution(iChannel1), calcResolution(iChannel2), calcResolution(iChannel3)]
     property vector4d   iDate;
     property real       iSampleRate: 44100
 
+    Image {
+      id: ich0
+      source: Qt.resolvedUrl("../Resources/Shadertoy_Organic_3.jpg")
+    }
+    Image {
+      id: ich1
+      source: Qt.resolvedUrl("../Resources/Shadertoy_Organic_2.jpg")
+    }
+    Image {
+      id: ich2
+      source: Qt.resolvedUrl("../Resources/Shadertoy_Bayer.png")
+    }
+    Image {
+      id: ich3
+      source: Qt.resolvedUrl("../Resources/Shadertoy_London.jpg")
+    }
     //properties for Qml controller
     property alias hoverEnabled: mouse.hoverEnabled
     property bool running: true
