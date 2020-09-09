@@ -196,7 +196,7 @@ Item {
           text: i18n("Speed: %1\n(default is 1.0)", wallpaper.configuration.shaderSpeed)
         }
         Slider {
-          from: 0.0
+          from: -10.0
           to: 10.0
           id: speedSlider
           stepSize: 0.01
@@ -234,22 +234,36 @@ Item {
           text: i18n("Pause:")
         }
 
-        ImageBtn {
-            width: 32
-            height: 32
-            imageUrl: isPaused ?  "./Comp/play.svg" : "./Comp/pause.svg"
-            tipText: isPaused ? "Resume" : "Pause"
-            property bool isPaused: false
-            onClicked: {
-                wallpaper.configuration.running = isPaused
-                isPaused = !isPaused;
-            }
-            Rectangle {
-                anchors.fill: parent
-                color: "transparent"
-                border.width: parent.containsMouse ? 1 : 0
-                border.color: "gray"
-            }
+        RowLayout{
+
+          ImageBtn {
+              width: 32
+              height: 32
+              imageUrl: isPaused ?  "./Comp/play.svg" : "./Comp/pause.svg"
+              tipText: isPaused ? "Resume" : "Pause"
+              property bool isPaused: false
+              onClicked: {
+                  wallpaper.configuration.running = isPaused
+                  isPaused = !isPaused;
+              }
+              Rectangle {
+                  anchors.fill: parent
+                  color: "transparent"
+                  border.width: parent.containsMouse ? 1 : 0
+                  border.color: "gray"
+              }
+          }
+
+          // Text {
+          //     text: shaderEngine.iTime.toFixed(2)
+          //     color: "white"
+          //     anchors.verticalCenter: parent.verticalCenter
+          // }
+          Text {
+              text: wallpaper.configuration.running ? fpsItem.fps + " fps" : "stopped"
+              color: "white"
+              anchors.verticalCenter: parent.verticalCenter
+          }
         }
 
         Rectangle{
@@ -291,7 +305,7 @@ Item {
         }
         RadioButton {
           id: checkedSmartPlay
-          text: i18n("Pause the shader when maximized or full-screen windows.")
+          text: i18n("TODO: Pause the shader when maximized or full-screen windows.")
           checked: true
           // onCheckedChanged: {
           //   checkedBusyPlay.checked = !checkedSmartPlay.checked
@@ -305,7 +319,7 @@ Item {
         RadioButton {
           id: checkedBusyPlay
           // checked: !checkedSmartPlay.checked
-          text: i18n("Pause the shader when the desktop is busy.")
+          text: i18n("TODO: Pause the shader when the desktop is busy.")
           // onCheckedChanged: {
           //   checkedSmartPlay.checked = !checkedBusyPlay.checked
           // }
@@ -321,109 +335,29 @@ Item {
 
     ColorDialog {
         id: colorDialog
-        title: "(Experimental) Please choose a color"
+        title: "Please choose a color"
+        property string previousColor: colorDialog.color.r + ", " + colorDialog.color.g + ", " + colorDialog.color.b;
+        onCurrentColorChanged: {
+            // console.log("You are choosing: " + colorDialog.currentColor.r, colorDialog.currentColor.g, colorDialog.currentColor.b)
+            let color = colorDialog.currentColor.r + ", " + colorDialog.currentColor.g + ", " + colorDialog.currentColor.b;
+            findAndReplaceColor(color);
+        }
         onAccepted: {
-            console.log("You chose: " + colorDialog.color)
+            // console.log("You chose: " + colorDialog.color.r, colorDialog.color.g, colorDialog.color.b)
             Qt.quit()
         }
         onRejected: {
-            console.log("Canceled")
+            findAndReplaceColor(previousColor);
+            // console.log("Canceled, set previous color back")
             Qt.quit()
         }
     }
 
 
-    // TODO: Add FPS/Pause GUI options
-    // Image {
-    //     source: "./Img/reset.png"
-    //     width: 32
-    //     height: 32
-    //
-    //     MouseArea {
-    //         anchors.fill: parent
-    //         onClicked: {
-    //           // toy.restart()
-    //           // console.log(root)
-    //         }
-    //     }
-    // }
-    //
-    // Image {
-    //     width: 32
-    //     height: 32
-    //     source: isPaused ?  "./Img/resume.png" : "./Img/pause.png"
-    //
-    //     MouseArea {
-    //         anchors.fill: parent
-    //         onClicked: {
-    //           isPaused = !isPaused;
-    //           // root.toyLoader.doPause(isPaused)
-    //           // toy.running != toy.running
-    //         }
-    //     }
-    //     Rectangle {
-    //         anchors.fill: parent
-    //         color: "transparent"
-    //         border.width: parent.containsMouse ? 1 : 0
-    //         border.color: "gray"
-    //     }
-    // }
-    //   RowLayout{
-    //     spacing: units.largeSpacing / 2
-    //     Layout.minimumWidth: width
-    //     Layout.maximumWidth: width
-    //     width: formAlignment - units.largeSpacing
-    //     CheckBox {
-    //       id: checkedSmartPlay
-    //       text: i18n("Pause when maximized or fullscreen")
-    //       checked: false
-    //       // onCheckedChanged: {
-    //       //     checkedBusyPlay.checked = !checkedSmartPlay.checked
-    //       // }
-    //     }
-    //   }
-    //
-    //   RowLayout{
-    //     spacing: units.largeSpacing / 2
-    //     Layout.minimumWidth: width
-    //     Layout.maximumWidth: width
-    //     CheckBox {
-    //       id: checkedBusyPlay
-    //       text: i18n("Pause when PC needs resources")
-    //       checked: false
-    //       // onCheckedChanged: {
-    //       //     checkedSmartPlay.checked = !checkedBusyPlay.checked
-    //       // }
-    //     }
-    //   }
-    // TShaderToy {
-    //   id: toy
-    // }
-    // FPSItem {
-    //     id: fpsItem
-    //     running: toy.running
-    // }
-    // RowLayout {
-    //   spacing: units.largeSpacing / 2
-    //
-    //   Text {
-    //       Layout.minimumWidth: width
-    //       Layout.maximumWidth: width
-    //       width: formAlignment - units.largeSpacing
-    //       horizontalAlignment: Text.AlignRight
-    //       text: toy.iTime.toFixed(2) + ":"
-    //       color: "white"
-    //       anchors.verticalCenter: parent.verticalCenter
-    //   }
-    //   Text {
-    //       Layout.minimumWidth: width
-    //       Layout.maximumWidth: width
-    //       width: formAlignment - units.largeSpacing
-    //       text: fpsItem.fps + " fps"
-    //       color: "white"
-    //       anchors.verticalCenter: parent.verticalCenter
-    //   }
-    // }
+    FPSItem {
+        id: fpsItem
+        running: shaderEngine.running
+    }
 
   }
 
@@ -461,6 +395,27 @@ Item {
     }
 
     xhr.send();
+  }
+
+
+  // string   color    rgb                  combined color from colorDialog in rgb
+  // int      number   default 0           match case for the vec3 / which variable to hijack color of
+  function findAndReplaceColor(color, number = 0){
+
+    let vec3regex = /(vec3\([+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+\))/;
+
+    // console.log("You are choosing: " + color);
+    let currentShaderContent = wallpaper.configuration.selectedShaderContent;
+
+     // find a vec3(0.0, 0.0, 0.0); spaces may be ignored
+    let matches = currentShaderContent.match(vec3regex);
+    console.log('matches:', matches[number]);
+
+    currentShaderContent = currentShaderContent.replace(matches[number], 'vec3('+color+');');
+
+    // assign modified color to current shader
+    wallpaper.configuration.selectedShaderContent = currentShaderContent;
+
   }
 
 }

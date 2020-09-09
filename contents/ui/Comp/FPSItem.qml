@@ -2,7 +2,7 @@
 import QtQuick.Controls 2.12
 Item {
     id: fpsRoot
-    property int fps: 60
+    property int fps: 144
     property int frameCount: 0
     property bool running: true
 
@@ -24,7 +24,7 @@ Item {
         running: fpsRoot.running
         onRunningChanged: {
             if (running) {
-                fps = 60
+                fps = 144
                 frameCount = 0
             }
         }
