@@ -3,7 +3,7 @@ import QtQuick.Layouts 1
 import QtQuick.Controls 2.12
 import QtQuick.Dialogs 1.3
 import Qt.labs.folderlistmodel 2
-import "./Comp"
+import "./Components"
 
 import org.kde.plasma.core 2.0 as PlasmaCore
 
@@ -205,37 +205,15 @@ Item {
           onValueChanged: wallpaper.configuration.shaderSpeed = value
         }
 
-        // Shader Color 1
-        // TODO: Since the shader is just a long string, it should be possible to conditionally RegEx scan for
-        //       any vec3(double,double,double) and procedurally add color pickers
         Rectangle{
           width: 340;
           height: 1
           color: "#555"
         }
 
-        Button {
-          text: i18n("Change first color")
-          onClicked: {
-            colorDialog.number = 0
-            colorDialog.visible = !colorDialog.visible
-          }
-        }
-
-        Button {
-          text: i18n("Change second color")
-          onClicked: {
-            colorDialog.number = 1
-            colorDialog.visible = !colorDialog.visible
-          }
-        }
-
-        Button {
-          text: i18n("Change third color")
-          onClicked: {
-            colorDialog.number = 2
-            colorDialog.visible = !colorDialog.visible
-          }
+        // Shader vec3 container
+        ColumnLayout{
+          id: buttonContainer
         }
 
         Rectangle{
@@ -243,8 +221,8 @@ Item {
           height: 1
           color: "#555"
         }
+
         // Resume/Pause
-
         Label {
           width:100
           text: i18n("Pause:")
@@ -408,19 +386,31 @@ Item {
           response = response.Shader.renderpass[0].code
         }
         wallpaper.configuration.selectedShaderContent = response;
+        // create GUI buttons of the containing vec3
+        createVec3Buttons();
       }
     }
 
     xhr.send();
   }
 
+  function getShaderVec3s(){
+    let vec3regex         = /(vec3\([+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+\))/g;
+    let vec3regexSingular = /(vec3\([+-]?([0-9]*[.])?[0-9]+\))/g;
+
+    let currentShaderContent = wallpaper.configuration.selectedShaderContent;
+    let matches = currentShaderContent.match(vec3regex);
+    if (matches.length == 0) matches = currentShaderContent.match(vec3regexSingular);
+    
+    return matches.length ? matches.length : 0;
+  }
 
   // string   color    rgb                  combined color from colorDialog in rgb
   // int      number   default 0           match case for the vec3 / which variable to hijack color of
   function findAndReplaceColor(color, number = 0){
 
-    let vec3regex         = /(vec3\([+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+\))/;
-    let vec3regexSingular = /(vec3\([+-]?([0-9]*[.])?[0-9]+\))/;
+    let vec3regex         = /(vec3\([+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+\))/g;
+    let vec3regexSingular = /(vec3\([+-]?([0-9]*[.])?[0-9]+\))/g;
     // console.log("You are choosing: " + color);
     let currentShaderContent = wallpaper.configuration.selectedShaderContent;
 
@@ -428,6 +418,7 @@ Item {
     let matches = currentShaderContent.match(vec3regex);
     let replacement = 'vec3('+color+')'
     // console.log('matches', matches);
+
     // vec3 may be vec3(0.33) for vec3(0.33,0.33,0.33)
     if (!matches.length){
       matches = currentShaderContent.match(vec3regexSingular);
@@ -440,6 +431,25 @@ Item {
     // assign modified color to current shader
     wallpaper.configuration.selectedShaderContent = currentShaderContent;
 
+  }
+  property variant vec3buttonsList: [];
+
+  function createVec3Buttons(){
+    for(var i = buttonContainer.children.length; i > 0; i--) {
+        buttonContainer.children[i-1].destroy();
+    }
+    for (var i=0; i<getShaderVec3s(); i++) {
+        let objStr = `import QtQuick 2.0; import QtQuick.Controls 2.12;Button {
+            property int number: `+i+`
+            id: vec3button_`+i+`
+            text: i18n("Change color of "+`+i+`)
+            onClicked: {
+              colorDialog.number = `+i+`
+              colorDialog.visible = !colorDialog.visible
+            }
+          }`;
+        var button = Qt.createQmlObject(objStr, buttonContainer);
+    }
   }
 
 }

@@ -24,41 +24,15 @@
 
 import QtQuick 2.12
 import QtQuick.Controls 2.12
-import "./Comp"
+import "./Components"
 
 Item {
     id: main
-    // Loader {
-    //   id: toyLoader
-    //   // source: wallpaper.configuration.selectedShader
-    //   // source: wallpaper.configuration.selectedShaderContent
-    //   // source: "file:///home/y4my4m/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders/2D_Clouds.frag"
-    //   anchors.fill: parent
-    //   onLoaded: {
-    //     // toy.shaderSpeed = wallpaper.configuration.shaderSpeed
-    //     // toy.pixelShader = item.pixelShader
-    //     // if (item.iChannel0) {
-    //     //   toy.iChannel0 = item.iChannel0
-    //     // }
-    //     // if (item.iChannel1) {
-    //     //   toy.iChannel1 = item.iChannel1
-    //     // }
-    //     // if (item.iChannel2) {
-    //     //   toy.iChannel2 = item.iChannel2
-    //     // }
-    //     // if (item.iChannel3) {
-    //     //   toy.iChannel3 = item.iChannel3
-    //     // }
-    //     toy.restart()
-    //   }
-    // }
+
     ShaderEngine {
       id: shaderEngine
       anchors.fill: parent
       running: wallpaper.configuration.running
     }
 
-    // function doPause(){
-    //   toy.running != item.running
-    // }
 }
