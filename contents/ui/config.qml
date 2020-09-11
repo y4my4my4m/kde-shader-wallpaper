@@ -12,11 +12,13 @@ Item {
   property alias cfg_checkGl3Ver:  checkGl3Ver.checked
   property alias cfg_checkedSmartPlay: checkedSmartPlay.checked
   property alias cfg_checkedBusyPlay:  checkedBusyPlay.checked
-  // property bool isPaused: false
+
+  Layout.fillWidth: true
 
   // Resume/Pause
   ColumnLayout {
     spacing: units.largeSpacing
+    Layout.fillWidth: true
 
     Label {
       width:100
@@ -43,19 +45,18 @@ Item {
           }
       }
 
-      // Text {
-      //     text: shaderEngine.iTime.toFixed(2)
-      //     color: "white"
-      //     anchors.verticalCenter: parent.verticalCenter
-      // }
       Text {
           text: wallpaper.configuration.running ? fpsItem.fps + " fps" : "stopped"
           color: "white"
           anchors.verticalCenter: parent.verticalCenter
       }
+
     }
   }
 
+  //**********************
+  //*** Configuration  ***
+  //**********************
   ColumnLayout {
 
     //************************
@@ -165,7 +166,6 @@ Item {
     RowLayout {
       Layout.topMargin: 25
       Layout.bottomMargin: 5
-      spacing: units.largeSpacing
 
       Text {
         width:100
@@ -175,22 +175,31 @@ Item {
         text: i18n("Customization:")
       }
       Rectangle{
-        width: 600;
+        Layout.fillWidth: true
         height: 1
-        color: "#555"
+        color: Qt.rgba(255,255,255,0.25);
       }
     }
+    // Content FIXME: ScrollView doesnt actually scroll?
+    ScrollView {
+      id: scrollview
+      clip: true
+      Layout.fillWidth: true
+      Layout.fillHeight: true
+      contentItem:scrollviewContent
+      ScrollBar.vertical.policy: ScrollBar.AlwaysOn
+      // ScrollBar.vertical.visible: ScrollBar.vertical.size < 1
+      ScrollBar.horizontal.policy: ScrollBar.AlwaysOn
+      // ScrollBar.horizontal.visible: ScrollBar.horizontal.size < 1
+      padding: 10
 
-    ColumnLayout {
-
-      //**************
-      //*** Global ***
-      //**************
-
-      // Shader Speed
       ColumnLayout{
-        spacing: units.largeSpacing
+        id: scrollviewContent
+        //**************
+        //*** Global ***
+        //**************
 
+        // Shader Speed
         RowLayout {
 
           Text {
@@ -216,36 +225,21 @@ Item {
           Rectangle{
             anchors.fill: parent
             // anchors.centerIn: parent
-            border.color: Qt.rgba(255,255,255,0.35)
+            border.color: Qt.rgba(255,255,255,0.05)
             border.width: 1
             radius: 4
             color: "transparent"
           }
         }
-      }
 
 
-      //*******************
-      //*** Vec3s/Vars ***
-      //*******************
+        //*******************
+        //*** Vec3s/Vars ***
+        //*******************
 
-      // Customization elements
-      ColumnLayout{
-        spacing: units.largeSpacing
-
-
+        // Customization elements
         GridLayout{
-          id: gridOne
-          // anchors.fill: parent
-          property double colMulti : gridOne.width / gridOne.columns
-          property double rowMulti : gridOne.height / gridOne.rows
           columns:2
-          function prefWidth(item){
-              return colMulti * item.Layout.columnSpan
-          }
-          function prefHeight(item){
-              return rowMulti * item.Layout.rowSpan
-          }
 
           // iChannels
           ColumnLayout {
@@ -254,7 +248,7 @@ Item {
             Rectangle{
               anchors.fill: parent
               // anchors.centerIn: parent
-              border.color: Qt.rgba(255,255,255,0.35)
+              border.color: Qt.rgba(255,255,255,0.05)
               border.width: 1
               radius: 4
               color: "transparent"
@@ -271,8 +265,6 @@ Item {
               }
               CheckBox {
                 id: iChannel0_flag
-                Layout.minimumWidth: width
-                Layout.maximumWidth: width
                 width: 35
                 checked: wallpaper.configuration.iChannel0_flag
                 onCheckedChanged: {
@@ -281,14 +273,12 @@ Item {
               }
               TextField {
                 id: iChannel0Field
-                placeholderText: "path to iChannel0"
+                placeholderText: "TODO: path to iChannel0"
+                opacity: 0.45
+                enabled: false
                 onEditingFinished: {
                   // iChannel0Field.text;
                 }
-              }
-              Text {
-                padding: 5
-                text: ""
               }
 
             }
@@ -303,8 +293,6 @@ Item {
               }
               CheckBox {
                 id: iChannel1_flag
-                Layout.minimumWidth: width
-                Layout.maximumWidth: width
                 width: 35
                 checked: wallpaper.configuration.iChannel1_flag
                 onCheckedChanged: {
@@ -313,14 +301,12 @@ Item {
               }
               TextField {
                 id: iChannel1Field
-                placeholderText: "path to iChannel1"
+                placeholderText: "TODO: path to iChannel1"
                 onEditingFinished: {
                   // iChannel0Field.text;
                 }
-              }
-              Text {
-                padding: 5
-                text: ""
+                opacity: 0.45
+                enabled: false
               }
             }
             // iChannel2
@@ -334,8 +320,6 @@ Item {
               }
               CheckBox {
                 id: iChanne2_flag
-                Layout.minimumWidth: width
-                Layout.maximumWidth: width
                 width: 35
                 checked: wallpaper.configuration.iChannel2_flag
                 onCheckedChanged: {
@@ -344,14 +328,12 @@ Item {
               }
               TextField {
                 id: iChannel2Field
-                placeholderText: "path to iChannel2"
+                placeholderText: "TODO: path to iChannel2"
                 onEditingFinished: {
                   // iChannel0Field.text;
                 }
-              }
-              Text {
-                padding: 5
-                text: ""
+                opacity: 0.45
+                enabled: false
               }
             }
             // iChannel3
@@ -365,8 +347,6 @@ Item {
               }
               CheckBox {
                 id: iChanne3_flag
-                Layout.minimumWidth: width
-                Layout.maximumWidth: width
                 width: 35
                 checked: wallpaper.configuration.iChannel3_flag
                 onCheckedChanged: {
@@ -375,19 +355,16 @@ Item {
               }
               TextField {
                 id: iChannel3Field
-                placeholderText: "path to iChannel3"
+                placeholderText: "TODO: path to iChannel3"
                 onEditingFinished: {
                   // iChannel0Field.text;
                 }
-              }
-              Text {
-                padding: 5
-                text: ""
+                opacity: 0.45
+                enabled: false
               }
             }
 
           }
-
 
           // vec3s container
           ColumnLayout{
@@ -396,14 +373,12 @@ Item {
             Layout.fillWidth: true
 
             Layout.columnSpan: 1
-            // Layout.preferredWidth  : gridOne.prefWidth(this)
-            // Layout.preferredHeight : gridOne.prefHeight(this)
 
             Rectangle{
               Layout.fillHeight: true
               Layout.fillWidth: true
               anchors.fill: parent
-              border.color: Qt.rgba(255,255,255,0.35)
+              border.color: Qt.rgba(255,255,255,0.05)
               border.width: 1
               radius: 4
               color: "transparent"
@@ -422,210 +397,208 @@ Item {
           }
 
         }
-      }
 
-      // vars container
-      ColumnLayout {
-
+        // vars container
         RowLayout{
-          anchors.verticalCenter  : parent.verticalCenter
-          anchors.horizontalCenter: parent.horizontalCenter
+
           Rectangle{
             anchors.fill: parent
-            border.color: Qt.rgba(255,255,255,0.35)
+            border.color: Qt.rgba(255,255,255,0.05)
             border.width: 1
+            Layout.fillHeight: true
+            Layout.fillWidth : true
             radius: 4
             color: "transparent"
           }
           GridLayout{
+            Layout.topMargin: 10
+            Layout.bottomMargin:10
             Layout.fillHeight: true
             Layout.fillWidth : true
-            anchors.verticalCenter  : parent.verticalCenter
             anchors.horizontalCenter: parent.horizontalCenter
             columns: 3
             id: variableContainer
           }
-
-        }
-      }
-
-
-      //*******************
-      //*** Performance ***
-      //*******************
-
-      ColumnLayout {
-        // Title
-        RowLayout {
-          Layout.topMargin: 25
-          Layout.bottomMargin: 5
-
-          Text {
-            width:100
-            font.bold: true
-            color: "white"
-            font.pointSize: 16
-            text: i18n("Performance:")
-          }
-          Rectangle{
-            Layout.fillWidth: true
-            height: 1
-            color: "#555"
-          }
         }
 
-        RowLayout {
 
+        //*******************
+        //*** Performance ***
+        //*******************
+
+
+        ColumnLayout {
+          // Title
+          RowLayout {
+            Layout.topMargin: 25
+            Text {
+              width:100
+              font.bold: true
+              color: "white"
+              font.pointSize: 16
+              text: i18n("Performance:")
+            }
+            Rectangle{
+              Layout.fillWidth: true
+              height: 1
+              color: Qt.rgba(255,255,255,0.25);
+            }
+          }
+          // Content
           ColumnLayout {
 
-            Rectangle{
-              Layout.fillHeight: true
-              Layout.fillWidth: true
-              anchors.fill: parent
-              border.color: Qt.rgba(255,255,255,0.35)
-              border.width: 1
-              radius: 4
-              color: "transparent"
-            }
+              Rectangle{
+                Layout.fillHeight: true
+                Layout.fillWidth: true
+                anchors.fill: parent
+                border.color: Qt.rgba(255,255,255,0.05)
+                border.width: 1
+                radius: 4
+                color: "transparent"
+              }
 
-            RowLayout{
-              Text {
-                width:100
-                color: "white"
-                padding:5
+              RowLayout{
+                Text {
+                  width:100
+                  color: "white"
+                  padding:5
+                }
+                CheckBox {
+                  id: checkGl3Ver
+                  text: i18n("Compatibility mode (GL3 version)")
+                  checked: true
+                }
               }
-              CheckBox {
-                id: checkGl3Ver
-                text: i18n("Change gl3 version")
-                checked: true
+              // TODO: Fullscreen/Busy
+              RowLayout{
+                Text {
+                  width:100
+                  color: "white"
+                  padding:5
+                }
+                RadioButton {
+                  id: checkedSmartPlay
+                  checkable: false
+                  opacity: 0.25
+                  text: i18n("TODO: Pause the shader when maximized or full-screen windows.")
+                  // onCheckedChanged: {
+                  //   checkedBusyPlay.checked = !checkedSmartPlay.checked
+                  // }
+                }
               }
-            }
-            // TODO: Fullscreen/Busy
-            RowLayout{
-              Text {
-                width:100
-                color: "white"
-                padding:5
-              }
-              RadioButton {
-                id: checkedSmartPlay
-                text: i18n("TODO: Pause the shader when maximized or full-screen windows.")
-                checked: true
-                // onCheckedChanged: {
-                //   checkedBusyPlay.checked = !checkedSmartPlay.checked
-                // }
-              }
-            }
 
-            RowLayout{
-              Layout.fillWidth: true
-              Text {
-                width:100
-                color: "white"
-                padding:5
+              RowLayout{
+                Layout.fillWidth: true
+                Text {
+                  width:100
+                  color: "white"
+                  padding:5
+                }
+                RadioButton {
+                  id: checkedBusyPlay
+                  checkable: false
+                  opacity: 0.25
+                  // checked: !checkedSmartPlay.checked
+                  text: i18n("TODO: Pause the shader when the desktop is busy.")
+                  // onCheckedChanged: {
+                  //   checkedSmartPlay.checked = !checkedBusyPlay.checked
+                  // }
+                }
               }
-              RadioButton {
-                id: checkedBusyPlay
-                // checked: !checkedSmartPlay.checked
-                text: i18n("TODO: Pause the shader when the desktop is busy.")
-                // onCheckedChanged: {
-                //   checkedSmartPlay.checked = !checkedBusyPlay.checked
-                // }
-              }
-            }
           }
+
 
         }
 
-      }
-
-    }
-
-    //****************
-    //*** Footnote ***
-    //****************
-    // Title
-    RowLayout {
-      Layout.topMargin: 25
-      Layout.bottomMargin: 5
-      spacing: units.largeSpacing
-
-      Text {
-        font.bold: true
-        color: "white"
-        font.pointSize: 16
-        text: i18n("Info:")
-      }
-      Rectangle{
-        Layout.fillWidth: true
-        height: 1
-        color: "#555"
-      }
-    }
-
-    RowLayout {
-
-      ColumnLayout {
-        Layout.fillHeight: true
-        Layout.fillWidth: true
-        anchors.fill: parent
-        // Support
-        RowLayout{
-          Label {
-            font.bold: true
-            text: "Support:"
-          }
-
-          Text {
-            text: "<a href='https://github.com/y4my4my4m'>Github</a> | <a href='https://twitter.com/y4my4my4m'>Twitter</a>"
-            onLinkActivated: Qt.openUrlExternally(link)
-            color:"white"
-            MouseArea {
-              anchors.fill: parent
-              acceptedButtons: Qt.NoButton // we don't want to eat clicks on the Text
-              cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
-            }
-          }
-        }
-        // Notice
-        RowLayout{
-          ColumnLayout{
-            Label {
-              font.bold: true
-              text: "Notice:"
-            }
-
+        //****************
+        //*** Footnote ***
+        //****************
+        ColumnLayout {
+          Layout.topMargin: 20
+          Layout.bottomMargin: 10
+          // Title
+          RowLayout {
             Text {
+              font.bold: true
               color: "white"
-              text: "In case of emergency, delete folder in\n\"~/.local/share/plasma/wallpaper/online.knowmad.shaderwallpaper\",\nthen run: \"pkill plasmashell && plasmashell &\" to relaunch it.\n\nUse with caution."
+              font.pointSize: 16
+              text: i18n("Info:")
+            }
+            Rectangle{
+              Layout.fillWidth: true
+              height: 1
+              color: Qt.rgba(255,255,255,0.25);
+            }
+          }
+
+          // Content
+          ColumnLayout {
+            Layout.fillHeight: true
+            Layout.fillWidth: true
+            // Notice
+            RowLayout{
+              Layout.bottomMargin: 20
+              Text {
+                color: "white"
+                text: "In case of emergency, delete folder in\n\"~/.local/share/plasma/wallpaper/online.knowmad.shaderwallpaper\",\nthen run: \"pkill plasmashell && plasmashell &\" to relaunch it.\n\nUse with caution."
+              }
             }
 
+            RowLayout{
+              Layout.fillWidth: true
+              // Donation
+              ColumnLayout {
+                Layout.fillWidth: true
+                Layout.bottomMargin: 20
+                Layout.maximumWidth: 200
+                anchors.left: parent.left
+                Label {
+                  font.bold: true
+                  font.pointSize: 14
+                  text: "Donate:"
+                }
+
+                Text {
+                  Layout.minimumWidth: width
+                  Layout.maximumWidth: width
+                  width: formAlignment - units.largeSpacing
+                  horizontalAlignment: Text.AlignLeft
+                  text: "<a href='https://ko-fi.com/y4my4my4m'>ko-fi</a>"
+                  onLinkActivated: Qt.openUrlExternally(link)
+                  color:"white"
+                  MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.NoButton
+                    cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+                  }
+                }
+              }
+              // Support
+              ColumnLayout {
+                Layout.fillWidth: true
+                anchors.right: parent.right
+                Label {
+                  font.bold: true
+                  font.pointSize: 14
+                  text: "Support:"
+                }
+
+                Text {
+                  text: "<a href='https://github.com/y4my4my4m'>Github</a> | <a href='https://twitter.com/y4my4my4m'>Twitter</a>"
+                  onLinkActivated: Qt.openUrlExternally(link)
+                  color:"white"
+                  MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.NoButton // we don't want to eat clicks on the Text
+                    cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+                  }
+                }
+              }
+            }
           }
 
         }
-        // Donation
-        RowLayout {
-          Layout.maximumWidth: 200
-          Label {
-            font.bold: true
-            text: "Donate:"
-          }
 
-          Text {
-            Layout.minimumWidth: width
-            Layout.maximumWidth: width
-            width: formAlignment - units.largeSpacing
-            horizontalAlignment: Text.AlignLeft
-            text: "<a href='https://ko-fi.com/y4my4my4m'>ko-fi</a>"
-            onLinkActivated: Qt.openUrlExternally(link)
-            color:"white"
-            MouseArea {
-              anchors.fill: parent
-              acceptedButtons: Qt.NoButton
-              cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
-            }
-          }
-        }
       }
 
     }
@@ -633,6 +606,10 @@ Item {
 
   }
 
+
+  //*******************
+  //*** Components  ***
+  //*******************
   ColorDialog {
     id: colorDialog
     title: "Please choose a color"
@@ -869,6 +846,7 @@ Item {
     }
     for (var i=0; i<getShaderVec3s(); i++) {
         // should load GUIButton.qml instead
+        // FIXME: ColorDialog defaults to a color when opened, should use the current variable
         let objStr = `
             import QtQuick 2.12;
             import QtQuick.Controls 2.12;
@@ -886,7 +864,10 @@ Item {
   }
 
   Component.onCompleted: {
-    getShaderContent();
+    if(!selectedShaderField.text) getShaderContent();
+
+    createVec3Buttons();
+    createVariableFields();
     // selectedShaderField.text = Qt.resolvedUrl("./Shaders/"+model.get(selectedShader.currentIndex, "fileName"));
   }
 }
