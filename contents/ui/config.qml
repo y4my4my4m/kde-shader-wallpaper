@@ -14,391 +14,498 @@ Item {
   property alias cfg_checkedBusyPlay:  checkedBusyPlay.checked
   // property bool isPaused: false
 
+  // Resume/Pause
+  ColumnLayout {
+    spacing: units.largeSpacing
+
+    Label {
+      width:100
+      text: i18n("Pause:")
+    }
+
+    RowLayout{
+
+      ImageBtn {
+          width: 32
+          height: 32
+          imageUrl: isPaused ?  "./Resources/play.svg" : "./Resources/pause.svg"
+          tipText: isPaused ? "Resume" : "Pause"
+          property bool isPaused: false
+          onClicked: {
+              wallpaper.configuration.running = isPaused
+              isPaused = !isPaused;
+          }
+          Rectangle {
+              anchors.fill: parent
+              color: "transparent"
+              border.width: parent.containsMouse ? 1 : 0
+              border.color: "gray"
+          }
+      }
+
+      // Text {
+      //     text: shaderEngine.iTime.toFixed(2)
+      //     color: "white"
+      //     anchors.verticalCenter: parent.verticalCenter
+      // }
+      Text {
+          text: wallpaper.configuration.running ? fpsItem.fps + " fps" : "stopped"
+          color: "white"
+          anchors.verticalCenter: parent.verticalCenter
+      }
+    }
+  }
+
   ColumnLayout {
 
     //************************
     //*** Shader Selection ***
     //************************
-    RowLayout {
+    ColumnLayout {
       spacing: units.largeSpacing / 2
-      width: parent.width
-      height: parent.height
-      anchors.fill: parent
-      // contentWidth: childrenRect.width
-      // contentHeight: childrenRect.height
-
-      // anchors {
-      //   top: parent.top
-      //   left: parent.left
-      // }
-
-      ColumnLayout{
-        anchors.fill: parent
-        spacing: units.largeSpacing
-        // Layout.minimumWidth: width
-        // Layout.maximumWidth: width
-        // width: formAlignment - units.largeSpacing
-        // anchors.verticalCenter: parent.verticalCenter
-
-
-        RowLayout {
-          spacing: units.largeSpacing / 2
-          Label {
-            Layout.minimumWidth: width
-            Layout.maximumWidth: width
-            width: formAlignment - units.largeSpacing
-            horizontalAlignment: Text.AlignRight
-            text: "Selected Shader:"
-          }
-
-          ComboBox {
-            id: selectedShader
-            Layout.minimumWidth: width
-            Layout.maximumWidth: width
-            width: 435
-            model: FolderListModel {
-              id: folderListModel
-              showDirs: false
-              nameFilters: ["*.frag"]
-              folder: "./Shaders"
-            }
-            delegate: Component {
-              id: folderListDelegate
-              ItemDelegate {
-                  text: fileBaseName.replace("_"," ")
-               }
-            }
-
-            textRole: "fileBaseName"
-            displayText: currentText.replace("_"," ")
-
-            onCurrentTextChanged: {
-              selectedShaderField.text = Qt.resolvedUrl("./Shaders/"+model.get(currentIndex, "fileName"));
-              getShaderContent();
-            }
-          }
-        }
-        RowLayout {
+      RowLayout {
           spacing: units.largeSpacing / 2
 
-          Label {
-            Layout.minimumWidth: width
-            Layout.maximumWidth: width
-            width: formAlignment - units.largeSpacing
-            horizontalAlignment: Text.AlignRight
-            text: "Shader Path:"
-          }
+          ColumnLayout {
+            spacing: units.largeSpacing
 
-          TextField {
-            id: selectedShaderField
-            Layout.minimumWidth: width
-            Layout.maximumWidth: width
-            width: 435
-            onEditingFinished: {
-              selectedShaderField.text;
-              getShaderContent();
-            }
-          }
+            RowLayout {
+              spacing: units.largeSpacing / 2
 
-          Button {
-            id: imageButton
-            implicitWidth: height
-            PlasmaCore.IconItem {
-              anchors.fill: parent
-              source: "document-open"
-              PlasmaCore.ToolTipArea {
-                anchors.fill: parent
-                subText: "Pick Shader"
+              Label {
+                Layout.minimumWidth: width
+                Layout.maximumWidth: width
+                width: formAlignment - units.largeSpacing
+                horizontalAlignment: Text.AlignRight
+                text: "Selected Shader:"
+              }
+
+              ComboBox {
+                id: selectedShader
+                Layout.minimumWidth: width
+                Layout.maximumWidth: width
+                width: 435
+                model: FolderListModel {
+                  id: folderListModel
+                  showDirs: false
+                  nameFilters: ["*.frag"]
+                  folder: "./Shaders"
+                }
+                delegate: Component {
+                  id: folderListDelegate
+                  ItemDelegate {
+                      text: fileBaseName.replace("_"," ")
+                   }
+                }
+
+                textRole: "fileBaseName"
+                displayText: currentText.replace("_"," ")
+
+                onCurrentTextChanged: {
+                  selectedShaderField.text = Qt.resolvedUrl("./Shaders/"+model.get(currentIndex, "fileName"));
+                  getShaderContent();
+                }
               }
             }
-            MouseArea {
-              anchors.fill: parent
-              onClicked: {
-                fileDialog.folder = fileDialog.shortcuts.home+"/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders/"
-                fileDialog.open()
+
+            RowLayout {
+              spacing: units.largeSpacing / 2
+
+              Label {
+                Layout.minimumWidth: width
+                Layout.maximumWidth: width
+                width: formAlignment - units.largeSpacing
+                horizontalAlignment: Text.AlignRight
+                text: "Shader Path:"
               }
+
+              TextField {
+                id: selectedShaderField
+                Layout.minimumWidth: width
+                Layout.maximumWidth: width
+                width: 435
+                onEditingFinished: {
+                  selectedShaderField.text;
+                  getShaderContent();
+                }
+              }
+
+              Button {
+                id: imageButton
+                implicitWidth: height
+                PlasmaCore.IconItem {
+                  anchors.fill: parent
+                  source: "document-open"
+                  PlasmaCore.ToolTipArea {
+                    anchors.fill: parent
+                    subText: "Pick Shader"
+                  }
+                }
+                MouseArea {
+                  anchors.fill: parent
+                  onClicked: {
+                    fileDialog.folder = fileDialog.shortcuts.home+"/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders/"
+                    fileDialog.open()
+                  }
+                }
+              }
+
             }
+
           }
 
         }
-
-
-      }
-
     }
 
     //********************************
     //*** GUI Shader Customization ***
     //********************************
 
+    // Title
     RowLayout {
-      // ScrollBar.horizontal.policy: ScrollBar.AlwaysOn
-      // ScrollBar.vertical.policy: ScrollBar.AlwaysOn
-      width: parent.width
-      height: parent.height
-      // clip: true
-      // contentWidth: childrenRect.width
-      // contentHeight: childrenRect.height
-      // anchors {
-      //   bottom: parent.bottom
-      //   left: parent.left
-      // }
+      Layout.topMargin: 25
+      Layout.bottomMargin: 5
+      spacing: units.largeSpacing
 
+      Text {
+        width:100
+        font.bold: true
+        color: "white"
+        font.pointSize: 16
+        text: i18n("Customization:")
+      }
+      Rectangle{
+        width: 600;
+        height: 1
+        color: "#555"
+      }
+    }
+
+    ColumnLayout {
+
+      //**************
+      //*** Global ***
+      //**************
+
+      // Shader Speed
       ColumnLayout{
-
         spacing: units.largeSpacing
-        // Layout.minimumWidth: width
-        // Layout.maximumWidth: width
-        // width: formAlignment - units.largeSpacing
-        // anchors.verticalCenter: parent.verticalCenter
-
 
         RowLayout {
-          spacing: units.largeSpacing
 
+          Text {
+            color: "white"
+            padding: 5
+            width:100
+            text: i18n("Speed: %1\n(default is 1.0)", wallpaper.configuration.shaderSpeed)
+          }
+
+          Slider {
+            from: -10.0
+            to: 10.0
+            id: speedSlider
+            stepSize: 0.01
+            Layout.fillWidth: true
+            value: wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0
+            onValueChanged: wallpaper.configuration.shaderSpeed = value
+          }
+          Text {
+            text: ""
+            padding: 5
+          }
+          Rectangle{
+            anchors.fill: parent
+            // anchors.centerIn: parent
+            border.color: Qt.rgba(255,255,255,0.35)
+            border.width: 1
+            radius: 4
+            color: "transparent"
+          }
+        }
+      }
+
+
+      //*******************
+      //*** Vec3s/Vars ***
+      //*******************
+
+      // Customization elements
+      ColumnLayout{
+        spacing: units.largeSpacing
+
+
+        GridLayout{
+          id: gridOne
+          // anchors.fill: parent
+          property double colMulti : gridOne.width / gridOne.columns
+          property double rowMulti : gridOne.height / gridOne.rows
+          columns:2
+          function prefWidth(item){
+              return colMulti * item.Layout.columnSpan
+          }
+          function prefHeight(item){
+              return rowMulti * item.Layout.rowSpan
+          }
+
+          // iChannels
           ColumnLayout {
             spacing: units.largeSpacing
-            Layout.minimumWidth: width
-            Layout.maximumWidth: 420
-            width: formAlignment - units.largeSpacing
+            Layout.columnSpan: 1
+            Rectangle{
+              anchors.fill: parent
+              // anchors.centerIn: parent
+              border.color: Qt.rgba(255,255,255,0.35)
+              border.width: 1
+              radius: 4
+              color: "transparent"
+            }
 
-            // iChannels
-            ColumnLayout {
+            // iChannel0
+            RowLayout {
               spacing: units.largeSpacing / 2
-
-              Rectangle{
-                anchors.fill: parent
-                // anchors.centerIn: parent
-                border.color: "white"
-                border.width: 1
-                radius: 4
-                color: "transparent"
-              }
-              // iChannel0
-              RowLayout {
-                spacing: units.largeSpacing / 2
-                Label {
-                  // Layout.minimumWidth: width
-                  // Layout.maximumWidth: width
-                  // width: formAlignment - units.largeSpacing
-                  // horizontalAlignment: Text.AlignRight
-                  text: "Use iChannel0:"
-                }
-                CheckBox {
-                  id: iChannel0_flag
-                  Layout.minimumWidth: width
-                  Layout.maximumWidth: width
-                  width: 35
-                  checked: wallpaper.configuration.iChannel0_flag
-                  onCheckedChanged: {
-                    wallpaper.configuration.iChannel0_flag != wallpaper.configuration.iChannel0_flag
-                  }
-                }
-              }
-              // iChannel1
-              RowLayout {
-                spacing: units.largeSpacing / 2
-                Label {
-                  // Layout.minimumWidth: width
-                  // Layout.maximumWidth: width
-                  // width: formAlignment - units.largeSpacing
-                  // horizontalAlignment: Text.AlignRight
-                  text: "Use iChannel1:"
-                }
-                CheckBox {
-                  id: iChannel1_flag
-                  Layout.minimumWidth: width
-                  Layout.maximumWidth: width
-                  width: 35
-                  checked: wallpaper.configuration.iChannel1_flag
-                  onCheckedChanged: {
-                    wallpaper.configuration.iChannel1_flag != wallpaper.configuration.iChannel1_flag
-                  }
-                }
-              }
-              // iChannel2
-              RowLayout {
-                spacing: units.largeSpacing / 2
-                Label {
-                // Layout.minimumWidth: width
-                // Layout.maximumWidth: width
-                // width: formAlignment - units.largeSpacing
-                // horizontalAlignment: Text.AlignRight
-                text: "Use iChannel2:"
-                }
-                CheckBox {
-                  id: iChanne2_flag
-                  Layout.minimumWidth: width
-                  Layout.maximumWidth: width
-                  width: 35
-                  checked: wallpaper.configuration.iChannel2_flag
-                  onCheckedChanged: {
-                    wallpaper.configuration.iChannel2_flag != wallpaper.configuration.iChannel2_flag
-                  }
-                }
-              }
-              // iChannel3
-              RowLayout {
-                spacing: units.largeSpacing / 2
-                Label {
-                  // Layout.minimumWidth: width
-                  // Layout.maximumWidth: width
-                  // width: formAlignment - units.largeSpacing
-                  // horizontalAlignment: Text.AlignRight
-                  text: "Use iChannel3:"
-                }
-                CheckBox {
-                  id: iChanne3_flag
-                  Layout.minimumWidth: width
-                  Layout.maximumWidth: width
-                  width: 35
-                  checked: wallpaper.configuration.iChannel3_flag
-                  onCheckedChanged: {
-                    wallpaper.configuration.iChannel3_flag != wallpaper.configuration.iChannel3_flag
-                  }
-                }
-              }
-
-            }
-
-            // Shader Speed
-            ColumnLayout {
-              spacing: units.largeSpacing
-
-              RowLayout {
-                spacing: units.largeSpacing
-
-                Rectangle{
-                  anchors.fill: parent
-                  // anchors.centerIn: parent
-                  border.color: "white"
-                  border.width: 1
-                  radius: 4
-                  color: "transparent"
-                }
-
-                Label {
-                  width:100
-                  text: i18n("Speed: %1\n(default is 1.0)", wallpaper.configuration.shaderSpeed)
-                }
-                Slider {
-                  from: -10.0
-                  to: 10.0
-                  id: speedSlider
-                  stepSize: 0.01
-                  Layout.fillWidth: true
-                  value: wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0
-                  onValueChanged: wallpaper.configuration.shaderSpeed = value
-                }
-
-              }
-
-            }
-
-            // Shader vec3 container
-            ColumnLayout{
-              spacing: units.largeSpacing
-
-              RowLayout {
-                spacing: units.largeSpacing
-
-                Rectangle{
-                  anchors.fill: parent
-                  // anchors.centerIn: parent
-                  border.color: "white"
-                  border.width: 1
-                  radius: 4
-                  color: "transparent"
-                }
-                id: buttonContainer
-              }
-            }
-
-            // Shader vars container
-            ColumnLayout{
-              id: variableContainer
-            }
-
-            Rectangle{
-              width: 340;
-              height: 1
-              color: "#555"
-            }
-
-            // Resume/Pause
-            Label {
-              width:100
-              text: i18n("Pause:")
-            }
-
-            RowLayout{
-
-              ImageBtn {
-                  width: 32
-                  height: 32
-                  imageUrl: isPaused ?  "./Resources/play.svg" : "./Resources/pause.svg"
-                  tipText: isPaused ? "Resume" : "Pause"
-                  property bool isPaused: false
-                  onClicked: {
-                      wallpaper.configuration.running = isPaused
-                      isPaused = !isPaused;
-                  }
-                  Rectangle {
-                      anchors.fill: parent
-                      color: "transparent"
-                      border.width: parent.containsMouse ? 1 : 0
-                      border.color: "gray"
-                  }
-              }
-
-              // Text {
-              //     text: shaderEngine.iTime.toFixed(2)
-              //     color: "white"
-              //     anchors.verticalCenter: parent.verticalCenter
-              // }
+              anchors.horizontalCenter: parent.horizontalCenter
               Text {
-                  text: wallpaper.configuration.running ? fpsItem.fps + " fps" : "stopped"
-                  color: "white"
-                  anchors.verticalCenter: parent.verticalCenter
+                color: "white"
+                padding: 5
+                text: "iChannel0:"
+              }
+              CheckBox {
+                id: iChannel0_flag
+                Layout.minimumWidth: width
+                Layout.maximumWidth: width
+                width: 35
+                checked: wallpaper.configuration.iChannel0_flag
+                onCheckedChanged: {
+                  wallpaper.configuration.iChannel0_flag != wallpaper.configuration.iChannel0_flag
+                }
+              }
+              TextField {
+                id: iChannel0Field
+                placeholderText: "path to iChannel0"
+                onEditingFinished: {
+                  // iChannel0Field.text;
+                }
+              }
+              Text {
+                padding: 5
+                text: ""
+              }
+
+            }
+            // iChannel1
+            RowLayout {
+              spacing: units.largeSpacing / 2
+              anchors.horizontalCenter: parent.horizontalCenter
+              Text {
+                color: "white"
+                padding: 5
+                text: "iChannel1:"
+              }
+              CheckBox {
+                id: iChannel1_flag
+                Layout.minimumWidth: width
+                Layout.maximumWidth: width
+                width: 35
+                checked: wallpaper.configuration.iChannel1_flag
+                onCheckedChanged: {
+                  wallpaper.configuration.iChannel1_flag != wallpaper.configuration.iChannel1_flag
+                }
+              }
+              TextField {
+                id: iChannel1Field
+                placeholderText: "path to iChannel1"
+                onEditingFinished: {
+                  // iChannel0Field.text;
+                }
+              }
+              Text {
+                padding: 5
+                text: ""
               }
             }
-
-            Rectangle{
-              width: 340;
-              height: 1
-              color: "#555"
+            // iChannel2
+            RowLayout {
+              spacing: units.largeSpacing / 2
+              anchors.horizontalCenter: parent.horizontalCenter
+              Text {
+                color: "white"
+                padding: 5
+                text: "iChannel2:"
+              }
+              CheckBox {
+                id: iChanne2_flag
+                Layout.minimumWidth: width
+                Layout.maximumWidth: width
+                width: 35
+                checked: wallpaper.configuration.iChannel2_flag
+                onCheckedChanged: {
+                  wallpaper.configuration.iChannel2_flag != wallpaper.configuration.iChannel2_flag
+                }
+              }
+              TextField {
+                id: iChannel2Field
+                placeholderText: "path to iChannel2"
+                onEditingFinished: {
+                  // iChannel0Field.text;
+                }
+              }
+              Text {
+                padding: 5
+                text: ""
+              }
+            }
+            // iChannel3
+            RowLayout {
+              spacing: units.largeSpacing / 2
+              anchors.horizontalCenter: parent.horizontalCenter
+              Text {
+                color: "white"
+                padding: 5
+                text: "iChannel3:"
+              }
+              CheckBox {
+                id: iChanne3_flag
+                Layout.minimumWidth: width
+                Layout.maximumWidth: width
+                width: 35
+                checked: wallpaper.configuration.iChannel3_flag
+                onCheckedChanged: {
+                  wallpaper.configuration.iChannel3_flag != wallpaper.configuration.iChannel3_flag
+                }
+              }
+              TextField {
+                id: iChannel3Field
+                placeholderText: "path to iChannel3"
+                onEditingFinished: {
+                  // iChannel0Field.text;
+                }
+              }
+              Text {
+                padding: 5
+                text: ""
+              }
             }
 
           }
 
-          //*******************
-          //*** Performance ***
-          //*******************
 
-          // RowLayout {
-          //   spacing: units.largeSpacing / 2
-          // }
+          // vec3s container
+          ColumnLayout{
+            spacing: units.largeSpacing
+            Layout.fillHeight: true
+            Layout.fillWidth: true
+
+            Layout.columnSpan: 1
+            // Layout.preferredWidth  : gridOne.prefWidth(this)
+            // Layout.preferredHeight : gridOne.prefHeight(this)
+
+            Rectangle{
+              Layout.fillHeight: true
+              Layout.fillWidth: true
+              anchors.fill: parent
+              border.color: Qt.rgba(255,255,255,0.35)
+              border.width: 1
+              radius: 4
+              color: "transparent"
+            }
+
+            GridLayout {
+              Layout.fillHeight: true
+              Layout.fillWidth: true
+              id: buttonContainer
+              anchors.verticalCenter: parent.verticalCenter
+              anchors.horizontalCenter: parent.horizontalCenter
+              columns: 3
+              // Layout.maximumWidth: parent.fillWidth / 2
+              // anchors.left: parent.left
+            }
+          }
 
         }
+      }
+
+      // vars container
+      ColumnLayout {
+
+        RowLayout{
+          anchors.verticalCenter  : parent.verticalCenter
+          anchors.horizontalCenter: parent.horizontalCenter
+          Rectangle{
+            anchors.fill: parent
+            border.color: Qt.rgba(255,255,255,0.35)
+            border.width: 1
+            radius: 4
+            color: "transparent"
+          }
+          GridLayout{
+            Layout.fillHeight: true
+            Layout.fillWidth : true
+            anchors.verticalCenter  : parent.verticalCenter
+            anchors.horizontalCenter: parent.horizontalCenter
+            columns: 3
+            id: variableContainer
+          }
+
+        }
+      }
+
+
+      //*******************
+      //*** Performance ***
+      //*******************
+
+      ColumnLayout {
+        // Title
+        RowLayout {
+          Layout.topMargin: 25
+          Layout.bottomMargin: 5
+
+          Text {
+            width:100
+            font.bold: true
+            color: "white"
+            font.pointSize: 16
+            text: i18n("Performance:")
+          }
+          Rectangle{
+            Layout.fillWidth: true
+            height: 1
+            color: "#555"
+          }
+        }
+
         RowLayout {
 
-            ColumnLayout {
-              spacing: units.largeSpacing
-              width: formAlignment - units.largeSpacing
+          ColumnLayout {
 
-              Label {
+            Rectangle{
+              Layout.fillHeight: true
+              Layout.fillWidth: true
+              anchors.fill: parent
+              border.color: Qt.rgba(255,255,255,0.35)
+              border.width: 1
+              radius: 4
+              color: "transparent"
+            }
+
+            RowLayout{
+              Text {
                 width:100
-                text: i18n("Performance:")
+                color: "white"
+                padding:5
               }
               CheckBox {
                 id: checkGl3Ver
-                text: i18n("Change gl3 version\n")
+                text: i18n("Change gl3 version")
                 checked: true
               }
-              Rectangle{
-                width: 340;
-                height: 1
-                color: "#555"
+            }
+            // TODO: Fullscreen/Busy
+            RowLayout{
+              Text {
+                width:100
+                color: "white"
+                padding:5
               }
               RadioButton {
                 id: checkedSmartPlay
@@ -408,10 +515,14 @@ Item {
                 //   checkedBusyPlay.checked = !checkedSmartPlay.checked
                 // }
               }
-              Rectangle{
-                width: 340;
-                height: 1
-                color: "#555"
+            }
+
+            RowLayout{
+              Layout.fillWidth: true
+              Text {
+                width:100
+                color: "white"
+                padding:5
               }
               RadioButton {
                 id: checkedBusyPlay
@@ -421,106 +532,132 @@ Item {
                 //   checkedSmartPlay.checked = !checkedBusyPlay.checked
                 // }
               }
-              Rectangle{
-                width: 340;
-                height: 1
-                color: "#555"
-              }
-
             }
           }
 
-        ColorDialog {
-              id: colorDialog
-              title: "Please choose a color"
-              property string previousColor: colorDialog.color.r + ", " + colorDialog.color.g + ", " + colorDialog.color.b;
-              property int number: 0
-              onCurrentColorChanged: {
-                  // console.log("You are choosing: " + colorDialog.currentColor.r, colorDialog.currentColor.g, colorDialog.currentColor.b)
-                  let color = colorDialog.currentColor.r + ", " + colorDialog.currentColor.g + ", " + colorDialog.currentColor.b;
-                  findAndReplaceColor(color, number);
-              }
-              onAccepted: {
-                  // console.log("You chose: " + colorDialog.color.r, colorDialog.color.g, colorDialog.color.b)
-                  Qt.quit()
-              }
-              onRejected: {
-                  findAndReplaceColor(previousColor, number);
-                  // console.log("Canceled, set previous color back")
-                  Qt.quit()
-              }
-          }
-
-
-        FPSItem {
-              id: fpsItem
-              running: shaderEngine.running
-          }
+        }
 
       }
+
     }
 
     //****************
     //*** Footnote ***
     //****************
+    // Title
+    RowLayout {
+      Layout.topMargin: 25
+      Layout.bottomMargin: 5
+      spacing: units.largeSpacing
+
+      Text {
+        font.bold: true
+        color: "white"
+        font.pointSize: 16
+        text: i18n("Info:")
+      }
+      Rectangle{
+        Layout.fillWidth: true
+        height: 1
+        color: "#555"
+      }
+    }
 
     RowLayout {
 
-      anchors {
-        bottom: parent.bottom
-        left: parent.left
-      }
-
       ColumnLayout {
+        Layout.fillHeight: true
+        Layout.fillWidth: true
         anchors.fill: parent
+        // Support
+        RowLayout{
+          Label {
+            font.bold: true
+            text: "Support:"
+          }
 
-        Label {
-          Layout.minimumWidth: width
-          Layout.maximumWidth: width
-          width: formAlignment - units.largeSpacing
-          horizontalAlignment: Text.AlignRight
-          text: "Support:"
-        }
-
-        Label {
-          Layout.minimumWidth: width
-          Layout.maximumWidth: width
-          width: formAlignment - units.largeSpacing
-          horizontalAlignment: Text.AlignLeft
-          text: "<a href='https://github.com/y4my4my4m'>Github</a> | <a href='https://twitter.com/y4my4my4m'>Twitter</a>"
-          onLinkActivated: Qt.openUrlExternally(link)
-          MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.NoButton // we don't want to eat clicks on the Text
-            cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+          Text {
+            text: "<a href='https://github.com/y4my4my4m'>Github</a> | <a href='https://twitter.com/y4my4my4m'>Twitter</a>"
+            onLinkActivated: Qt.openUrlExternally(link)
+            color:"white"
+            MouseArea {
+              anchors.fill: parent
+              acceptedButtons: Qt.NoButton // we don't want to eat clicks on the Text
+              cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+            }
           }
         }
+        // Notice
+        RowLayout{
+          ColumnLayout{
+            Label {
+              font.bold: true
+              text: "Notice:"
+            }
 
-        Label {
-          Layout.minimumWidth: width
-          Layout.maximumWidth: width
-          width: formAlignment - units.largeSpacing
-          horizontalAlignment: Text.AlignRight
-          text: "Notice:"
+            Text {
+              color: "white"
+              text: "In case of emergency, delete folder in\n\"~/.local/share/plasma/wallpaper/online.knowmad.shaderwallpaper\",\nthen run: \"pkill plasmashell && plasmashell &\" to relaunch it.\n\nUse with caution."
+            }
+
+          }
+
         }
+        // Donation
+        RowLayout {
+          Layout.maximumWidth: 200
+          Label {
+            font.bold: true
+            text: "Donate:"
+          }
 
-        Label {
-          Layout.minimumWidth: width
-          Layout.maximumWidth: width
-          width: formAlignment - units.largeSpacing
-          horizontalAlignment: Text.AlignLeft
-          text: "In case of emergency, delete folder in\n\"~/.local/share/plasma/wallpaper/online.knowmad.shaderwallpaper\",\nthen run: \"pkill plasmashell && plasmashell &\" to relaunch it.\n\nUse with caution."
+          Text {
+            Layout.minimumWidth: width
+            Layout.maximumWidth: width
+            width: formAlignment - units.largeSpacing
+            horizontalAlignment: Text.AlignLeft
+            text: "<a href='https://ko-fi.com/y4my4my4m'>ko-fi</a>"
+            onLinkActivated: Qt.openUrlExternally(link)
+            color:"white"
+            MouseArea {
+              anchors.fill: parent
+              acceptedButtons: Qt.NoButton
+              cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+            }
+          }
         }
-
       }
 
     }
 
 
   }
-  // Item {
-  //   Layout.fillHeight: true
-  // }
+
+  ColorDialog {
+    id: colorDialog
+    title: "Please choose a color"
+    property string previousColor: colorDialog.color.r + ", " + colorDialog.color.g + ", " + colorDialog.color.b;
+    property int number: 0
+    onCurrentColorChanged: {
+      // console.log("You are choosing: " + colorDialog.currentColor.r, colorDialog.currentColor.g, colorDialog.currentColor.b)
+      let color = colorDialog.currentColor.r + ", " + colorDialog.currentColor.g + ", " + colorDialog.currentColor.b;
+      findAndReplaceColor(color, number);
+    }
+    onAccepted: {
+      // console.log("You chose: " + colorDialog.color.r, colorDialog.color.g, colorDialog.color.b)
+      Qt.quit()
+    }
+    onRejected: {
+      findAndReplaceColor(previousColor, number);
+      // console.log("Canceled, set previous color back")
+      Qt.quit()
+    }
+  }
+
+  FPSItem {
+    id: fpsItem
+    running: shaderEngine.running
+  }
 
   FileDialog {
     id: fileDialog
@@ -528,8 +665,8 @@ Item {
     title: "Pick a shader file"
     // nameFilters: [ "Video files (*.mp4 *.mpg *.ogg *.mov *.webm *.flv *.matroska *.avi *wmv)", "All files (*)" ]
     onAccepted: {
-        selectedShaderField.text = fileDialog.fileUrls[0]
-        getShaderContent();
+      selectedShaderField.text = fileDialog.fileUrls[0]
+      getShaderContent();
     }
   }
 
@@ -732,7 +869,10 @@ Item {
     }
     for (var i=0; i<getShaderVec3s(); i++) {
         // should load GUIButton.qml instead
-        let objStr = `import QtQuick 2.12; import QtQuick.Controls 2.12;Button {
+        let objStr = `
+            import QtQuick 2.12;
+            import QtQuick.Controls 2.12;
+            Button {
             property int number: `+i+`
             id: vec3button_`+i+`
             text: i18n("Change color of "+`+i+`)
