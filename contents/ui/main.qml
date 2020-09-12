@@ -19,6 +19,10 @@
  *  This software uses some of the QML code from JaredTao/jared2020@163.com's ToyShader for Android.
  *  See: https://github.com/jaredtao/TaoShaderToy/
  *
+ *  Thanks to: Rog131 <samrog131@hotmail.com>, adhe <adhemarks2@gmail.com>
+ *  for their work on the SmartVideoWallpaper plugin, I've used this as a reference for
+ *  pausing the shader when fullscreen/maximed or when resources are busy
+ *
  *  Thanks to github.com/simons-public for his contributions
  */
 

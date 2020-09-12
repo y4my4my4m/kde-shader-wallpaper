@@ -2,6 +2,7 @@
 import QtQuick.Controls 2.12
 
 import org.kde.taskmanager 0.1 as TaskManager
+import org.kde.plasma.core 2.0 as PlasmaCore
 /*
 vec3        iResolution             image/buffer        The viewport resolution (z is pixel aspect ratio, usually 1.0)
 float       iTime                   image/sound/buffer	Current time in seconds
@@ -69,7 +70,7 @@ ShaderEffect {
 
     //properties for Qml controller
     property alias hoverEnabled: mouse.hoverEnabled
-    property bool running: true
+    property bool running: wallpaper.configuration.running
     function restart() {
         shader.iTime = 0
         running = true
@@ -215,74 +216,117 @@ ShaderEffect {
 
 
     // Performance
-    // property bool modePlay: wallpaper.configuration.checkedBusyPlay
-    //
-    // TaskManager.VirtualDesktopInfo { id: virtualDesktopInfo }
-    // TaskManager.ActivityInfo { id: activityInfo }
-    // TaskManager.TasksModel {
-    //     id: tasksModel
-    //     sortMode: TaskManager.TasksModel.SortVirtualDesktop
-    //     groupMode: TaskManager.TasksModel.GroupDisabled
-    //
-    //     activity: activityInfo.currentActivity
-    //     virtualDesktop: virtualDesktopInfo.currentDesktop
-    //     screenGeometry: wallpaper.screenGeometry // Warns "Unable to assign [undefined] to QRect" during init, but works thereafter.
-    //
-    //     filterByActivity: true
-    //     filterByVirtualDesktop: true
-    //     filterByScreen: true
-    //
-    //     // onActiveTaskChanged: updateWindowsinfo(shader.modePlay)
-    //     // onDataChanged: updateWindowsinfo(shader.modePlay)
-    //     Component.onCompleted: {
-    //         maximizedWindowModel.sourceModel = tasksModel
-    //         fullScreenWindowModel.sourceModel = tasksModel
-    //         minimizedWindowModel.sourceModel = tasksModel
-    //         onlyWindowsModel.sourceModel = tasksModel
-    //     }
-    // }
-    //
-    // function updateWindowsinfo(modePlay) {
-    //     if(modePlay){
-    //         playVideoWallpaper = (onlyWindowsModel.count === minimizedWindowModel.count) ? true : false
-    //     }
-    //     else{
-    //         var joinApps  = [];
-    //         var minApps  = [];
-    //         var aObj;
-    //         var i;
-    //         var j;
-    //         // add fullscreen apps
-    //         for (i = 0 ; i < fullScreenWindowModel.count ; i++){
-    //             aObj = fullScreenWindowModel.get(i)
-    //             joinApps.push(aObj.AppPid)
-    //         }
-    //         // add maximized apps
-    //         for (i = 0 ; i < maximizedWindowModel.count ; i++){
-    //             aObj = maximizedWindowModel.get(i)
-    //             joinApps.push(aObj.AppPid)
-    //         }
-    //
-    //         // add minimized apps
-    //         for (i = 0 ; i < minimizedWindowModel.count ; i++){
-    //             aObj = minimizedWindowModel.get(i)
-    //             minApps.push(aObj.AppPid)
-    //         }
-    //
-    //         joinApps = removeDuplicates(joinApps) // for qml Kubuntu 18.04
-    //
-    //         joinApps.sort();
-    //         minApps.sort();
-    //
-    //         var twoStates = 0
-    //         j = 0;
-    //         for(i = 0 ; i < minApps.length ; i++){
-    //             if(minApps[i] === joinApps[j]){
-    //                 twoStates = twoStates + 1;
-    //                 j = j + 1;
-    //             }
-    //         }
-    //         playVideoWallpaper = (fullScreenWindowModel.count + maximizedWindowModel.count - twoStates) == 0 ? true : false
-    //     }
-    // }
+    property bool runShader: true
+    property bool modePlay: wallpaper.configuration.checkedBusyPlay
+
+    TaskManager.VirtualDesktopInfo { id: virtualDesktopInfo }
+    TaskManager.ActivityInfo { id: activityInfo }
+    TaskManager.TasksModel {
+        id: tasksModel
+        sortMode: TaskManager.TasksModel.SortVirtualDesktop
+        groupMode: TaskManager.TasksModel.GroupDisabled
+
+        activity: activityInfo.currentActivity
+        virtualDesktop: virtualDesktopInfo.currentDesktop
+        screenGeometry: wallpaper.screenGeometry // Warns "Unable to assign [undefined] to QRect" during init, but works thereafter.
+
+        filterByActivity: true
+        filterByVirtualDesktop: true
+        filterByScreen: true
+
+        // onActiveTaskChanged: updateWindowsinfo(shader.modePlay)
+        // onDataChanged: updateWindowsinfo(shader.modePlay)
+        Component.onCompleted: {
+            maximizedWindowModel.sourceModel = tasksModel
+            fullScreenWindowModel.sourceModel = tasksModel
+            minimizedWindowModel.sourceModel = tasksModel
+            onlyWindowsModel.sourceModel = tasksModel
+        }
+    }
+
+    PlasmaCore.SortFilterModel {
+        id: onlyWindowsModel
+        filterRole: 'IsWindow'
+        filterRegExp: 'true'
+        onDataChanged: updateWindowsinfo(shader.modePlay)
+        onCountChanged: updateWindowsinfo(shader.modePlay)
+    }
+
+    PlasmaCore.SortFilterModel {
+        id: maximizedWindowModel
+        filterRole: 'IsMaximized'
+        filterRegExp: 'true'
+        onDataChanged: updateWindowsinfo(shader.modePlay)
+        onCountChanged: updateWindowsinfo(shader.modePlay)
+    }
+    PlasmaCore.SortFilterModel {
+        id: fullScreenWindowModel
+        filterRole: 'IsFullScreen'
+        filterRegExp: 'true'
+        onDataChanged: updateWindowsinfo(shader.modePlay)
+        onCountChanged: updateWindowsinfo(shader.modePlay)
+    }
+
+    PlasmaCore.SortFilterModel {
+        id: minimizedWindowModel
+        filterRole: 'IsMinimized'
+        filterRegExp: 'true'
+        onDataChanged: updateWindowsinfo(shader.modePlay)
+        onCountChanged: updateWindowsinfo(shader.modePlay)
+    }
+    function updateWindowsinfo(modePlay) {
+        if(modePlay){
+            runShader = (onlyWindowsModel.count === minimizedWindowModel.count) ? true : false
+            shader.running = runShader
+            //FIXME just reassign it directly to running...or just reformat all of that actually
+        }
+        else{
+            var joinApps  = [];
+            var minApps  = [];
+            var aObj;
+            var i;
+            var j;
+            // add fullscreen apps
+            for (i = 0 ; i < fullScreenWindowModel.count ; i++){
+                aObj = fullScreenWindowModel.get(i)
+                joinApps.push(aObj.AppPid)
+                // console.log(`fullScreenWindowModel: ${aObj.AppPid}`)
+            }
+            // add maximized apps
+            for (i = 0 ; i < maximizedWindowModel.count ; i++){
+                aObj = maximizedWindowModel.get(i)
+                joinApps.push(aObj.AppPid)
+                // console.log(`maximizedWindowModel: ${aObj.AppPid}`)
+            }
+
+            // add minimized apps
+            for (i = 0 ; i < minimizedWindowModel.count ; i++){
+                aObj = minimizedWindowModel.get(i)
+                minApps.push(aObj.AppPid)
+                // console.log(`minimizedWindowModel: ${aObj.AppPid}`)
+            }
+
+            joinApps = removeDuplicates(joinApps) // for qml Kubuntu 18.04
+
+            joinApps.sort();
+            minApps.sort();
+
+            var twoStates = 0
+            j = 0;
+            for(i = 0 ; i < minApps.length ; i++){
+                if(minApps[i] === joinApps[j]){
+                    twoStates = twoStates + 1;
+                    j = j + 1;
+                }
+            }
+            runShader = (fullScreenWindowModel.count + maximizedWindowModel.count - twoStates) == 0 ? true : false
+            shader.running = runShader
+        }
+    }
+    function removeDuplicates(arrArg){
+      return arrArg.filter(function(elem, pos,arr) {
+        return arr.indexOf(elem) == pos;
+      });
+    }
+
 }

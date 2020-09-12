@@ -269,7 +269,7 @@ Item {
                 }
                 TextField {
                   id: iChannel0Field
-                  placeholderText: "TODO: path to iChannel0"
+                  placeholderText: "path to iChannel0"
                   text: wallpaper.configuration.iChannel0
                   // opacity: 0.45
                   // enabled: false
@@ -315,7 +315,7 @@ Item {
                 }
                 TextField {
                   id: iChannel1Field
-                  placeholderText: "TODO: path to iChannel1"
+                  placeholderText: "path to iChannel1"
                   text: wallpaper.configuration.iChannel1
                   onEditingFinished: {
                       wallpaper.configuration.iChannel1 =  iChannel1Field.text;
@@ -359,7 +359,7 @@ Item {
                 }
                 TextField {
                   id: iChannel2Field
-                  placeholderText: "TODO: path to iChannel2"
+                  placeholderText: "path to iChannel2"
                   text: wallpaper.configuration.iChannel2
                   onEditingFinished: {
                     wallpaper.configuration.iChannel2 = iChannel2Field.text;
@@ -403,7 +403,7 @@ Item {
                 }
                 TextField {
                   id: iChannel3Field
-                  placeholderText: "TODO: path to iChannel3"
+                  placeholderText: "path to iChannel3"
                   text: wallpaper.configuration.iChannel3
                   onEditingFinished: {
                     wallpaper.configuration.iChannel3 = iChannel3Field.text;
@@ -547,12 +547,13 @@ Item {
                 }
                 RadioButton {
                   id: checkedSmartPlay
-                  checkable: false
-                  opacity: 0.25
-                  text: i18n("TODO: Pause the shader when maximized or full-screen windows.")
-                  // onCheckedChanged: {
-                  //   checkedBusyPlay.checked = !checkedSmartPlay.checked
-                  // }
+                  // checkable: false
+                  // opacity: 0.25
+                  checked: !checkedBusyPlay.checked
+                  text: i18n("Pause the shader when maximized or full-screen windows.")
+                  onCheckedChanged: {
+                    checkedBusyPlay.checked = !checkedSmartPlay.checked
+                  }
                 }
               }
 
@@ -565,13 +566,13 @@ Item {
                 }
                 RadioButton {
                   id: checkedBusyPlay
-                  checkable: false
-                  opacity: 0.25
-                  // checked: !checkedSmartPlay.checked
-                  text: i18n("TODO: Pause the shader when the desktop is busy.")
-                  // onCheckedChanged: {
-                  //   checkedSmartPlay.checked = !checkedBusyPlay.checked
-                  // }
+                  // checkable: false
+                  // opacity: 0.25
+                  checked: !checkedSmartPlay.checked
+                  text: i18n("Pause the shader when the desktop is busy.")
+                  onCheckedChanged: {
+                    checkedSmartPlay.checked = !checkedBusyPlay.checked
+                  }
                 }
               }
           }
@@ -701,7 +702,7 @@ Item {
 
   FPSItem {
     id: fpsItem
-    running: shaderEngine.running
+    running: wallpaper.configuration.running
   }
 
   FileDialog {
