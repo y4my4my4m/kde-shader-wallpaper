@@ -683,20 +683,27 @@ Item {
     id: colorDialog
     title: "Please choose a color"
     property string previousColor: colorDialog.color.r + ", " + colorDialog.color.g + ", " + colorDialog.color.b;
+    color: getInitialColor();
+    // color: findAndReplaceColor("", number, false);
     property int number: 0
     onCurrentColorChanged: {
       // console.log("You are choosing: " + colorDialog.currentColor.r, colorDialog.currentColor.g, colorDialog.currentColor.b)
       let color = colorDialog.currentColor.r + ", " + colorDialog.currentColor.g + ", " + colorDialog.currentColor.b;
-      findAndReplaceColor(color, number);
+      // findAndReplaceColor(color, number, true);
     }
     onAccepted: {
-      // console.log("You chose: " + colorDialog.color.r, colorDialog.color.g, colorDialog.color.b)
+      console.log("You chose: " + colorDialog.color.r, colorDialog.color.g, colorDialog.color.b)
       Qt.quit()
     }
     onRejected: {
-      findAndReplaceColor(previousColor, number);
+      findAndReplaceColor(previousColor, number, true);
       // console.log("Canceled, set previous color back")
       Qt.quit()
+    }
+    function getInitialColor(){
+      let colors = findAndReplaceColor("", number, false);
+      if (colors.length > 1) return Qt.rgba(parseFloat(colors[0]),parseFloat(colors[1]),parseFloat(colors[2]),1);
+      return Qt.rgba(parseFloat(colors[0]),parseFloat(colors[0]),parseFloat(colors[0]));
     }
   }
 
@@ -963,26 +970,51 @@ Item {
 
   // string   color    rgb                  combined color from colorDialog in rgb
   // int      number   default 0           match case for the vec3 / which variable to hijack color of
-  function findAndReplaceColor(color, number = 0){
+  function findAndReplaceColor(color, number = 0, replace = true){
 
     let vec3regex         = /(vec3\([+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+\))/g; // vec3(0.0, 0.0, 0.0)
     let vec3regexSingular = /(vec3\([+-]?([0-9]*[.])?[0-9]+\))/g; // vec3(0.0)
 
     let currentShaderContent = wallpaper.configuration.selectedShaderContent;
 
+    // matches is the vec3(0.0, 0.0, 0.0) format
     let matches = currentShaderContent.match(vec3regex);
     let replacement = 'vec3('+color+')'
 
+    // matchesSingular is the vec3(0.0) format
     let matchesSingular = currentShaderContent.match(vec3regexSingular);
     for (var i=0; i<matchesSingular.length; i++){
       matches.push(matchesSingular[i])
     }
+    if (replace){
+      // replace the color in the temp string
+      currentShaderContent = currentShaderContent.replace(matches[number], replacement);
+      // assign modified color to current shader
+      wallpaper.configuration.selectedShaderContent = currentShaderContent;
+      return;
+    }
 
-    // replace the color in the temp string
-    currentShaderContent = currentShaderContent.replace(matches[number], replacement);
+    else{
+      // return an array of rgb values
 
-    // assign modified color to current shader
-    wallpaper.configuration.selectedShaderContent = currentShaderContent;
+      // for (var i=0; i<matches.length; i++){
+      //   // console.log(`shader color before: ${matches[i]}`)
+      //   matches[i] = matches[i].substr(5, matches[i].length);
+      //   // console.log(`shader color during: ${matches[i]}`)
+      //   matches[i] = matches[i].substr(0, matches[i].length - 1);
+      //   // console.log(`shader color after: ${matches[i]}`)
+      // }
+
+      // return a single string (one vec3's value)
+      console.log(`shader color before: ${matches[number]}`)
+      matches[number] = matches[number].substr(5, matches[number].length);
+      console.log(`shader color during: ${matches[number]}`)
+      matches[number] = matches[number].substr(0, matches[number].length -1);
+      console.log(`shader color after: ${matches[number]}`)
+      // console.log(`shader color test total: ${JSON.stringify(matches)}`)
+      return matches[number].split(',');
+      // return matches[number]
+    }
 
   }
 
@@ -992,16 +1024,15 @@ Item {
     }
     for (var i=0; i<getShaderVec3s(); i++) {
         // should load GUIButton.qml instead
-        // FIXME: ColorDialog defaults to a color when opened, should use the current variable
         let objStr = `
             import QtQuick 2.12;
             import QtQuick.Controls 2.12;
             Button {
-            property int number: `+i+`
-            id: vec3button_`+i+`
-            text: i18n("Change color of "+`+i+`)
+            property int number: ${i}
+            id: vec3button_${i}
+            text: i18n("Change color of ${i}")
             onClicked: {
-              colorDialog.number = `+i+`
+              colorDialog.number = ${i}
               colorDialog.visible = !colorDialog.visible
             }
           }`;

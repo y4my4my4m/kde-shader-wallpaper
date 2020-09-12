@@ -277,7 +277,7 @@ ShaderEffect {
     function updateWindowsinfo(modePlay) {
         if(modePlay){
             runShader = (onlyWindowsModel.count === minimizedWindowModel.count) ? true : false
-            shader.running = runShader
+            shader.running = !runShader
             //FIXME just reassign it directly to running...or just reformat all of that actually
         }
         else{
