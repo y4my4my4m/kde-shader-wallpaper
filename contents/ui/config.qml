@@ -8,12 +8,15 @@ import "./Components"
 import org.kde.plasma.core 2.0 as PlasmaCore
 
 Item {
-  property alias cfg_selectedShader: selectedShaderField.text
-  property alias cfg_checkGl3Ver:  checkGl3Ver.checked
+  property alias cfg_selectedShader:   selectedShaderField.text
+  property alias cfg_checkGl3Ver:      checkGl3Ver.checked
   property alias cfg_checkedSmartPlay: checkedSmartPlay.checked
   property alias cfg_checkedBusyPlay:  checkedBusyPlay.checked
+  property alias cfg_iChannel0_flag:   iChannel0_flag.checked
+  property alias cfg_iChannel1_flag:   iChannel1_flag.checked
+  property alias cfg_iChannel2_flag:   iChannel2_flag.checked
+  property alias cfg_iChannel3_flag:   iChannel3_flag.checked
 
-  Layout.fillWidth: true
 
   // Resume/Pause
   ColumnLayout {
@@ -62,100 +65,90 @@ Item {
     //************************
     //*** Shader Selection ***
     //************************
+
     ColumnLayout {
-      spacing: units.largeSpacing / 2
+
       RowLayout {
-          spacing: units.largeSpacing / 2
 
-          ColumnLayout {
-            spacing: units.largeSpacing
+        Label {
+          Layout.minimumWidth: width
+          Layout.maximumWidth: width
+          width: formAlignment - units.largeSpacing /2
+          horizontalAlignment: Text.AlignRight
+          text: "Selected Shader:"
+        }
 
-            RowLayout {
-              spacing: units.largeSpacing / 2
-
-              Label {
-                Layout.minimumWidth: width
-                Layout.maximumWidth: width
-                width: formAlignment - units.largeSpacing
-                horizontalAlignment: Text.AlignRight
-                text: "Selected Shader:"
-              }
-
-              ComboBox {
-                id: selectedShader
-                Layout.minimumWidth: width
-                Layout.maximumWidth: width
-                width: 435
-                model: FolderListModel {
-                  id: folderListModel
-                  showDirs: false
-                  nameFilters: ["*.frag"]
-                  folder: "./Shaders"
-                }
-                delegate: Component {
-                  id: folderListDelegate
-                  ItemDelegate {
-                      text: fileBaseName.replace("_"," ")
-                   }
-                }
-
-                textRole: "fileBaseName"
-                displayText: currentText.replace("_"," ")
-
-                onCurrentTextChanged: {
-                  selectedShaderField.text = Qt.resolvedUrl("./Shaders/"+model.get(currentIndex, "fileName"));
-                  getShaderContent();
-                }
-              }
-            }
-
-            RowLayout {
-              spacing: units.largeSpacing / 2
-
-              Label {
-                Layout.minimumWidth: width
-                Layout.maximumWidth: width
-                width: formAlignment - units.largeSpacing
-                horizontalAlignment: Text.AlignRight
-                text: "Shader Path:"
-              }
-
-              TextField {
-                id: selectedShaderField
-                Layout.minimumWidth: width
-                Layout.maximumWidth: width
-                width: 435
-                onEditingFinished: {
-                  selectedShaderField.text;
-                  getShaderContent();
-                }
-              }
-
-              Button {
-                id: imageButton
-                implicitWidth: height
-                PlasmaCore.IconItem {
-                  anchors.fill: parent
-                  source: "document-open"
-                  PlasmaCore.ToolTipArea {
-                    anchors.fill: parent
-                    subText: "Pick Shader"
-                  }
-                }
-                MouseArea {
-                  anchors.fill: parent
-                  onClicked: {
-                    fileDialog.folder = fileDialog.shortcuts.home+"/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders/"
-                    fileDialog.open()
-                  }
-                }
-              }
-
-            }
-
+        ComboBox {
+          id: selectedShader
+          Layout.minimumWidth: width
+          Layout.maximumWidth: width
+          width: 435
+          model: FolderListModel {
+            id: folderListModel
+            showDirs: false
+            nameFilters: ["*.frag"]
+            folder: "./Shaders"
+          }
+          delegate: Component {
+            id: folderListDelegate
+            ItemDelegate {
+                text: fileBaseName.replace("_"," ")
+             }
           }
 
+          textRole: "fileBaseName"
+          displayText: currentText.replace("_"," ")
+
+          onCurrentTextChanged: {
+            selectedShaderField.text = Qt.resolvedUrl("./Shaders/"+model.get(currentIndex, "fileName"));
+            getShaderContent();
+          }
         }
+      }
+
+      RowLayout {
+
+        Label {
+          Layout.minimumWidth: width
+          Layout.maximumWidth: width
+          width: formAlignment - units.largeSpacing /2
+          horizontalAlignment: Text.AlignRight
+          text: "Shader Path:"
+        }
+
+        TextField {
+          id: selectedShaderField
+          Layout.minimumWidth: width
+          Layout.maximumWidth: width
+          width: 435
+          onEditingFinished: {
+            selectedShaderField.text;
+            getShaderContent();
+          }
+        }
+
+        Button {
+          id: imageButton
+          implicitWidth: height
+          PlasmaCore.IconItem {
+            anchors.fill: parent
+            source: "document-open"
+            PlasmaCore.ToolTipArea {
+              anchors.fill: parent
+              subText: "Pick Shader"
+            }
+          }
+          MouseArea {
+            anchors.fill: parent
+            onClicked: {
+              fileDialog.folder = fileDialog.shortcuts.home+"/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders/"
+              fileDialog.open()
+            }
+          }
+        }
+
+      }
+
     }
 
     //********************************
@@ -243,9 +236,10 @@ Item {
 
           // iChannels
           ColumnLayout {
-            spacing: units.largeSpacing
             Layout.columnSpan: 1
             Rectangle{
+              Layout.fillHeight: true
+              Layout.fillWidth: true
               anchors.fill: parent
               // anchors.centerIn: parent
               border.color: Qt.rgba(255,255,255,0.05)
@@ -253,114 +247,186 @@ Item {
               radius: 4
               color: "transparent"
             }
+            ColumnLayout{
 
-            // iChannel0
-            RowLayout {
-              spacing: units.largeSpacing / 2
+              Layout.fillHeight: true
+              Layout.fillWidth: true
+              anchors.verticalCenter: parent.verticalCenter
               anchors.horizontalCenter: parent.horizontalCenter
-              Text {
-                color: "white"
-                padding: 5
-                text: "iChannel0:"
-              }
-              CheckBox {
-                id: iChannel0_flag
-                width: 35
-                checked: wallpaper.configuration.iChannel0_flag
-                onCheckedChanged: {
-                  wallpaper.configuration.iChannel0_flag != wallpaper.configuration.iChannel0_flag
+              // iChannel0
+              RowLayout {
+                spacing: units.largeSpacing / 2
+                anchors.horizontalCenter: parent.horizontalCenter
+                Text {
+                  color: "white"
+                  padding: 5
+                  text: "iChannel0:"
                 }
-              }
-              TextField {
-                id: iChannel0Field
-                placeholderText: "TODO: path to iChannel0"
-                opacity: 0.45
-                enabled: false
-                onEditingFinished: {
-                  // iChannel0Field.text;
+                CheckBox {
+                  id: iChannel0_flag
+                  width: 35
+                  checked: false
                 }
-              }
+                TextField {
+                  id: iChannel0Field
+                  placeholderText: "TODO: path to iChannel0"
+                  text: wallpaper.configuration.iChannel0
+                  // opacity: 0.45
+                  // enabled: false
+                  onEditingFinished: {
+                    wallpaper.configuration.iChannel0 =  iChannel0Field.text;
+                  }
+                }
 
-            }
-            // iChannel1
-            RowLayout {
-              spacing: units.largeSpacing / 2
-              anchors.horizontalCenter: parent.horizontalCenter
-              Text {
-                color: "white"
-                padding: 5
-                text: "iChannel1:"
+                Button {
+                  implicitWidth: height
+                  PlasmaCore.IconItem {
+                    anchors.fill: parent
+                    source: "document-open"
+                    PlasmaCore.ToolTipArea {
+                      anchors.fill: parent
+                      subText: "Load iChannel Image/Shader"
+                    }
+                  }
+                  MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                      fileDialog_ich0.folder = fileDialog_ich0.shortcuts.home+"/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/"
+                      fileDialog_ich0.open()
+                    }
+                  }
+                }
+
               }
-              CheckBox {
-                id: iChannel1_flag
-                width: 35
-                checked: wallpaper.configuration.iChannel1_flag
-                onCheckedChanged: {
-                  wallpaper.configuration.iChannel1_flag != wallpaper.configuration.iChannel1_flag
+              // iChannel1
+              RowLayout {
+                spacing: units.largeSpacing / 2
+                anchors.horizontalCenter: parent.horizontalCenter
+                Text {
+                  color: "white"
+                  padding: 5
+                  text: "iChannel1:"
+                }
+                CheckBox {
+                  id: iChannel1_flag
+                  width: 35
+                  checked: false
+                }
+                TextField {
+                  id: iChannel1Field
+                  placeholderText: "TODO: path to iChannel1"
+                  text: wallpaper.configuration.iChannel1
+                  onEditingFinished: {
+                      wallpaper.configuration.iChannel1 =  iChannel1Field.text;
+                  }
+                  // opacity: 0.45
+                  // enabled: false
+                }
+                Button {
+                  implicitWidth: height
+                  PlasmaCore.IconItem {
+                    anchors.fill: parent
+                    source: "document-open"
+                    PlasmaCore.ToolTipArea {
+                      anchors.fill: parent
+                      subText: "Load iChannel Image/Shader"
+                    }
+                  }
+                  MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                      fileDialog_ich1.folder = fileDialog_ich1.shortcuts.home+"/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/"
+                      fileDialog_ich1.open()
+                    }
+                  }
                 }
               }
-              TextField {
-                id: iChannel1Field
-                placeholderText: "TODO: path to iChannel1"
-                onEditingFinished: {
-                  // iChannel0Field.text;
+              // iChannel2
+              RowLayout {
+                spacing: units.largeSpacing / 2
+                anchors.horizontalCenter: parent.horizontalCenter
+                Text {
+                  color: "white"
+                  padding: 5
+                  text: "iChannel2:"
                 }
-                opacity: 0.45
-                enabled: false
-              }
-            }
-            // iChannel2
-            RowLayout {
-              spacing: units.largeSpacing / 2
-              anchors.horizontalCenter: parent.horizontalCenter
-              Text {
-                color: "white"
-                padding: 5
-                text: "iChannel2:"
-              }
-              CheckBox {
-                id: iChanne2_flag
-                width: 35
-                checked: wallpaper.configuration.iChannel2_flag
-                onCheckedChanged: {
-                  wallpaper.configuration.iChannel2_flag != wallpaper.configuration.iChannel2_flag
+                CheckBox {
+                  id: iChannel2_flag
+                  width: 35
+                  checked: false
                 }
-              }
-              TextField {
-                id: iChannel2Field
-                placeholderText: "TODO: path to iChannel2"
-                onEditingFinished: {
-                  // iChannel0Field.text;
+                TextField {
+                  id: iChannel2Field
+                  placeholderText: "TODO: path to iChannel2"
+                  text: wallpaper.configuration.iChannel2
+                  onEditingFinished: {
+                    wallpaper.configuration.iChannel2 = iChannel2Field.text
+                  }
+                  // opacity: 0.45
+                  // enabled: false
                 }
-                opacity: 0.45
-                enabled: false
-              }
-            }
-            // iChannel3
-            RowLayout {
-              spacing: units.largeSpacing / 2
-              anchors.horizontalCenter: parent.horizontalCenter
-              Text {
-                color: "white"
-                padding: 5
-                text: "iChannel3:"
-              }
-              CheckBox {
-                id: iChanne3_flag
-                width: 35
-                checked: wallpaper.configuration.iChannel3_flag
-                onCheckedChanged: {
-                  wallpaper.configuration.iChannel3_flag != wallpaper.configuration.iChannel3_flag
+                Button {
+                  implicitWidth: height
+                  PlasmaCore.IconItem {
+                    anchors.fill: parent
+                    source: "document-open"
+                    PlasmaCore.ToolTipArea {
+                      anchors.fill: parent
+                      subText: "Load iChannel Image/Shader"
+                    }
+                  }
+                  MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                      fileDialog_ich2.folder = fileDialog_ich2.shortcuts.home+"/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/"
+                      fileDialog_ich2.open()
+                    }
+                  }
                 }
               }
-              TextField {
-                id: iChannel3Field
-                placeholderText: "TODO: path to iChannel3"
-                onEditingFinished: {
-                  // iChannel0Field.text;
+              // iChannel3
+              RowLayout {
+                spacing: units.largeSpacing / 2
+                anchors.horizontalCenter: parent.horizontalCenter
+                Text {
+                  color: "white"
+                  padding: 5
+                  text: "iChannel3:"
                 }
-                opacity: 0.45
-                enabled: false
+                CheckBox {
+                  id: iChannel3_flag
+                  width: 35
+                  checked: false
+                }
+                TextField {
+                  id: iChannel3Field
+                  placeholderText: "TODO: path to iChannel3"
+                  text: wallpaper.configuration.iChannel3
+                  onEditingFinished: {
+                    wallpaper.configuration.iChannel3 = iChannel3Field.text;
+                  }
+                  // opacity: 0.45
+                  // enabled: false
+                }
+
+                Button {
+                  implicitWidth: height
+                  PlasmaCore.IconItem {
+                    anchors.fill: parent
+                    source: "document-open"
+                    PlasmaCore.ToolTipArea {
+                      anchors.fill: parent
+                      subText: "Load iChannel Image/Shader"
+                    }
+                  }
+                  MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                      fileDialog_ich3.folder = fileDialog_ich3.shortcuts.home+"/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/"
+                      fileDialog_ich3.open()
+                    }
+                  }
+                }
               }
             }
 
@@ -368,7 +434,6 @@ Item {
 
           // vec3s container
           ColumnLayout{
-            spacing: units.largeSpacing
             Layout.fillHeight: true
             Layout.fillWidth: true
 
@@ -606,7 +671,6 @@ Item {
 
   }
 
-
   //*******************
   //*** Components  ***
   //*******************
@@ -646,7 +710,49 @@ Item {
       getShaderContent();
     }
   }
+  // TODO: re-use the same file dialog...
+  FileDialog {
+    id: fileDialog_ich0
+    selectMultiple : false
+    title: "Pick a shader file"
+    // nameFilters: [ "Video files (*.mp4 *.mpg *.ogg *.mov *.webm *.flv *.matroska *.avi *wmv)", "All files (*)" ]
+    onAccepted: {
+      iChannel0Field.text = fileDialog_ich0.fileUrls[0]
+      // getShaderContent();
+    }
+  }
 
+  FileDialog {
+    id: fileDialog_ich1
+    selectMultiple : false
+    title: "Pick a shader file"
+    // nameFilters: [ "Video files (*.mp4 *.mpg *.ogg *.mov *.webm *.flv *.matroska *.avi *wmv)", "All files (*)" ]
+    onAccepted: {
+      iChannel1Field.text = fileDialog_ich1.fileUrls[0]
+      // getShaderContent();
+    }
+  }
+
+  FileDialog {
+    id: fileDialog_ich2
+    selectMultiple : false
+    title: "Pick a shader file"
+    // nameFilters: [ "Video files (*.mp4 *.mpg *.ogg *.mov *.webm *.flv *.matroska *.avi *wmv)", "All files (*)" ]
+    onAccepted: {
+      iChannel2Field.text = fileDialog_ich2.fileUrls[0]
+      // getShaderContent();
+    }
+  }
+  FileDialog {
+    id: fileDialog_ich3
+    selectMultiple : false
+    title: "Pick a shader file"
+    // nameFilters: [ "Video files (*.mp4 *.mpg *.ogg *.mov *.webm *.flv *.matroska *.avi *wmv)", "All files (*)" ]
+    onAccepted: {
+      iChannel3Field.text = fileDialog_ich3.fileUrls[0]
+      // getShaderContent();
+    }
+  }
   //****************************
   //*** Shader Loading Logic ***
   //****************************
@@ -670,15 +776,39 @@ Item {
     xhr.onreadystatechange = function () {
       if(xhr.readyState === XMLHttpRequest.DONE){
         var response = xhr.responseText;
+        var code;
         // console.log("shader content:\n"+response);
+        var channel0,channel1,channel2,channel3;
         if(!isFile){
           response = JSON.parse(response)
-          response = response.Shader.renderpass[0].code
+          response = response.Shader.renderpass[0]
+          code = response.code
+          // FIXME
+          // inputs[0] is first, but maybe should use "channel" key/value to be safe
+          // perhaps channel0 can be unused but channel1 is and this messes it up?
+          // if(response.inputs[0]){
+          //   channel0 = `https://www.shadertoy.com/${response.inputs[0].src}`;
+          //   iChannel0Field.text = channel0;
+          //   iChannel0_flag.checked = true;
+          // }
+          // if(response.inputs[1]){
+          //   channel1 = `https://www.shadertoy.com/${response.inputs[1].src}`;
+          //   iChannel1Field.text = channel1;
+          //   iChannel1_flag.checked = true;
+          // }
+          // if(response.inputs[2]){
+          //   channel2 = `https://www.shadertoy.com/${response.inputs[2].src}`;
+          //   iChannel2Field.text = channel2;
+          //   iChannel2_flag.checked = true;
+          // }
+          // if(response.inputs[3]){
+          //   channel3 = `https://www.shadertoy.com/${response.inputs[3].src}`;
+          //   iChannel3Field.text = channel3;
+          //   iChannel3_flag.checked = true;
+          // }
         }
-        wallpaper.configuration.selectedShaderContent = response;
+        wallpaper.configuration.selectedShaderContent = code;
         // create GUI buttons of the containing vec3
-        // main.shaderEngine.iChannel0 = Qt.resolvedUrl("./Resources/Shadertoy_Pebbles.png")
-        console.log(wallpaper)
         createVec3Buttons();
         createVariableFields();
       }
@@ -868,6 +998,7 @@ Item {
 
     createVec3Buttons();
     createVariableFields();
+    // while(true) console.log(`AYYLMAO: ${wallpaper.configuration.iChannel0}`)
     // selectedShaderField.text = Qt.resolvedUrl("./Shaders/"+model.get(selectedShader.currentIndex, "fileName"));
   }
 }

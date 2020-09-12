@@ -36,7 +36,7 @@
     </entry>
     <entry name="iChannel0" type="string">
       <label>iChannel0's path</label>
-      <default>./Resources/Shadertoy_Organic_2.jpg</default>
+      <default>../Resources/Shadertoy_Pebbles.png</default>
     </entry>
     <entry name="iChannel0_flag" type="bool">
       <label>iChannel0 on/off flag</label>
@@ -44,7 +44,7 @@
     </entry>
     <entry name="iChannel1" type="string">
       <label>iChannel1's path</label>
-      <default>./Resources/Shadertoy_Organic_2.jpg</default>
+      <default>../Resources/Shadertoy_Organic_2.jpg</default>
     </entry>
     <entry name="iChannel1_flag" type="bool">
       <label>iChannel1 on/off flag</label>
@@ -52,19 +52,23 @@
     </entry>
     <entry name="iChannel2" type="string">
       <label>iChannel2's path</label>
-      <default>./Resources/Shadertoy_Organic_2.jpg</default>
+      <default>../Resources/Shadertoy_Organic_2.jpg</default>
     </entry>
     <entry name="iChannel2_flag" type="bool">
       <label>iChannel0 on/off flag</label>
       <default>false</default>
     </entry>
-        <entry name="iChannel3" type="string">
+    <entry name="iChannel3" type="string">
       <label>iChannel3's path</label>
-      <default>./Resources/Shadertoy_Organic_2.jpg</default>
+      <default>../Resources/Shadertoy_Organic_2.jpg</default>
     </entry>
     <entry name="iChannel3_flag" type="bool">
       <label>iChannel3 on/off flag</label>
       <default>false</default>
+    </entry>
+    <entry name="iFrameRate" type="double">
+      <label>iFrameRate</label>
+      <default>-1</default>
     </entry>
   </group>
 

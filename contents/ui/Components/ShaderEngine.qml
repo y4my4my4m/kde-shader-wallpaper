@@ -37,10 +37,10 @@ ShaderEffect {
     property real       iFrameRate
     property double     shaderSpeed: 1.0
     property vector4d   iMouse;
-    property var        iChannel0: wallpaper.configuration.ichannel0_flag ? ich0 : ''; //only Image or ShaderEffectSource
-    property var        iChannel1: wallpaper.configuration.ichannel1_flag ? ich1 : ''; //only Image or ShaderEffectSource
-    property var        iChannel2: wallpaper.configuration.ichannel2_flag ? ich2 : ''; //only Image or ShaderEffectSource
-    property var        iChannel3: wallpaper.configuration.ichannel3_flag ? ich3 : ''; //only Image or ShaderEffectSource
+    property var        iChannel0: ich0; //only Image or ShaderEffectSource
+    property var        iChannel1: ich1; //only Image or ShaderEffectSource
+    property var        iChannel2: ich2; //only Image or ShaderEffectSource
+    property var        iChannel3: ich3; //only Image or ShaderEffectSource
     property var        iChannelTime: [0, 1, 2, 3]
     property var        iChannelResolution: [calcResolution(iChannel0), calcResolution(iChannel1), calcResolution(iChannel2), calcResolution(iChannel3)]
     property vector4d   iDate;
@@ -48,23 +48,23 @@ ShaderEffect {
 
     Image {
       id: ich0
-      source: Qt.resolvedUrl("../Resources/Shadertoy_Organic_3.jpg")
+      source: wallpaper.configuration.iChannel0_flag ? Qt.resolvedUrl(wallpaper.configuration.iChannel0) : ''
       visible:false
     }
     Image {
       id: ich1
-      source: Qt.resolvedUrl("../Resources/Shadertoy_Organic_2.jpg")
+      source: wallpaper.configuration.iChannel1_flag ? Qt.resolvedUrl(wallpaper.configuration.iChannel1) : ''
       visible:false
     }
     Image {
       id: ich2
-      source: Qt.resolvedUrl("../Resources/Shadertoy_Bayer.png")
+      source: wallpaper.configuration.iChannel2_flag ? Qt.resolvedUrl(wallpaper.configuration.iChannel2) : ''
       visible:false
     }
     Image {
       id: ich3
-      source: Qt.resolvedUrl("../Resources/Shadertoy_London.jpg")
-      visible:false
+      source: wallpaper.configuration.iChannel3_flag ? Qt.resolvedUrl(wallpaper.configuration.iChannel3) : ''
+      visible: false
     }
 
     //properties for Qml controller

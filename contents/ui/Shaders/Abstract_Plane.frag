@@ -1,7 +1,9 @@
 // property Image iChannel0: Image { source: "./Shadertoy_Organic_3.jpg" }
+// from Shane
+// url https://www.shadertoy.com/view/4sGSRV
 /*
-    Abstract Plane
-    --------------
+  Abstract Plane
+  --------------
 
 	Performing 2nd order distance checks on randomized 3D tiles to add some pronounced
 	surfacing to a warped plane... Verbose description aside, it's a pretty simple process. :)
