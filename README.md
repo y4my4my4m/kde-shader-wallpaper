@@ -29,12 +29,12 @@ I'll probably maintain it on Github principally for issues/PR but I'll try my be
 - Opencode: https://www.opencode.net/y4my4my4m/kde-shader-wallpaper
 
 #### Roadmap:
-- [x] Version 1.0 - Simply load shaders
-- [x] Version 1.1 - File Dialog added
-- [x] Version 1.2 - iGPU fix
-- [x] Version 1.3 - 70 new shaders + autolisting(current version)
-- [ ] Version 2.0 - Customize shaders via GUI
-- [ ] Version 3.0 - Directly load shaders from shadertoy.com or file
+- [x] Version 1.0  - Simply load shaders
+- [x] Version 1.1  - File Dialog added
+- [x] Version 1.2  - iGPU fix
+- [x] Version 1.3  - 70 new shaders + autolisting
+- [x] Version 2.0a - Customize shaders via GUI, directly load shaders from shadertoy.com or file **(current version)**
+- [ ] Version 2.x  - Save/Load edits, better customization, better buffers/channel
 
 #### Notes:
 - Performance may vary depending of your specs, but it's actually not all that resource intensive, depends on the shader too.
