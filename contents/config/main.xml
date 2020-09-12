@@ -6,9 +6,17 @@
   <kcfgfile name=""/>
 
   <group name="General">
-    <entry name="SelectedShader" type="String">
+    <entry name="selectedShader" type="String">
       <label>SelectedShader</label>
-      <default>./Shader/Shader_Waves</default>
+      <default>./Shaders/2D_Clouds/2D_Clouds</default>
+    </entry>
+      <entry name="selectedShaderContent" type="String">
+        <label>selectedShaderContent</label>
+        <default></default>
+      </entry>
+    <entry name="running" type="bool">
+      <label>Shader is running.</label>
+      <default>true</default>
     </entry>
     <entry name="checkedSmartPlay" type="bool">
       <label>Pause the video when existing a maximized or full-screen windows.</label>
@@ -21,6 +29,46 @@
     <entry name="checkGl3Ver" type="bool">
       <label>Change gl3 version for shader compatibility.</label>
       <default>true</default>
+    </entry>
+    <entry name="shaderSpeed" type="double">
+      <label>Change the shader speed</label>
+      <default>1.0</default>
+    </entry>
+    <entry name="iChannel0" type="string">
+      <label>iChannel0's path</label>
+      <default>../Resources/Shadertoy_Pebbles.png</default>
+    </entry>
+    <entry name="iChannel0_flag" type="bool">
+      <label>iChannel0 on/off flag</label>
+      <default>false</default>
+    </entry>
+    <entry name="iChannel1" type="string">
+      <label>iChannel1's path</label>
+      <default>../Resources/Shadertoy_Organic_2.jpg</default>
+    </entry>
+    <entry name="iChannel1_flag" type="bool">
+      <label>iChannel1 on/off flag</label>
+      <default>false</default>
+    </entry>
+    <entry name="iChannel2" type="string">
+      <label>iChannel2's path</label>
+      <default>../Resources/Shadertoy_Organic_2.jpg</default>
+    </entry>
+    <entry name="iChannel2_flag" type="bool">
+      <label>iChannel0 on/off flag</label>
+      <default>false</default>
+    </entry>
+    <entry name="iChannel3" type="string">
+      <label>iChannel3's path</label>
+      <default>../Resources/Shadertoy_Organic_2.jpg</default>
+    </entry>
+    <entry name="iChannel3_flag" type="bool">
+      <label>iChannel3 on/off flag</label>
+      <default>false</default>
+    </entry>
+    <entry name="iFrameRate" type="double">
+      <label>iFrameRate</label>
+      <default>-1</default>
     </entry>
   </group>
 
