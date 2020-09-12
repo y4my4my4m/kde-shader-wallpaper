@@ -684,12 +684,10 @@ Item {
     title: "Please choose a color"
     property string previousColor: colorDialog.color.r + ", " + colorDialog.color.g + ", " + colorDialog.color.b;
     color: getInitialColor();
-    // color: findAndReplaceColor("", number, false);
     property int number: 0
     onCurrentColorChanged: {
-      // console.log("You are choosing: " + colorDialog.currentColor.r, colorDialog.currentColor.g, colorDialog.currentColor.b)
       let color = colorDialog.currentColor.r + ", " + colorDialog.currentColor.g + ", " + colorDialog.currentColor.b;
-      // findAndReplaceColor(color, number, true);
+      findAndReplaceColor(color, number, true);
     }
     onAccepted: {
       console.log("You chose: " + colorDialog.color.r, colorDialog.color.g, colorDialog.color.b)
@@ -697,7 +695,6 @@ Item {
     }
     onRejected: {
       findAndReplaceColor(previousColor, number, true);
-      // console.log("Canceled, set previous color back")
       Qt.quit()
     }
     function getInitialColor(){
@@ -996,7 +993,6 @@ Item {
 
     else{
       // return an array of rgb values
-
       // for (var i=0; i<matches.length; i++){
       //   // console.log(`shader color before: ${matches[i]}`)
       //   matches[i] = matches[i].substr(5, matches[i].length);
@@ -1005,15 +1001,10 @@ Item {
       //   // console.log(`shader color after: ${matches[i]}`)
       // }
 
-      // return a single string (one vec3's value)
-      console.log(`shader color before: ${matches[number]}`)
+      // separate rgb colors in an array from a split string and return it
       matches[number] = matches[number].substr(5, matches[number].length);
-      console.log(`shader color during: ${matches[number]}`)
       matches[number] = matches[number].substr(0, matches[number].length -1);
-      console.log(`shader color after: ${matches[number]}`)
-      // console.log(`shader color test total: ${JSON.stringify(matches)}`)
       return matches[number].split(',');
-      // return matches[number]
     }
 
   }
