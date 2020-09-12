@@ -275,6 +275,7 @@ Item {
                   // enabled: false
                   onEditingFinished: {
                     wallpaper.configuration.iChannel0 =  iChannel0Field.text;
+                    getShaderContent();
                   }
                 }
 
@@ -318,6 +319,7 @@ Item {
                   text: wallpaper.configuration.iChannel1
                   onEditingFinished: {
                       wallpaper.configuration.iChannel1 =  iChannel1Field.text;
+                      getShaderContent();
                   }
                   // opacity: 0.45
                   // enabled: false
@@ -360,7 +362,8 @@ Item {
                   placeholderText: "TODO: path to iChannel2"
                   text: wallpaper.configuration.iChannel2
                   onEditingFinished: {
-                    wallpaper.configuration.iChannel2 = iChannel2Field.text
+                    wallpaper.configuration.iChannel2 = iChannel2Field.text;
+                    getShaderContent();
                   }
                   // opacity: 0.45
                   // enabled: false
@@ -404,6 +407,7 @@ Item {
                   text: wallpaper.configuration.iChannel3
                   onEditingFinished: {
                     wallpaper.configuration.iChannel3 = iChannel3Field.text;
+                    getShaderContent();
                   }
                   // opacity: 0.45
                   // enabled: false
@@ -772,42 +776,53 @@ Item {
       // console.log(shaderID)
       xhr.open("GET", "https://www.shadertoy.com/api/v1/shaders/"+shaderID+"?key=rd8t44"); // using @y4my4my4m's api key, be nice
     }
-
     xhr.onreadystatechange = function () {
       if(xhr.readyState === XMLHttpRequest.DONE){
         var response = xhr.responseText;
-        var code;
         // console.log("shader content:\n"+response);
+
+        // TODO / FIXME  make all of this pragmatic
+        var shaderCode;
         var channel0,channel1,channel2,channel3;
+        var renderpass0;
+        var ch0media,ch1media,ch2media,ch3media;
         if(!isFile){
-          response = JSON.parse(response)
-          response = response.Shader.renderpass[0]
-          code = response.code
+          response = JSON.parse(response);
+          renderpass0 = response.Shader.renderpass[0]
+          ch0media    = response.Shader.renderpass[0].inputs[0]
+          ch1media    = response.Shader.renderpass[0].inputs[1]
+          ch2media    = response.Shader.renderpass[0].inputs[2]
+          ch3media    = response.Shader.renderpass[0].inputs[3]
+          shaderCode  = response.Shader.renderpass[0].code
+          // code = response.code
           // FIXME
           // inputs[0] is first, but maybe should use "channel" key/value to be safe
           // perhaps channel0 can be unused but channel1 is and this messes it up?
-          // if(response.inputs[0]){
-          //   channel0 = `https://www.shadertoy.com/${response.inputs[0].src}`;
-          //   iChannel0Field.text = channel0;
-          //   iChannel0_flag.checked = true;
-          // }
-          // if(response.inputs[1]){
-          //   channel1 = `https://www.shadertoy.com/${response.inputs[1].src}`;
-          //   iChannel1Field.text = channel1;
-          //   iChannel1_flag.checked = true;
-          // }
-          // if(response.inputs[2]){
-          //   channel2 = `https://www.shadertoy.com/${response.inputs[2].src}`;
-          //   iChannel2Field.text = channel2;
-          //   iChannel2_flag.checked = true;
-          // }
-          // if(response.inputs[3]){
-          //   channel3 = `https://www.shadertoy.com/${response.inputs[3].src}`;
-          //   iChannel3Field.text = channel3;
-          //   iChannel3_flag.checked = true;
-          // }
+          if(ch0media){
+            channel0 = `https://www.shadertoy.com/${ch0media.src}`;
+            iChannel0Field.text = channel0;
+            iChannel0_flag.checked = true;
+          }
+          if(ch1media){
+            channel1 = `https://www.shadertoy.com/${ch1media.src}`;
+            iChannel1Field.text = channel1;
+            iChannel1_flag.checked = true;
+          }
+          if(ch2media){
+            channel2 = `https://www.shadertoy.com/${ch2media.src}`;
+            iChannel2Field.text = channel2;
+            iChannel2_flag.checked = true;
+          }
+          if(ch3media){
+            channel3 = `https://www.shadertoy.com/${ch3media.src}`;
+            iChannel3Field.text = channel3;
+            iChannel3_flag.checked = true;
+          }
+          wallpaper.configuration.selectedShaderContent = shaderCode;
         }
-        wallpaper.configuration.selectedShaderContent = code;
+        else{
+          wallpaper.configuration.selectedShaderContent = response;
+        }
         // create GUI buttons of the containing vec3
         createVec3Buttons();
         createVariableFields();
@@ -998,7 +1013,6 @@ Item {
 
     createVec3Buttons();
     createVariableFields();
-    // while(true) console.log(`AYYLMAO: ${wallpaper.configuration.iChannel0}`)
     // selectedShaderField.text = Qt.resolvedUrl("./Shaders/"+model.get(selectedShader.currentIndex, "fileName"));
   }
 }
