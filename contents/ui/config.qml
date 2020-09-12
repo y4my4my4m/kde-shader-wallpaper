@@ -1027,19 +1027,31 @@ Item {
     for (var i=0; i<getShaderVec3s(); i++) {
         // should load GUIButton.qml instead
         let prevC = getInitialColor(i, true);
+        let prevCrgb = prevC.split(',');
+        console.log(`prevCrgb ${prevCrgb}`)
         let objStr = `
             import QtQuick 2.12;
             import QtQuick.Controls 2.12;
+            import QtQuick.Controls 2.12;
+            import org.kde.plasma.core 2.0 as PlasmaCore;
             Button {
-            property int number: ${i}
-            id: vec3button_${i}
-            text: i18n("Change color of ${i}")
-            onClicked: {
-              colorDialog.number = ${i}
-              colorDialog.visible = !colorDialog.visible
-              colorDialog.previousColor = ${JSON.stringify(prevC)};
-            }
-          }`;
+              property int number: ${i}
+              id: vec3button_${i}
+              text: i18n(" Change color of ${i}")
+              Rectangle {
+                width:10
+                height:10
+                x: 5
+                anchors.verticalCenterOffset: -2.5
+                anchors.verticalCenter: parent.verticalCenter
+                color: Qt.rgba(${prevCrgb},1)
+              }
+              onClicked: {
+                colorDialog.number = ${i}
+                colorDialog.visible = !colorDialog.visible
+                colorDialog.previousColor = ${JSON.stringify(prevC)};
+              }
+            }`;
         var button = Qt.createQmlObject(objStr, buttonContainer);
     }
   }
