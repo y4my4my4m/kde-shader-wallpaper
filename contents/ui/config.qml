@@ -679,28 +679,27 @@ Item {
   //*******************
   //*** Components  ***
   //*******************
+  // property string tempColor: colorDialog.color.r + ", " + colorDialog.color.g + ", " + colorDialog.color.b;
+
   ColorDialog {
     id: colorDialog
     title: "Please choose a color"
     property string previousColor: colorDialog.color.r + ", " + colorDialog.color.g + ", " + colorDialog.color.b;
-    color: getInitialColor();
+    color: getInitialColor(number);
     property int number: 0
     onCurrentColorChanged: {
       let color = colorDialog.currentColor.r + ", " + colorDialog.currentColor.g + ", " + colorDialog.currentColor.b;
       findAndReplaceColor(color, number, true);
     }
     onAccepted: {
-      console.log("You chose: " + colorDialog.color.r, colorDialog.color.g, colorDialog.color.b)
+      // let color = colorDialog.currentColor.r + ", " + colorDialog.currentColor.g + ", " + colorDialog.currentColor.b;
+      // findAndReplaceColor(color, number, true);
+      // console.log("You chose: " + colorDialog.color.r, colorDialog.color.g, colorDialog.color.b)
       Qt.quit()
     }
     onRejected: {
       findAndReplaceColor(previousColor, number, true);
       Qt.quit()
-    }
-    function getInitialColor(){
-      let colors = findAndReplaceColor("", number, false);
-      if (colors.length > 1) return Qt.rgba(parseFloat(colors[0]),parseFloat(colors[1]),parseFloat(colors[2]),1);
-      return Qt.rgba(parseFloat(colors[0]),parseFloat(colors[0]),parseFloat(colors[0]));
     }
   }
 
@@ -1004,9 +1003,21 @@ Item {
       // separate rgb colors in an array from a split string and return it
       matches[number] = matches[number].substr(5, matches[number].length);
       matches[number] = matches[number].substr(0, matches[number].length -1);
-      return matches[number].split(',');
+      let colors = matches[number].split(',').map(parseFloat);
+      console.log(`colors: ${colors}`);
+      return colors;
     }
 
+  }
+
+
+  function getInitialColor(number, numOnly = false){
+    let colors = findAndReplaceColor("", number, false);
+    // FIXME: doesnt need to be like that
+    if (colors.length > 1 && !numOnly) return Qt.rgba(colors[0],colors[1],colors[2],1);
+    else if (colors.length > 1 && numOnly) return `${colors[0]},${colors[1]},${colors[2]}`;
+    else if (numOnly) return `${colors[0]}`;
+    return Qt.rgba(colors[0],colors[0],colors[0],1);
   }
 
   function createVec3Buttons(){
@@ -1015,6 +1026,7 @@ Item {
     }
     for (var i=0; i<getShaderVec3s(); i++) {
         // should load GUIButton.qml instead
+        let prevC = getInitialColor(i, true);
         let objStr = `
             import QtQuick 2.12;
             import QtQuick.Controls 2.12;
@@ -1025,6 +1037,7 @@ Item {
             onClicked: {
               colorDialog.number = ${i}
               colorDialog.visible = !colorDialog.visible
+              colorDialog.previousColor = ${JSON.stringify(prevC)};
             }
           }`;
         var button = Qt.createQmlObject(objStr, buttonContainer);
