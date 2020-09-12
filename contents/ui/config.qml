@@ -266,6 +266,11 @@ Item {
                   id: iChannel0_flag
                   width: 35
                   checked: false
+                  onCheckedChanged: {
+                    if (!checked) wallpaper.configuration.iChannel0 = ""
+                    else wallpaper.configuration.iChannel0 = iChannel0Field.text;
+                    getShaderContent();
+                  }
                 }
                 TextField {
                   id: iChannel0Field
@@ -312,13 +317,19 @@ Item {
                   id: iChannel1_flag
                   width: 35
                   checked: false
+                  onCheckedChanged: {
+                    if (!checked) wallpaper.configuration.iChannel1 = ""
+                    else wallpaper.configuration.iChannel1 = iChannel1Field.text;
+                    getShaderContent();
+                  }
                 }
                 TextField {
                   id: iChannel1Field
                   placeholderText: "path to iChannel1"
                   text: wallpaper.configuration.iChannel1
                   onEditingFinished: {
-                      wallpaper.configuration.iChannel1 =  iChannel1Field.text;
+                      if(iChannel1Field.text !== "") iChannel1_flag.checked
+                      wallpaper.configuration.iChannel1 = iChannel1Field.text;
                       getShaderContent();
                   }
                   // opacity: 0.45
@@ -356,6 +367,11 @@ Item {
                   id: iChannel2_flag
                   width: 35
                   checked: false
+                  onCheckedChanged: {
+                    if (!checked) wallpaper.configuration.iChannel2 = ""
+                    else wallpaper.configuration.iChannel2 = iChannel2Field.text;
+                    getShaderContent();
+                  }
                 }
                 TextField {
                   id: iChannel2Field
@@ -400,6 +416,11 @@ Item {
                   id: iChannel3_flag
                   width: 35
                   checked: false
+                  onCheckedChanged: {
+                    if (!checked) wallpaper.configuration.iChannel3 = ""
+                    else wallpaper.configuration.iChannel3 = iChannel3Field.text;
+                    getShaderContent();
+                  }
                 }
                 TextField {
                   id: iChannel3Field
@@ -726,7 +747,7 @@ Item {
     // nameFilters: [ "Video files (*.mp4 *.mpg *.ogg *.mov *.webm *.flv *.matroska *.avi *wmv)", "All files (*)" ]
     onAccepted: {
       iChannel0Field.text = fileDialog_ich0.fileUrls[0]
-      // getShaderContent();
+      getShaderContent();
     }
   }
 
@@ -737,7 +758,7 @@ Item {
     // nameFilters: [ "Video files (*.mp4 *.mpg *.ogg *.mov *.webm *.flv *.matroska *.avi *wmv)", "All files (*)" ]
     onAccepted: {
       iChannel1Field.text = fileDialog_ich1.fileUrls[0]
-      // getShaderContent();
+      getShaderContent();
     }
   }
 
@@ -748,7 +769,7 @@ Item {
     // nameFilters: [ "Video files (*.mp4 *.mpg *.ogg *.mov *.webm *.flv *.matroska *.avi *wmv)", "All files (*)" ]
     onAccepted: {
       iChannel2Field.text = fileDialog_ich2.fileUrls[0]
-      // getShaderContent();
+      getShaderContent();
     }
   }
   FileDialog {
@@ -758,7 +779,7 @@ Item {
     // nameFilters: [ "Video files (*.mp4 *.mpg *.ogg *.mov *.webm *.flv *.matroska *.avi *wmv)", "All files (*)" ]
     onAccepted: {
       iChannel3Field.text = fileDialog_ich3.fileUrls[0]
-      // getShaderContent();
+      getShaderContent();
     }
   }
   //****************************
