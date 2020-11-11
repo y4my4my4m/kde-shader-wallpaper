@@ -11,7 +11,6 @@ Item {
   property alias cfg_selectedShader:   selectedShaderField.text
   property alias cfg_checkGl3Ver:      checkGl3Ver.checked
   property alias cfg_checkedSmartPlay: checkedSmartPlay.checked
-  property alias cfg_checkedBusyPlay:  checkedBusyPlay.checked
   property alias cfg_iChannel0_flag:   iChannel0_flag.checked
   property alias cfg_iChannel1_flag:   iChannel1_flag.checked
   property alias cfg_iChannel2_flag:   iChannel2_flag.checked
@@ -566,34 +565,10 @@ Item {
                   color: "white"
                   padding:5
                 }
-                RadioButton {
+                CheckBox {
                   id: checkedSmartPlay
-                  // checkable: false
-                  // opacity: 0.25
-                  checked: !checkedBusyPlay.checked
-                  text: i18n("Pause the shader when maximized or full-screen windows.")
-                  onCheckedChanged: {
-                    checkedBusyPlay.checked = !checkedSmartPlay.checked
-                  }
-                }
-              }
-
-              RowLayout{
-                Layout.fillWidth: true
-                Text {
-                  width:100
-                  color: "white"
-                  padding:5
-                }
-                RadioButton {
-                  id: checkedBusyPlay
-                  // checkable: false
-                  // opacity: 0.25
-                  checked: !checkedSmartPlay.checked
-                  text: i18n("Pause the shader when the desktop is busy.")
-                  onCheckedChanged: {
-                    checkedSmartPlay.checked = !checkedBusyPlay.checked
-                  }
+                  checked: false
+                  text: i18n("Pause the shader when covered by maximized or full-screen windows.")
                 }
               }
           }

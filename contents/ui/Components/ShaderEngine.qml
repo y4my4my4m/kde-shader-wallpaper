@@ -217,7 +217,7 @@ ShaderEffect {
 
     // Performance
     property bool runShader: true
-    property bool modePlay: wallpaper.configuration.checkedBusyPlay
+    property bool smartPlay: wallpaper.configuration.checkedSmartPlay
 
     TaskManager.VirtualDesktopInfo { id: virtualDesktopInfo }
     TaskManager.ActivityInfo { id: activityInfo }
@@ -234,12 +234,9 @@ ShaderEffect {
         filterByVirtualDesktop: true
         filterByScreen: true
 
-        // onActiveTaskChanged: updateWindowsinfo(shader.modePlay)
-        // onDataChanged: updateWindowsinfo(shader.modePlay)
+        // onActiveTaskChanged: updateWindowsinfo(shader.smartPlay)
+        // onDataChanged: updateWindowsinfo(shader.smartPlay)
         Component.onCompleted: {
-            maximizedWindowModel.sourceModel = tasksModel
-            fullScreenWindowModel.sourceModel = tasksModel
-            minimizedWindowModel.sourceModel = tasksModel
             onlyWindowsModel.sourceModel = tasksModel
         }
     }
@@ -248,85 +245,46 @@ ShaderEffect {
         id: onlyWindowsModel
         filterRole: 'IsWindow'
         filterRegExp: 'true'
-        onDataChanged: updateWindowsinfo(shader.modePlay)
-        onCountChanged: updateWindowsinfo(shader.modePlay)
+        onDataChanged: updateWindowsinfo(shader.smartPlay)
+    }
+    
+    function setRunning(running) {
+        console.log(running?'shader restarted':'shader stopped')
+        runShader = running
+        shader.running = running
     }
 
-    PlasmaCore.SortFilterModel {
-        id: maximizedWindowModel
-        filterRole: 'IsMaximized'
-        filterRegExp: 'true'
-        onDataChanged: updateWindowsinfo(shader.modePlay)
-        onCountChanged: updateWindowsinfo(shader.modePlay)
-    }
-    PlasmaCore.SortFilterModel {
-        id: fullScreenWindowModel
-        filterRole: 'IsFullScreen'
-        filterRegExp: 'true'
-        onDataChanged: updateWindowsinfo(shader.modePlay)
-        onCountChanged: updateWindowsinfo(shader.modePlay)
+    function contains(rectOuter, rectInner){
+        return rectOuter.left <= rectInner.left &&
+            rectOuter.top <= rectInner.top &&
+            rectOuter.bottom >= rectInner.bottom &&
+            rectOuter.right >= rectInner.right
     }
 
-    PlasmaCore.SortFilterModel {
-        id: minimizedWindowModel
-        filterRole: 'IsMinimized'
-        filterRegExp: 'true'
-        onDataChanged: updateWindowsinfo(shader.modePlay)
-        onCountChanged: updateWindowsinfo(shader.modePlay)
-    }
-    function updateWindowsinfo(modePlay) {
-        if(modePlay){
-            runShader = (onlyWindowsModel.count === minimizedWindowModel.count) ? true : false
-            shader.running = !runShader
-            //FIXME just reassign it directly to running...or just reformat all of that actually
-        }
-        else{
-            var joinApps  = [];
-            var minApps  = [];
-            var aObj;
-            var i;
-            var j;
-            // add fullscreen apps
-            for (i = 0 ; i < fullScreenWindowModel.count ; i++){
-                aObj = fullScreenWindowModel.get(i)
-                joinApps.push(aObj.AppPid)
-                // console.log(`fullScreenWindowModel: ${aObj.AppPid}`)
-            }
-            // add maximized apps
-            for (i = 0 ; i < maximizedWindowModel.count ; i++){
-                aObj = maximizedWindowModel.get(i)
-                joinApps.push(aObj.AppPid)
-                // console.log(`maximizedWindowModel: ${aObj.AppPid}`)
-            }
-
-            // add minimized apps
-            for (i = 0 ; i < minimizedWindowModel.count ; i++){
-                aObj = minimizedWindowModel.get(i)
-                minApps.push(aObj.AppPid)
-                // console.log(`minimizedWindowModel: ${aObj.AppPid}`)
-            }
-
-            joinApps = removeDuplicates(joinApps) // for qml Kubuntu 18.04
-
-            joinApps.sort();
-            minApps.sort();
-
-            var twoStates = 0
-            j = 0;
-            for(i = 0 ; i < minApps.length ; i++){
-                if(minApps[i] === joinApps[j]){
-                    twoStates = twoStates + 1;
-                    j = j + 1;
+    function updateWindowsinfo(smartPlay) {
+        if(!smartPlay){
+            setRunning(true)
+        } else {
+            const screenGeometry = shader.parent.parent.parent.screenGeometry
+            for (let i = 0 ; i < onlyWindowsModel.count ; i++){
+                let appWindow = onlyWindowsModel.get(i)
+                if (!appWindow.IsMinimized){
+                    if (appWindow.IsFullScreen || appWindow.IsMaximized){
+                        // This is a crude way to check if window is on the same
+                        // screen as the shader for multi monitor setups.
+                        // Ideally it would check the other way around
+                        // (check if screenGeometry is contained within window,
+                        // which would mean that the whole screen is covered 
+                        // by the window), but this doesn't work on the main
+                        // screen because of the taskbar
+                        if (contains(screenGeometry, appWindow.Geometry)){
+                            setRunning(false)                    
+                            return
+                        }
+                    }
                 }
             }
-            runShader = (fullScreenWindowModel.count + maximizedWindowModel.count - twoStates) == 0 ? true : false
-            shader.running = runShader
+            setRunning(true)                    
         }
     }
-    function removeDuplicates(arrArg){
-      return arrArg.filter(function(elem, pos,arr) {
-        return arr.indexOf(elem) == pos;
-      });
-    }
-
 }
