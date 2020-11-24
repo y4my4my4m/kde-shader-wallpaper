@@ -18,7 +18,7 @@
 - `kpackagetool5 -t Plasma/Wallpaper --upgrade kde-shadertoy-wallpaper`
 
 #### Uninstall
-- You can uninstall it via KDE's desktop settings otherwise, you can uninstall like this: `kpackagetool5 -t Plasma/Wallpaper --upgrade kde-shadertoy-wallpaper`
+- You can uninstall it via KDE's desktop settings otherwise, you can uninstall like this: `kpackagetool5 -t Plasma/Wallpaper --remove kde-shadertoy-wallpaper`
 
 
 ### Repo:
