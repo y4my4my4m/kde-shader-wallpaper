@@ -18,8 +18,7 @@
 - `kpackagetool5 -t Plasma/Wallpaper --upgrade kde-shader-wallpaper`
 
 #### Uninstall
-- You can uninstall it via KDE's desktop settings otherwise, you can uninstall like this: `kpackagetool5 -t Plasma/Wallpaper --remove kde-shader-wallpaper`
-
+- You can uninstall it via KDE's desktop settings otherwise, you can uninstall like this: `kpackagetool5 -t Plasma/Wallpaper --remove online.knowmad.shaderwallpaper`
 
 ### Repo:
 I'll probably maintain it on Github principally for issues/PR but I'll try my best to maintain both, if anything contact me on twitter [@y4my4my4m](https://twitter.com/@y4my4my4m).
