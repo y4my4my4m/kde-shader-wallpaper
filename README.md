@@ -11,14 +11,14 @@
 
 #### Install from Source
 - clone this repository or [download the latest release](https://github.com/y4my4my4m/kde-shader-wallpaper/releases)
-- install from folder: `kpackagetool5 -t Plasma/Wallpaper -i kde-shadertoy-wallpaper`
+- install from folder: `kpackagetool5 -t Plasma/Wallpaper -i kde-shader-wallpaper`
 - install from archive: `kpackagetool5 -t Plasma/Wallpaper -i online.knowmad.shaderwallpaper-1.3.tar.gz`
 
 #### Upgrade
-- `kpackagetool5 -t Plasma/Wallpaper --upgrade kde-shadertoy-wallpaper`
+- `kpackagetool5 -t Plasma/Wallpaper --upgrade kde-shader-wallpaper`
 
 #### Uninstall
-- You can uninstall it via KDE's desktop settings otherwise, you can uninstall like this: `kpackagetool5 -t Plasma/Wallpaper --remove kde-shadertoy-wallpaper`
+- You can uninstall it via KDE's desktop settings otherwise, you can uninstall like this: `kpackagetool5 -t Plasma/Wallpaper --remove kde-shader-wallpaper`
 
 
 ### Repo:
