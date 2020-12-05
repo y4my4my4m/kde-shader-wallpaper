@@ -33,6 +33,7 @@ I'll probably maintain it on Github principally for issues/PR but I'll try my be
 - [x] Version 1.2  - iGPU fix
 - [x] Version 1.3  - 70 new shaders + autolisting
 - [x] Version 2.0a - Customize shaders via GUI, directly load shaders from shadertoy.com or file **(current version)**
+- [x] Version 2.0.1a - Breaking bug fix regarding the pause/fullscreen feature(current version)
 - [ ] Version 2.x  - Save/Load edits, better customization, better buffers/channel
 
 #### Notes:
