@@ -66,6 +66,22 @@
       <label>iFrameRate</label>
       <default>-1</default>
     </entry>
+    <entry name="win0_left" type="string">
+      <label>win0_left</label>
+      <default>1.0</default>
+    </entry>
+    <entry name="win0_right" type="string">
+      <label>win0_right</label>
+      <default>1.0</default>
+    </entry>
+    <entry name="win0_top" type="string">
+      <label>win0_top</label>
+      <default>1.0</default>
+    </entry>
+    <entry name="win0_bottom" type="string">
+      <label>win0_bottom</label>
+      <default>1.0</default>
+    </entry>
   </group>
 
 </kcfg>

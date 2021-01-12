@@ -509,7 +509,28 @@ Item {
             id: variableContainer
           }
         }
-
+        // // v2 container
+        // RowLayout{
+        //
+        //   Rectangle{
+        //     anchors.fill: parent
+        //     border.color: Qt.rgba(255,255,255,0.05)
+        //     border.width: 1
+        //     Layout.fillHeight: true
+        //     Layout.fillWidth : true
+        //     radius: 4
+        //     color: "transparent"
+        //   }
+        //   GridLayout{
+        //     Layout.topMargin: 10
+        //     Layout.bottomMargin:10
+        //     Layout.fillHeight: true
+        //     Layout.fillWidth : true
+        //     anchors.horizontalCenter: parent.horizontalCenter
+        //     columns: 3
+        //     id: v2Container
+        //   }
+        // }
 
         //*******************
         //*** Performance ***
@@ -942,6 +963,125 @@ Item {
         Qt.createQmlObject(objStr, variableContainer);
     }
   }
+  // find all vars in shader (to create textfields for each)
+  // return array[{name,value}];
+  // function getWindowLines(){
+  //   // vec2 o1 = vec2(0.15,0.15);
+  //   let vec2regex   = /vec2\s(o[0-9])\s=\svec2(\([+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+\))/g;
+  //
+  //   let currentShaderContent = wallpaper.configuration.selectedShaderContent;
+  //   let matches = currentShaderContent.match(vec2regex);
+  //   // console.log(`matches: ${matches}`);
+  //   //
+  //   // let test = varRegex.exec(matches[1]);
+  //   // console.log(`matchedGroup 1????: ${test}`); // variable
+  //
+  //   let allMatches = []
+  //   for (var i=0; i<matches.length; i++){
+  //     // find groups within matched pattern
+  //     // console.log(`matches      ${i}: ${matches[i]}`);
+  //     let matchedGroup = vec2regex.exec(matches[i]);
+  //     vec2regex.lastIndex = 0; // RESET REGEX INDEX !!!!
+  //     console.log(`matchedGroup ${i}: ${matchedGroup}`); // variable
+  //     // console.log(`matchedGroup 1: ${matchedGroup[1]}`); // variable's name
+  //     // console.log(`matchedGroup 2: ${matchedGroup[2]}`); // variable's value
+  //     let matchedObj = {};
+  //     if (matchedGroup){
+  //       // matchedObj['full'] = matchedGroup[0];
+  //       let newVariable;
+  //       if(matchedGroup[1] == 'o1') newVariable = matched.replace(matchedGroup[2],'vec2('+wallpaper.configuration.win0_left+','+wallpaper.configuration.win0_top+')');
+  //       // if(matchedGroup[1] == 'o2') newVariable = matched.replace(matchedGroup[2],wallpaper.configuration.win0_right);
+  //       // if(matchedGroup[1] == 'o3') newVariable = matched.replace(matchedGroup[2],wallpaper.configuration.win0_bottom);
+  //       // if(matchedGroup[1] == 'o4') newVariable = matched.replace(matchedGroup[2],wallpaper.configuration.win0_top);
+  //       // matchedObj['name']  = matchedGroup[1];
+  //       // matchedObj['value'] = matchedGroup[2];
+  //       // allMatches.push(matchedObj)
+  //       currentShaderContent = currentShaderContent.replace(matched, newVariable);
+  //       // assign modified var to current shader
+  //     }
+  //   }
+  //   wallpaper.configuration.selectedShaderContent = currentShaderContent;
+  //   // return allMatches;
+  //
+  // }
+
+
+    // // string       variables                      the new value to replace
+    // // int          index      default 0          match case for the vec3 / which variable to hijack color of
+    // function findAndReplaceLines(index = 0){
+    //
+    //   let varRegex = /vec2\s(o[0-9])\s=\svec2(\([+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+\))/g;
+    //
+    //   let currentShaderContent = wallpaper.configuration.selectedShaderContent;
+    //
+    //   let matches = currentShaderContent.match(varRegex);
+    //   // console.log(`matches: ${matches}`);
+    //   let matched = matches[index]; // only need to modify requested;
+    //   // console.log(`matched: ${matched}`);
+    //
+    //   // find groups within matched pattern
+    //   let matchedGroup = varRegex.exec(matched);
+    //   varRegex.lastIndex = 0; // RESET REGEX INDEX !!!!
+    //   // console.log(`matchedgroup ${matchedGroup}`)
+    //   console.log(`matchedGroup 1: ${matchedGroup[1]}`); // variable's name
+    //   console.log(`matchedGroup 2: ${matchedGroup[2]}`); // variable's value
+    //   if (matchedGroup){
+    //     if(matchedGroup[1] == 'o1') {
+    //       let newVariable = matched.replace(matchedGroup[2],'vec2('+wallpaper.configuration.win0_left+','+wallpaper.configuration.win0_top+')');
+    //
+    //       console.log(`OLD VALUE: ${matchedGroup[2]} || NEW VALUE: ${wallpaper.configuration.win0_left} || NEW VARIABLE ${newVariable}`)
+    //       // currentShaderContent = currentShaderContent.replace(matched, newVariable);
+    //       // assign modified var to current shader
+    //       // wallpaper.configuration.selectedShaderContent = currentShaderContent;
+    //     }
+    //
+    //   }
+    //
+    //
+    // }
+      //
+      // function createLineFields(){
+      //   for(var i = v2Container.children.length; i > 0; i--) {
+      //       v2Container.children[i-1].destroy();
+      //   }
+      //   let variables = getWindowLines();
+      //   for (var i=0; i<variables.length; i++) {
+      //
+      //       // should load GUIVariableField.qml instead
+      //       // console.log(`variables: ${JSON.stringify(variables)}`)
+      //       // console.log('trying to create variable textfield')
+      //       // console.log(`variables[i]: ${i} ${variables[i].name} ${variables[i].value}`)
+      //       // console.log(`variables[i].name: ${variables[i].name}`)
+      //       // console.log(`variables[i].value: ${variables[i].value}`)
+      //       // if (!variables[i]) return;
+      //
+      //       let objStr = `
+      //           import QtQuick 2.12;
+      //           import QtQuick.Layouts 1;
+      //           import QtQuick.Controls 2.12;
+      //           RowLayout {
+      //             spacing: units.largeSpacing / 2
+      //             Label {
+      //               Layout.minimumWidth: width
+      //               Layout.maximumWidth: width
+      //               horizontalAlignment: Text.AlignRight
+      //               width: 120
+      //               text: '${variables[i].name}:'
+      //             }
+      //             TextField {
+      //               id: v2Field_${i}
+      //               Layout.minimumWidth: width
+      //               Layout.maximumWidth: width
+      //               width: 150
+      //               text: '${variables[i].value}'
+      //               onEditingFinished: {
+      //                 findAndReplaceVar(v2Field_${i}.text, ${i});
+      //               }
+      //             }
+      //           }`;
+      //       Qt.createQmlObject(objStr, v2Container);
+      //   }
+      // }
 
   // ******************
   // *** GUI COLORS ***
@@ -1057,6 +1197,7 @@ Item {
 
     createVec3Buttons();
     createVariableFields();
+    // if(!selectedShaderField.text == 'WindowLines')
     // selectedShaderField.text = Qt.resolvedUrl("./Shaders/"+model.get(selectedShader.currentIndex, "fileName"));
   }
 }

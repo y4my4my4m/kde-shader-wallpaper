@@ -247,7 +247,7 @@ ShaderEffect {
         filterRegExp: 'true'
         onDataChanged: updateWindowsinfo(shader.smartPlay)
     }
-    
+
     function setRunning(running) {
         console.log(running?'shader restarted':'shader stopped')
         runShader = running
@@ -260,12 +260,85 @@ ShaderEffect {
             rectOuter.bottom >= rectInner.bottom &&
             rectOuter.right >= rectInner.right
     }
+    function updateShaderEffect(screenGeometry, winGeometry, index = 0){
+        let varRegex = /vec2\s(o[0-9])\s=\svec2(\([+-]?([0-9]*[.])?[0-9]+,\s*[+-]?([0-9]*[.])?[0-9]+\))/g;
 
+        let currentShaderContent = wallpaper.configuration.selectedShaderContent;
+        let matches = currentShaderContent.match(varRegex);
+        // console.log(`matches: ${matches}`);
+        let matched = matches[index]; // only need to modify requested;
+        // console.log(`matched: ${matched}`);
+
+        // find groups within matched pattern
+        let matchedGroup = varRegex.exec(matched);
+        varRegex.lastIndex = 0; // RESET REGEX INDEX !!!!
+        // console.log(`matchedgroup ${matchedGroup}`)
+        // console.log(`matchedGroup 1: ${matchedGroup[1]}`); // variable's name
+        // console.log(`matchedGroup 2: ${matchedGroup[2]}`); // variable's value
+        if (matchedGroup){
+          let newVariable;
+          let newValue;
+          if(matchedGroup[1] == 'o1') {
+            console.log('OONE');
+            console.log('sG.r: '+screenGeometry.right);
+            console.log('wG.l: '+winGeometry.left);
+            console.log('wG.l/sG.r: '+winGeometry.left/screenGeometry.right+'\n\n');
+            console.log('sG.b: '+screenGeometry.bottom);
+            console.log('wG.b: '+winGeometry.bottom);
+            console.log('wG.t/sG.b: '+(screenGeometry.bottom - winGeometry.bottom) / screenGeometry.bottom+'\n\n');
+
+            newValue = '('+winGeometry.left/screenGeometry.right+','+ (screenGeometry.bottom - winGeometry.bottom) / screenGeometry.bottom+')';
+            newVariable = matched.replace(matchedGroup[2],newValue);
+          }
+          if(matchedGroup[1] == 'o2') {
+            console.log('OTWO');
+            console.log('wG.r/wG.r: '+winGeometry.left/screenGeometry.right+'\n');
+            // console.log('wG.t/sG.b: '+winGeometry.top / screenGeometry.bottom+'\n\n\n');
+            newValue = '('+winGeometry.right/screenGeometry.right+','+(screenGeometry.bottom - winGeometry.bottom) / screenGeometry.bottom+')';
+            newVariable = matched.replace(matchedGroup[2],newValue);
+          }
+          // if(matchedGroup[1] == 'o3') {
+          //   newVariable = matched.replace(matchedGroup[2],'(0.'+geometry.right+',0.'+geometry.top+')');
+          // }
+          // if(matchedGroup[1] == 'o4') {
+          //   newVariable = matched.replace(matchedGroup[2],'(0.'+geometry.right+',0.'+geometry.bottom+')');
+          // }
+
+          // if (contains(screenGeometry, winGeometry)){
+            // console.log(`OLD VALUE: ${matchedGroup[2]} || NEW VALUE: ${newValue} || NEW VARIABLE ${newVariable}`)
+            currentShaderContent = currentShaderContent.replace(matched, newVariable);
+            // assign modified var to current shader
+            wallpaper.configuration.selectedShaderContent = currentShaderContent;
+          // }
+
+        }
+
+    }
     function updateWindowsinfo(smartPlay) {
+        const screenGeometry = shader.parent.parent.parent.screenGeometry;
+
+        let appWindows = [];
+
+        // if(WindowLine){
+          for (let i = 0 ; i < onlyWindowsModel.count ; i++){
+              let appWindow = onlyWindowsModel.get(i)
+              if (!appWindow.IsMinimized){
+                // if(i=0){
+                  // wallpaper.configuration.win0_top    = appWindow.Geometry.top;
+                  // wallpaper.configuration.win0_bottom = appWindow.Geometry.bottom;
+                  // wallpaper.configuration.win0_left   = appWindow.Geometry.left;
+                  // wallpaper.configuration.win0_right  = appWindow.Geometry.right;
+                  updateShaderEffect(screenGeometry, appWindow.Geometry,0);
+                  updateShaderEffect(screenGeometry, appWindow.Geometry,1);
+                // }
+                // appWindows.push(appWindow.Geometry);
+              }
+          }
+        // }
+
         if(!smartPlay){
             setRunning(true)
         } else {
-            const screenGeometry = shader.parent.parent.parent.screenGeometry
             for (let i = 0 ; i < onlyWindowsModel.count ; i++){
                 let appWindow = onlyWindowsModel.get(i)
                 if (!appWindow.IsMinimized){
@@ -274,17 +347,17 @@ ShaderEffect {
                         // screen as the shader for multi monitor setups.
                         // Ideally it would check the other way around
                         // (check if screenGeometry is contained within window,
-                        // which would mean that the whole screen is covered 
+                        // which would mean that the whole screen is covered
                         // by the window), but this doesn't work on the main
                         // screen because of the taskbar
                         if (contains(screenGeometry, appWindow.Geometry)){
-                            setRunning(false)                    
+                            setRunning(false)
                             return
                         }
                     }
                 }
             }
-            setRunning(true)                    
+            setRunning(true)
         }
     }
 }
