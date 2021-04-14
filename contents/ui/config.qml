@@ -15,6 +15,7 @@ Item {
   property alias cfg_iChannel1_flag:   iChannel1_flag.checked
   property alias cfg_iChannel2_flag:   iChannel2_flag.checked
   property alias cfg_iChannel3_flag:   iChannel3_flag.checked
+  property alias cfg_experimental:     experimental.checked
 
 
   // Resume/Pause
@@ -590,6 +591,19 @@ Item {
                   id: checkedSmartPlay
                   checked: false
                   text: i18n("Pause the shader when covered by maximized or full-screen windows.")
+                }
+              }
+              // experimental shader
+              RowLayout{
+                Text {
+                  width:100
+                  color: "white"
+                  padding:5
+                }
+                CheckBox {
+                  id: experimental
+                  text: i18n("Experimental Shader")
+                  checked: false
                 }
               }
           }

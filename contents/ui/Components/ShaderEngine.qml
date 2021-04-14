@@ -319,7 +319,7 @@ ShaderEffect {
 
         let appWindows = [];
 
-        // if(WindowLine){
+        if(wallpaper.configuration.experimental == true){
           for (let i = 0 ; i < onlyWindowsModel.count ; i++){
               let appWindow = onlyWindowsModel.get(i)
               if (!appWindow.IsMinimized){
@@ -334,7 +334,7 @@ ShaderEffect {
                 // appWindows.push(appWindow.Geometry);
               }
           }
-        // }
+        }
 
         if(!smartPlay){
             setRunning(true)

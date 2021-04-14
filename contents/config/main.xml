@@ -82,6 +82,10 @@
       <label>win0_bottom</label>
       <default>1.0</default>
     </entry>
+    <entry name="experimental" type="bool">
+      <label>experimental</label>
+      <default>false</default>
+    </entry>
   </group>
 
 </kcfg>
