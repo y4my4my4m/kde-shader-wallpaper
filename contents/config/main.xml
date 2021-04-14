@@ -66,6 +66,14 @@
       <label>iFrameRate</label>
       <default>-1</default>
     </entry>
+    <entry name="fadeToNext" type="bool">
+      <label>fade to next shader in folder</label>
+      <default>false</default>
+    </entry>
+    <entry name="fadeToRandom" type="bool">
+      <label>fade to random shader in folder</label>
+      <default>false</default>
+    </entry>
   </group>
 
 </kcfg>
