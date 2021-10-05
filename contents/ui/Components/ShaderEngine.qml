@@ -247,7 +247,7 @@ ShaderEffect {
         filterRegExp: 'true'
         onDataChanged: updateWindowsinfo(shader.smartPlay)
     }
-    
+
     function setRunning(running) {
         console.log(running?'shader restarted':'shader stopped')
         runShader = running
@@ -274,17 +274,17 @@ ShaderEffect {
                         // screen as the shader for multi monitor setups.
                         // Ideally it would check the other way around
                         // (check if screenGeometry is contained within window,
-                        // which would mean that the whole screen is covered 
+                        // which would mean that the whole screen is covered
                         // by the window), but this doesn't work on the main
                         // screen because of the taskbar
                         if (contains(screenGeometry, appWindow.Geometry)){
-                            setRunning(false)                    
+                            setRunning(false)
                             return
                         }
                     }
                 }
             }
-            setRunning(true)                    
+            setRunning(true)
         }
     }
 }

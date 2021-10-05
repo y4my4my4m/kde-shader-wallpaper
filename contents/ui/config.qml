@@ -3,7 +3,14 @@ import QtQuick.Layouts 1
 import QtQuick.Controls 2.12
 import QtQuick.Dialogs 1.3
 import Qt.labs.folderlistmodel 2
+import QtQuick.Window 2.15
+//We need units from it
+import org.kde.plasma.core 2.0 as Plasmacore
+import org.kde.plasma.wallpapers.image 2.0 as Wallpaper
+import org.kde.kquickcontrolsaddons 2.0
+
 import "./Components"
+import "./Views"
 
 import org.kde.plasma.core 2.0 as PlasmaCore
 
@@ -15,8 +22,6 @@ Item {
   property alias cfg_iChannel1_flag:   iChannel1_flag.checked
   property alias cfg_iChannel2_flag:   iChannel2_flag.checked
   property alias cfg_iChannel3_flag:   iChannel3_flag.checked
-  property alias cfg_fadeToNext:       checkFadeToNext.checked
-  property alias cfg_fadeToRandom:     checkFadeToRandom.checked
   property int curIndex: 0;
 
 
@@ -53,7 +58,6 @@ Item {
       Text {
           text: wallpaper.configuration.running ? fpsItem.fps + " fps" : "stopped"
           color: "white"
-          anchors.verticalCenter: parent.verticalCenter
       }
 
     }
@@ -69,7 +73,19 @@ Item {
     //************************
 
     ColumnLayout {
-
+      RowLayout {
+        Button {
+            anchors.centerIn: parent
+            text: qsTr("Click me")
+            onClicked: {
+                var component = Qt.createComponent("child.qml")
+                if (component.status === Component.Ready) {
+                  var window    = component.createObject("root")
+                  window.show()
+                }
+            }
+        }
+      }
       RowLayout {
 
         Label {
@@ -259,7 +275,6 @@ Item {
               // iChannel0
               RowLayout {
                 spacing: units.largeSpacing / 2
-                anchors.horizontalCenter: parent.horizontalCenter
                 Text {
                   color: "white"
                   padding: 5
@@ -470,7 +485,6 @@ Item {
             Rectangle{
               Layout.fillHeight: true
               Layout.fillWidth: true
-              anchors.fill: parent
               border.color: Qt.rgba(255,255,255,0.05)
               border.width: 1
               radius: 4
@@ -481,8 +495,6 @@ Item {
               Layout.fillHeight: true
               Layout.fillWidth: true
               id: buttonContainer
-              anchors.verticalCenter: parent.verticalCenter
-              anchors.horizontalCenter: parent.horizontalCenter
               columns: 3
               // Layout.maximumWidth: parent.fillWidth / 2
               // anchors.left: parent.left
@@ -495,7 +507,6 @@ Item {
         RowLayout{
 
           Rectangle{
-            anchors.fill: parent
             border.color: Qt.rgba(255,255,255,0.05)
             border.width: 1
             Layout.fillHeight: true
@@ -508,7 +519,6 @@ Item {
             Layout.bottomMargin:10
             Layout.fillHeight: true
             Layout.fillWidth : true
-            anchors.horizontalCenter: parent.horizontalCenter
             columns: 3
             id: variableContainer
           }
@@ -644,7 +654,6 @@ Item {
               Rectangle{
                 Layout.fillHeight: true
                 Layout.fillWidth: true
-                anchors.fill: parent
                 border.color: Qt.rgba(255,255,255,0.05)
                 border.width: 1
                 radius: 4
@@ -722,7 +731,6 @@ Item {
                 Layout.fillWidth: true
                 Layout.bottomMargin: 20
                 Layout.maximumWidth: 200
-                anchors.left: parent.left
                 Label {
                   font.bold: true
                   font.pointSize: 14
@@ -747,7 +755,6 @@ Item {
               // Support
               ColumnLayout {
                 Layout.fillWidth: true
-                anchors.right: parent.right
                 Label {
                   font.bold: true
                   font.pointSize: 14
