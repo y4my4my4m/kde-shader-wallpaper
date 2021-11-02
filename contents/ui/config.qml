@@ -108,88 +108,93 @@ Item {
 
     }
 
-  // }
+    // }
 
-  //********************************
-  //*** GUI Shader Customization ***
-  //********************************
+    //********************************
+    //*** GUI Shader Customization ***
+    //********************************
 
-  // Title
-  // ColumnLayout {
-  //   RowLayout {
-  //     Layout.topMargin: 25
-  //     Layout.bottomMargin: 5
-  //     Text {
-  //       width:100
-  //       font.bold: true
-  //       color: "white"
-  //       font.pointSize: 16
-  //       text: i18n("Customization:")
-  //     }
-  //     Rectangle{
-  //       Layout.fillWidth: true
-  //       height: 1
-  //       color: Qt.rgba(255,255,255,0.25);
-  //     }
-  //   }
+    // Title
+    // ColumnLayout {
+    //   RowLayout {
+    //     Layout.topMargin: 25
+    //     Layout.bottomMargin: 5
+    //     Text {
+    //       width:100
+    //       font.bold: true
+    //       color: "white"
+    //       font.pointSize: 16
+    //       text: i18n("Customization:")
+    //     }
+    //     Rectangle{
+    //       Layout.fillWidth: true
+    //       height: 1
+    //       color: Qt.rgba(255,255,255,0.25);
+    //     }
+    //   }
 
-  //   ShaderCustomizer {
-  //     id: shaderCustomizer
-  //     selectedShaderField: selectedShaderField
-  //   }
+    //   ShaderCustomizer {
+    //     id: shaderCustomizer
+    //     selectedShaderField: selectedShaderField
+    //   }
 
-  // }
-  //*******************
-  //*** Components  ***
-  //*******************
+    // }
+    //*******************
+    //*** Components  ***
+    //*******************
 
 
-  //**********************
-  //*** Configuration  ***
-  //**********************
-  // ColumnLayout {
-    RowLayout {
-      PlayBtn {
-        id: playPause
-        running: wallpaper.configuration.running
-        // rootItem: fpsItem
-      }
-    }
+    //**********************
+    //*** Configuration  ***
+    //**********************
+    // ColumnLayout {
+
     // Shader Speed
     RowLayout {
 
       Layout.minimumHeight: height
       width: formAlignment - units.largeSpacing / 2
 
-      Text {
-        color: "white"
-        padding: 5
-        width: 100
-        text: i18n("Speed: %1\n(default is 1.0)", wallpaper.configuration.shaderSpeed)
-      }
 
-      Slider {
-        from: -10.0
-        to: 10.0
-        id: speedSlider
-        stepSize: 0.01
-        Layout.fillWidth: true
-        value: wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0
-        onValueChanged: wallpaper.configuration.shaderSpeed = value
+      RowLayout {
+        Text {
+          color: "white"
+          padding: 5
+          width: 100
+          text: i18n("Speed: %1\n(default is 1.0)", wallpaper.configuration.shaderSpeed)
+        }
+
+        Slider {
+          from: -10.0
+          to: 10.0
+          id: speedSlider
+          stepSize: 0.01
+          // Layout.fillWidth: true
+          value: wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0
+          onValueChanged: wallpaper.configuration.shaderSpeed = value
+        }
+        Text {
+          text: ""
+          padding: 5
+        }
+        Rectangle {
+          // anchors.fill: parent
+          // anchors.centerIn: parent
+          border.color: Qt.rgba(255, 255, 255, 0.05)
+          border.width: 1
+          radius: 4
+          color: "transparent"
+        }
       }
-      Text {
-        text: ""
-        padding: 5
-      }
-      Rectangle {
-        // anchors.fill: parent
-        // anchors.centerIn: parent
-        border.color: Qt.rgba(255, 255, 255, 0.05)
-        border.width: 1
-        radius: 4
-        color: "transparent"
+      RowLayout {
+        PlayBtn {
+          id: playPause
+          running: wallpaper.configuration.running
+          // rootItem: fpsItem
+        }
       }
     }
+
 
 
     RowLayout {
@@ -205,43 +210,45 @@ Item {
         }
       }
     }
-  }
+    // }
 
-  ColumnLayout {
+    // ColumnLayout {
     RowLayout {
       FPSItem {
         id: fpsItem
         running: wallpaper.configuration.running
       }
     }
-  }
+    // }
 
-  // Support
-  ColumnLayout {
+    // Support
+    // ColumnLayout {
 
-    Layout.fillWidth: true
-    Label {
-      font.bold: true
-      font.pointSize: 14
-      text: "Support:"
-    }
+    RowLayout {
+      // Layout.fillWidth: true
+      Label {
+        font.bold: true
+        font.pointSize: 14
+        text: "Support:"
+      }
 
-    Text {
-      text: "<a href='https://github.com/y4my4my4m'>Github</a> | <a href='https://twitter.com/y4my4my4m'>Twitter</a>"
-      onLinkActivated: Qt.openUrlExternally(link)
-      color: "white"
-      MouseArea {
-        anchors.fill: parent
-        acceptedButtons: Qt.NoButton // we don't want to eat clicks on the Text
-        cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+      Text {
+        text: "<a href='https://github.com/y4my4my4m'>Github</a> | <a href='https://twitter.com/y4my4my4m'>Twitter</a>"
+        onLinkActivated: Qt.openUrlExternally(link)
+        color: "white"
+        MouseArea {
+          anchors.fill: parent
+          acceptedButtons: Qt.NoButton // we don't want to eat clicks on the Text
+          cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+        }
       }
     }
-  }
+    // }
 
-  // Content
-  ColumnLayout {
-    Layout.fillHeight: true
-    Layout.fillWidth: true
+    // Content
+    // ColumnLayout {
+    // Layout.fillHeight: true
+    // Layout.fillWidth: true
     // Notice
     RowLayout {
       Layout.bottomMargin: 20

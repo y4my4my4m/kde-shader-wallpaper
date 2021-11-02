@@ -7,21 +7,21 @@ Item {
     property bool running: true
     property bool isPaused: false
 
-    ColumnLayout {
-    spacing: units.largeSpacing
-    Layout.fillWidth: true
+    // ColumnLayout {
+    // spacing: units.largeSpacing
+    // Layout.fillWidth: true
 
-    Label {
-      width:100
-      text: i18n("Pause:")
-    }
 
-    RowLayout{
+    RowLayout {
 
+        Label {
+            width: 100
+            text: i18n("Pause:")
+        }
         ImageBtn {
             width: 32
             height: 32
-            imageUrl: playBtnRoot.isPaused ?  "../Resources/play.svg" : "../Resources/pause.svg"
+            imageUrl: playBtnRoot.isPaused ? "../Resources/play.svg" : "../Resources/pause.svg"
             tipText: playBtnRoot.isPaused ? "Resume" : "Pause"
             onClicked: {
                 playBtnRoot.running = isPaused
@@ -40,6 +40,6 @@ Item {
             color: "white"
         }
 
-    }   
-  }
+    }
+    // }
 }
