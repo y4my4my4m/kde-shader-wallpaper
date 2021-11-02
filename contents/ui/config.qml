@@ -193,6 +193,17 @@ Item {
           // rootItem: fpsItem
         }
       }
+
+      // RowLayout {
+      //   Timers {
+      //     id: timers
+      //   }
+      // }
+      RowLayout {
+        Settings {
+          id: settings
+        }
+      }
     }
 
 

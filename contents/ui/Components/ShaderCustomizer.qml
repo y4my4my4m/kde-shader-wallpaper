@@ -16,8 +16,6 @@ Item {
   property alias cfg_iChannel1_flag: iChannel1_flag.checked
   property alias cfg_iChannel2_flag: iChannel2_flag.checked
   property alias cfg_iChannel3_flag: iChannel3_flag.checked
-  property alias cfg_checkGl3Ver: checkGl3Ver.checked
-  property alias cfg_checkedSmartPlay: checkedSmartPlay.checked
 
   property TextField selectedShaderField
   // Content FIXME: ScrollView doesnt actually scroll?
