@@ -2,6 +2,8 @@ import QtQuick 2.3
 import QtQuick.Layouts 1
 import QtQuick.Controls 1.2
 import QtQuick.Window 2.15
+import org.kde.plasma.core 2.0 as PlasmaCore
+
 import "./Components"
 
 Window {
@@ -9,17 +11,11 @@ Window {
     // property alias cfg_selectedShader:   selectedShaderField.text
     // property int curIndex: 0;
     title: i18n("Desktop Shader Customization")
-    width: 400;height: 200
-    color: "transparent"
-    Text {
-        anchors.centerIn: parent
-        text: qsTr("Hello World.")
-    }
-
+    width: 640;height: 480
+    color: PlasmaCore.Theme.backgroundColor
     ColumnLayout {
         RowLayout {
             Layout.topMargin: 25
-            Layout.bottomMargin: 25
             Layout.leftMargin: 25
             Layout.rightMargin: 25
             Text {
@@ -29,19 +25,15 @@ Window {
                 font.pointSize: 16
                 text: i18n("Customization:")
             }
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.topMargin: 25
+        }
+        RowLayout {
+            ShaderCustomizer {
                 Layout.bottomMargin: 25
                 Layout.leftMargin: 25
                 Layout.rightMargin: 25
-                height: 1
-                color: Qt.rgba(255, 255, 255, 0.25);
+                id: shaderCustomizer
+                selectedShaderField: selectedShaderField
             }
-        }
-        ShaderCustomizer {
-            id: shaderCustomizer
-            selectedShaderField: selectedShaderField
         }
     }
 

@@ -16,9 +16,7 @@ import "./Components"
 Item {
   id: configRoot
   property alias cfg_selectedShader: selectedShaderField.text
-  property int curIndex: 0;
-
-
+  property int curIndex: 0
 
 
   //************************
@@ -194,11 +192,11 @@ Item {
         }
       }
 
-      // RowLayout {
-      //   Timers {
-      //     id: timers
-      //   }
-      // }
+      RowLayout {
+        Timers {
+          id: timers
+        }
+      }
       RowLayout {
         Settings {
           id: settings
@@ -216,7 +214,7 @@ Item {
           var component = Qt.createComponent("child.qml")
           if (component.status === Component.Ready) {
             var window = component.createObject("root")
-            window.show()
+            window.show();
           }
         }
       }

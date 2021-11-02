@@ -40,7 +40,7 @@ I'll probably maintain it on Github principally for issues/PR but I'll try my be
 - GUI Customization is highly experimental, bugs will occur.
 - Shadertoy.com imports doesn't work on all shaders, that is because iChannels/Buffers are not fully implemented yet
 - Performance may vary depending of your specs, but it's actually not all that resource intensive, depends on the shader too.
-- If you modify the shader files and want to see the changes, the KDE Wallpaper QtQuick App itself needs to be restart, I recommend simply to `pkill plasmashell` and restart it.
+- If you modify the shader files and want to see the changes, the KDE Wallpaper QtQuick App itself needs to be restart, I recommend to simply do `pkill plasmashell` and restart it with `plasmashell &`.
 
 #### Videos:
 
