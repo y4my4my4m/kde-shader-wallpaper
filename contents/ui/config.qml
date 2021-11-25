@@ -17,12 +17,9 @@ Item {
   id: configRoot
   property alias cfg_selectedShader: selectedShaderField.text
   property int curIndex: 0
+  property var customizer: null
 
-
-  //************************
-  //*** Shader Selection ***
-  //************************
-
+  // Shader Selection
   ColumnLayout {
     RowLayout {
 
@@ -58,7 +55,7 @@ Item {
         onCurrentTextChanged: {
           currentIndex: curIndex;
           selectedShaderField.text = Qt.resolvedUrl("./Shaders/" + model.get(currentIndex, "fileName"));
-          shaderCustomizer.getShaderContent();
+          customizer.getShaderContent();
         }
       }
     }
@@ -80,7 +77,7 @@ Item {
         width: 435
         onEditingFinished: {
           selectedShaderField.text;
-          shaderCustomizer.getShaderContent();
+          customizer.getShaderContent();
         }
       }
 
@@ -103,10 +100,7 @@ Item {
           }
         }
       }
-
     }
-
-    // }
 
     //********************************
     //*** GUI Shader Customization ***
@@ -137,23 +131,11 @@ Item {
     //   }
 
     // }
-    //*******************
-    //*** Components  ***
-    //*******************
 
 
-    //**********************
-    //*** Configuration  ***
-    //**********************
-    // ColumnLayout {
+  // Controls
 
-    // Shader Speed
-    RowLayout {
-
-      Layout.minimumHeight: height
-      width: formAlignment - units.largeSpacing / 2
-
-
+      // speed
       RowLayout {
         Text {
           color: "white"
@@ -176,65 +158,66 @@ Item {
           padding: 5
         }
         Rectangle {
-          // anchors.fill: parent
-          // anchors.centerIn: parent
           border.color: Qt.rgba(255, 255, 255, 0.05)
           border.width: 1
           radius: 4
           color: "transparent"
         }
       }
+      // play
       RowLayout {
         PlayBtn {
           id: playPause
           running: wallpaper.configuration.running
-          // rootItem: fpsItem
+        }
+        FPSItem {
+          id: fpsItem
+          running: wallpaper.configuration.running
         }
       }
+      // timer
+      // RowLayout {
+      //   Timers {
+      //     id: timers
+      //   }
+      // }
 
-      RowLayout {
-        Timers {
-          id: timers
-        }
-      }
-      RowLayout {
-        Settings {
-          id: settings
-        }
-      }
-    }
-
-
-
+    // Customize Button
     RowLayout {
+      Layout.fillHeight: true
+      Layout.fillWidth: true
+      Layout.topMargin: 40
       Button {
-        // anchors.centerIn: parent
+        anchors.centerIn: parent
         text: qsTr("Customize Shader")
         onClicked: {
           var component = Qt.createComponent("child.qml")
           if (component.status === Component.Ready) {
             var window = component.createObject("root")
+            component.objectName = "customizer"
             window.show();
+            console.log(`AAAAAAAAAAAAAAAAAA\n\n\n\n\n`)
+            console.log(JSON.stringify(component))
+            console.log(`AAAAAAAAAAAAAAAAAA\n\n\n\n\n`)
+            customizer = component
           }
         }
       }
     }
-    // }
 
-    // ColumnLayout {
+    // Settings
     RowLayout {
-      FPSItem {
-        id: fpsItem
-        running: wallpaper.configuration.running
+      Settings {
+        id: settings
       }
     }
-    // }
 
+  // Info
     // Support
-    // ColumnLayout {
-
     RowLayout {
-      // Layout.fillWidth: true
+      Layout.fillHeight: true
+      Layout.fillWidth: true
+      Layout.topMargin: 120
       Label {
         font.bold: true
         font.pointSize: 14
@@ -252,50 +235,34 @@ Item {
         }
       }
     }
-    // }
-
-    // Content
-    // ColumnLayout {
-    // Layout.fillHeight: true
-    // Layout.fillWidth: true
-    // Notice
+    // Emergency
     RowLayout {
-      Layout.bottomMargin: 20
-      Text {
-        color: "white"
-        text: "In case of emergency, delete folder in\n\"~/.local/share/plasma/wallpaper/online.knowmad.shaderwallpaper\",\nthen run: \"pkill plasmashell && plasmashell &\" to relaunch it.\n\nUse with caution."
-      }
-    }
-
-    RowLayout {
-      Layout.fillWidth: true
-      // Donation
-      ColumnLayout {
-        Layout.fillWidth: true
-        Layout.bottomMargin: 20
-        Layout.maximumWidth: 200
-        Label {
-          font.bold: true
-          font.pointSize: 14
-          text: "Donate:"
-        }
 
         Text {
-          Layout.minimumWidth: width
-          Layout.maximumWidth: width
-          width: formAlignment - units.largeSpacing
-          horizontalAlignment: Text.AlignLeft
-          text: "<a href='https://ko-fi.com/y4my4my4m'>ko-fi</a>"
-          onLinkActivated: Qt.openUrlExternally(link)
           color: "white"
-          MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.NoButton
-            cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
-          }
+          text: "In case of emergency, delete folder in\n\"~/.local/share/plasma/wallpaper/online.knowmad.shaderwallpaper\",\nthen run: \"pkill plasmashell && plasmashell &\" to relaunch it.\n\nUse with caution."
         }
-      }
+        // Donation
+          Label {
+            font.bold: true
+            font.pointSize: 14
+            text: "Donate:"
+          }
 
+          Text {
+            Layout.minimumWidth: width
+            Layout.maximumWidth: width
+            width: formAlignment - units.largeSpacing
+            horizontalAlignment: Text.AlignLeft
+            text: "<a href='https://ko-fi.com/y4my4my4m'>ko-fi</a>"
+            onLinkActivated: Qt.openUrlExternally(link)
+            color: "white"
+            MouseArea {
+              anchors.fill: parent
+              acceptedButtons: Qt.NoButton
+              cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+            }
+          }
     }
-  }
+}
 }

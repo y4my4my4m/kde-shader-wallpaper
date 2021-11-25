@@ -14,58 +14,60 @@ Item {
   property alias cfg_checkGl3Ver: checkGl3Ver.checked
   property alias cfg_checkedSmartPlay: checkedSmartPlay.checked
 
-        // Title
-        RowLayout {
-          Layout.topMargin: 25
-          Text {
-            width: 100
-            font.bold: true
-            color: "white"
-            font.pointSize: 16
-            text: i18n("Performance:")
-          }
-          Rectangle {
-            Layout.fillWidth: true
-            height: 1
-            color: Qt.rgba(255, 255, 255, 0.25);
-          }
-        }
-        // Content
-        ColumnLayout {
+  ColumnLayout {
+  // Title
+    RowLayout {
+      Layout.topMargin: 25
+      Text {
+        width: 100
+        font.bold: true
+        color: "white"
+        font.pointSize: 16
+        text: i18n("Performance:")
+      }
+      Rectangle {
+        Layout.fillWidth: true
+        height: 1
+        color: Qt.rgba(255, 255, 255, 0.25);
+      }
+    }
+  // Content
 
-          Rectangle {
-            Layout.fillHeight: true
-            Layout.fillWidth: true
-            border.color: Qt.rgba(255, 255, 255, 0.05)
-            border.width: 1
-            radius: 4
-            color: "transparent"
-          }
+      Rectangle {
+        Layout.minimumWidth: width
+        Layout.minimumHeight: height
+        Layout.fillHeight: true
+        Layout.fillWidth: true
+        border.color: Qt.rgba(255, 255, 255, 0.05)
+        border.width: 1
+        radius: 4
+        color: "transparent"
+      }
+    RowLayout {
 
-          RowLayout {
-            Text {
-              width: 100
-              color: "white"
-              padding: 5
-            }
-            CheckBox {
-              id: checkGl3Ver
-              text: i18n("Compatibility mode (GL3 version)")
-              checked: true
-            }
-          }
-          // TODO: Fullscreen/Busy
-          RowLayout {
-            Text {
-              width: 100
-              color: "white"
-              padding: 5
-            }
-            CheckBox {
-              id: checkedSmartPlay
-              checked: false
-              text: i18n("Pause the shader when covered by maximized or full-screen windows.")
-            }
-          }
-        }
+      Text {
+        width: 100
+        color: "white"
+        padding: 5
+      }
+      CheckBox {
+        id: checkGl3Ver
+        text: i18n("Compatibility mode (GL3 version)")
+        checked: true
+      }
+    }
+    // TODO: Fullscreen/Busy
+    RowLayout {
+      Text {
+        width: 100
+        color: "white"
+        padding: 5
+      }
+      CheckBox {
+        id: checkedSmartPlay
+        checked: false
+        text: i18n("Pause the shader when covered by maximized or full-screen windows.")
+      }
+    }
+  }
 }

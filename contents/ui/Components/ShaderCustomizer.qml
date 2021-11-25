@@ -18,6 +18,7 @@ Item {
   property alias cfg_iChannel3_flag: iChannel3_flag.checked
 
   property TextField selectedShaderField
+  // property alias cfg_selectedShader:   selectedShaderField.text
   // Content FIXME: ScrollView doesnt actually scroll?
   ScrollView {
     id: scrollview
