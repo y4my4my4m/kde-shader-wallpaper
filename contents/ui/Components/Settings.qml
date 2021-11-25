@@ -15,36 +15,11 @@ Item {
   property alias cfg_checkedSmartPlay: checkedSmartPlay.checked
 
   ColumnLayout {
-  // Title
-    RowLayout {
-      Layout.topMargin: 25
-      Text {
-        width: 100
-        font.bold: true
-        color: "white"
-        font.pointSize: 16
-        text: i18n("Performance:")
-      }
-      Rectangle {
-        Layout.fillWidth: true
-        height: 1
-        color: Qt.rgba(255, 255, 255, 0.25);
-      }
-    }
-  // Content
 
-      Rectangle {
-        Layout.minimumWidth: width
-        Layout.minimumHeight: height
-        Layout.fillHeight: true
-        Layout.fillWidth: true
-        border.color: Qt.rgba(255, 255, 255, 0.05)
-        border.width: 1
-        radius: 4
-        color: "transparent"
-      }
     RowLayout {
-
+      Layout.fillHeight: true
+      Layout.fillWidth: true
+      Layout.topMargin:30
       Text {
         width: 100
         color: "white"

@@ -17,7 +17,8 @@ Item {
   id: configRoot
   property alias cfg_selectedShader: selectedShaderField.text
   property int curIndex: 0
-  property var customizer: null
+  property
+  var customizer: null
 
   // Shader Selection
   ColumnLayout {
@@ -133,54 +134,54 @@ Item {
     // }
 
 
-  // Controls
+    // Controls
 
-      // speed
-      RowLayout {
-        Text {
-          color: "white"
-          padding: 5
-          width: 100
-          text: i18n("Speed: %1\n(default is 1.0)", wallpaper.configuration.shaderSpeed)
-        }
+    // speed
+    RowLayout {
+      Text {
+        color: "white"
+        padding: 5
+        width: 100
+        text: i18n("Speed: %1\n(default is 1.0)", wallpaper.configuration.shaderSpeed)
+      }
 
-        Slider {
-          from: -10.0
-          to: 10.0
-          id: speedSlider
-          stepSize: 0.01
-          // Layout.fillWidth: true
-          value: wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0
-          onValueChanged: wallpaper.configuration.shaderSpeed = value
-        }
-        Text {
-          text: ""
-          padding: 5
-        }
-        Rectangle {
-          border.color: Qt.rgba(255, 255, 255, 0.05)
-          border.width: 1
-          radius: 4
-          color: "transparent"
-        }
+      Slider {
+        from: -10.0
+        to: 10.0
+        id: speedSlider
+        stepSize: 0.01
+        // Layout.fillWidth: true
+        value: wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0
+        onValueChanged: wallpaper.configuration.shaderSpeed = value
       }
-      // play
-      RowLayout {
-        PlayBtn {
-          id: playPause
-          running: wallpaper.configuration.running
-        }
-        FPSItem {
-          id: fpsItem
-          running: wallpaper.configuration.running
-        }
+      Text {
+        text: ""
+        padding: 5
       }
-      // timer
-      // RowLayout {
-      //   Timers {
-      //     id: timers
-      //   }
-      // }
+      Rectangle {
+        border.color: Qt.rgba(255, 255, 255, 0.05)
+        border.width: 1
+        radius: 4
+        color: "transparent"
+      }
+    }
+    // play
+    RowLayout {
+      PlayBtn {
+        id: playPause
+        running: wallpaper.configuration.running
+      }
+      FPSItem {
+        id: fpsItem
+        running: wallpaper.configuration.running
+      }
+    }
+    // timer
+    // RowLayout {
+    //   Timers {
+    //     id: timers
+    //   }
+    // }
 
     // Customize Button
     RowLayout {
@@ -207,62 +208,90 @@ Item {
 
     // Settings
     RowLayout {
+      Text {
+        width: 100
+        font.bold: true
+        color: "white"
+        font.pointSize: 16
+        text: i18n("Performance:")
+      }
+      Rectangle {
+        Layout.fillWidth: true
+        height: 1
+        color: Qt.rgba(255, 255, 255, 0.25);
+      }
       Settings {
         id: settings
       }
     }
 
-  // Info
-    // Support
+
+    // Help
     RowLayout {
       Layout.fillHeight: true
       Layout.fillWidth: true
-      Layout.topMargin: 120
-      Label {
-        font.bold: true
-        font.pointSize: 14
-        text: "Support:"
+      Layout.topMargin: 80
+      Dialog {
+        id: info
+        title: "Support - Shader Wallpaper"
+        standardButtons: Dialog.Ok
+        Text {
+          color: "white"
+          text: "In case of emergency, delete folder in."
+        }
+        TextInput {
+          topPadding: 20
+          color: "grey"
+          readOnly: true
+          selectByMouse: true
+          text: "~/.local/share/plasma/wallpaper/online.knowmad.shaderwallpaper"
+        }
+        TextInput {
+          topPadding: 40
+          color: "white"
+          readOnly: true
+          selectByMouse: true
+          text: `then run: "pkill plasmashell && plasmashell &" to relaunch it.`
+        }
+        Text {
+          topPadding: 80
+          text: "For other issues, contact on <a href='https://github.com/y4my4my4m'>Github</a> | <a href='https://twitter.com/y4my4my4m'>Twitter</a>"
+          onLinkActivated: Qt.openUrlExternally(link)
+          color: "white"
+          MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.NoButton // we don't want to eat clicks on the Text
+            cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+          }
+        }
       }
+      Button {
+        anchors.centerIn: parent
+        text: qsTr("Help")
+        onClicked: {
+          info.open()
+        }
+      }
+    }
+
+    // Donate
+    RowLayout {
 
       Text {
-        text: "<a href='https://github.com/y4my4my4m'>Github</a> | <a href='https://twitter.com/y4my4my4m'>Twitter</a>"
+        Layout.minimumWidth: width
+        Layout.maximumWidth: width
+        width: formAlignment - units.largeSpacing
+        horizontalAlignment: Text.AlignLeft
+        font.pointSize: 14
+        text: "<a href='https://ko-fi.com/y4my4my4m'>Donate</a>"
         onLinkActivated: Qt.openUrlExternally(link)
         color: "white"
         MouseArea {
           anchors.fill: parent
-          acceptedButtons: Qt.NoButton // we don't want to eat clicks on the Text
+          acceptedButtons: Qt.NoButton
           cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
         }
       }
     }
-    // Emergency
-    RowLayout {
-
-        Text {
-          color: "white"
-          text: "In case of emergency, delete folder in\n\"~/.local/share/plasma/wallpaper/online.knowmad.shaderwallpaper\",\nthen run: \"pkill plasmashell && plasmashell &\" to relaunch it.\n\nUse with caution."
-        }
-        // Donation
-          Label {
-            font.bold: true
-            font.pointSize: 14
-            text: "Donate:"
-          }
-
-          Text {
-            Layout.minimumWidth: width
-            Layout.maximumWidth: width
-            width: formAlignment - units.largeSpacing
-            horizontalAlignment: Text.AlignLeft
-            text: "<a href='https://ko-fi.com/y4my4my4m'>ko-fi</a>"
-            onLinkActivated: Qt.openUrlExternally(link)
-            color: "white"
-            MouseArea {
-              anchors.fill: parent
-              acceptedButtons: Qt.NoButton
-              cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
-            }
-          }
-    }
-}
+  }
 }
