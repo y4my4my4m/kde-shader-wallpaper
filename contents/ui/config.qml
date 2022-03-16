@@ -955,6 +955,7 @@ Item {
 
     let currentShaderContent = wallpaper.configuration.selectedShaderContent;
     let matches = currentShaderContent.match(varRegex);
+    if(!matches) return;
     // console.log(`matches: ${matches}`);
     //
     // let test = varRegex.exec(matches[1]);
@@ -990,6 +991,7 @@ Item {
     let currentShaderContent = wallpaper.configuration.selectedShaderContent;
 
     let matches = currentShaderContent.match(varRegex);
+    if(!matches) return;
     // console.log(`matches: ${matches}`);
     let matched = matches[index]; // only need to modify requested;
     // console.log(`matched: ${matched}`);
