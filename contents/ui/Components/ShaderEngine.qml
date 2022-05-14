@@ -30,6 +30,48 @@ ShaderEffect {
             return defaultResolution;
         }
     }
+    //shadertoy flips uv.y 
+    // function (te, vflip, image)
+    // {
+    //     if (te.mVFlip === vflip) return;
+
+    //     var id = te.mObjectID;
+
+    //     if (te.mType === me.TEXTYPE.T2D)
+    //     {
+    //         if( image != null)
+    //         {
+    //             mGL.activeTexture( mGL.TEXTURE0 );
+    //             mGL.bindTexture(mGL.TEXTURE_2D, id);
+    //             mGL.pixelStorei(mGL.UNPACK_FLIP_Y_WEBGL, vflip);
+    //             var glFoTy = iFormatPI2GL( te.mFormat );
+    //             mGL.texImage2D(mGL.TEXTURE_2D, 0, glFoTy.mGLFormat, glFoTy.mGLExternal, glFoTy.mGLType, image);
+    //             mGL.bindTexture(mGL.TEXTURE_2D, null);
+    //             mGL.pixelStorei(mGL.UNPACK_FLIP_Y_WEBGL, false);
+    //         }
+    //     }
+    //     else if (te.mType === me.TEXTYPE.CUBEMAP)
+    //     {
+    //         if( image != null)
+    //         {
+    //             var glFoTy = iFormatPI2GL( te.mFormat );
+    //             mGL.activeTexture( mGL.TEXTURE0 );
+    //             mGL.bindTexture( mGL.TEXTURE_CUBE_MAP, id );
+    //             mGL.pixelStorei( mGL.UNPACK_FLIP_Y_WEBGL, vflip);
+    //             mGL.texImage2D(  mGL.TEXTURE_CUBE_MAP_POSITIVE_X, 0, glFoTy.mGLFormat, glFoTy.mGLExternal, glFoTy.mGLType, image[0] );
+    //             mGL.texImage2D(  mGL.TEXTURE_CUBE_MAP_NEGATIVE_X, 0, glFoTy.mGLFormat, glFoTy.mGLExternal, glFoTy.mGLType, image[1] );
+    //             mGL.texImage2D(  mGL.TEXTURE_CUBE_MAP_POSITIVE_Y, 0, glFoTy.mGLFormat, glFoTy.mGLExternal, glFoTy.mGLType, (vflip ? image[3] : image[2]) );
+    //             mGL.texImage2D(  mGL.TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, glFoTy.mGLFormat, glFoTy.mGLExternal, glFoTy.mGLType, (vflip ? image[2] : image[3]) );
+    //             mGL.texImage2D(  mGL.TEXTURE_CUBE_MAP_POSITIVE_Z, 0, glFoTy.mGLFormat, glFoTy.mGLExternal, glFoTy.mGLType, image[4] );
+    //             mGL.texImage2D(  mGL.TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, glFoTy.mGLFormat, glFoTy.mGLExternal, glFoTy.mGLType, image[5] );
+    //             mGL.bindTexture( mGL.TEXTURE_CUBE_MAP, null );
+    //             mGL.pixelStorei(mGL.UNPACK_FLIP_Y_WEBGL, false);
+    //         }
+
+    //     }
+
+    //     te.mVFlip = vflip;
+    // };
     //pass
     readonly property vector3d  iResolution: defaultResolution
     property real       iTime: 0
@@ -202,7 +244,7 @@ ShaderEffect {
     readonly property string startCode: "
         void main(void)
         {
-            mainImage(gl_FragColor, vec2(vertex.x, iResolution.y - vertex.y));
+            mainImage(gl_FragColor, vec2(vertex.x,  iResolution.y - vertex.y));
         }"
 
     readonly property string defaultPixelShader: "
@@ -249,7 +291,7 @@ ShaderEffect {
     }
     
     function setRunning(running) {
-        console.log(running?'shader restarted':'shader stopped')
+        //console.log(running?'shader restarted':'shader stopped')
         runShader = running
         shader.running = running
     }
@@ -284,7 +326,7 @@ ShaderEffect {
                     }
                 }
             }
-            setRunning(true)                    
+            setRunning(true)
         }
     }
 }

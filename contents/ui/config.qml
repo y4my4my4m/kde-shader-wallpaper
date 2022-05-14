@@ -904,22 +904,22 @@ Item {
           // inputs[0] is first, but maybe should use "channel" key/value to be safe
           // perhaps channel0 can be unused but channel1 is and this messes it up?
           if(ch0media){
-            channel0 = `https://www.shadertoy.com/${ch0media.src}`;
+            channel0 = `https://www.shadertoy.com${ch0media.src}`;
             iChannel0Field.text = channel0;
             iChannel0_flag.checked = true;
           }
           if(ch1media){
-            channel1 = `https://www.shadertoy.com/${ch1media.src}`;
+            channel1 = `https://www.shadertoy.com${ch1media.src}`;
             iChannel1Field.text = channel1;
             iChannel1_flag.checked = true;
           }
           if(ch2media){
-            channel2 = `https://www.shadertoy.com/${ch2media.src}`;
+            channel2 = `https://www.shadertoy.com${ch2media.src}`;
             iChannel2Field.text = channel2;
             iChannel2_flag.checked = true;
           }
           if(ch3media){
-            channel3 = `https://www.shadertoy.com/${ch3media.src}`;
+            channel3 = `https://www.shadertoy.com${ch3media.src}`;
             iChannel3Field.text = channel3;
             iChannel3_flag.checked = true;
           }
