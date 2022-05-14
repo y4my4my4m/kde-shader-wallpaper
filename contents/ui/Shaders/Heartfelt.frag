@@ -187,7 +187,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     #endif
     
     float focus = mix(maxBlur-c.y, minBlur, S(.1, .2, c.x));
-    vec3 col = textureLod(iChannel0, UV+n, focus).rgb;
+    // edited until can VFLIP from ShaderEngine.qml
+    // vec3 col = textureLod(iChannel0, UV+n, focus).rgb;
+    vec3 col = textureLod(iChannel0, vec2(UV.x+n.x, 1.-UV.y+n.y), focus).rgb;
     
     
     #ifdef USE_POST_PROCESSING

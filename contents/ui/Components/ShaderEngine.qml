@@ -145,10 +145,12 @@ ShaderEffect {
         onPositionChanged: {
             shader.iMouse.x = mouseX
             shader.iMouse.y = mouseY
+            console.log(`shader.iMouse: ${shader.iMouse}`)
         }
         onClicked: {
             shader.iMouse.z = mouseX
             shader.iMouse.w = mouseY
+            console.log(`shader.iMouse: ${shader.iMouse}`)
         }
     }
 

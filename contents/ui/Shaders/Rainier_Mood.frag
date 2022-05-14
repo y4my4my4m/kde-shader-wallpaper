@@ -42,7 +42,7 @@ vec2 hash22(vec2 p)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     float resolution = 10. * exp2(-3.*iMouse.x/iResolution.x);
-	vec2 uv = fragCoord.xy / iResolution.y * resolution;
+	vec2 uv = fragCoord.xy / iResolution.xy * resolution;
     vec2 p0 = floor(uv);
 
     vec2 circles = vec2(0.);
@@ -74,7 +74,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     float intensity = mix(0.01, 0.15, smoothstep(0.1, 0.6, abs(fract(0.05*iTime + 0.5)*2.-1.)));
     vec3 n = vec3(circles, sqrt(1. - dot(circles, circles)));
-    vec3 color = texture(iChannel0, uv/resolution - intensity*n.xy).rgb + 5.*pow(clamp(dot(n, normalize(vec3(1., 0.7, 0.5))), 0., 1.), 6.);
+
+    // edited until can VFLIP from ShaderEngine.qml
+    // vec3 color = texture(iChannel0, uv/resolution - intensity*n.xy).rgb + 5.*pow(clamp(dot(n, normalize(vec3(1., 0.7, 0.5))), 0., 1.), 6.);
+    vec3 color = texture(iChannel0, vec2(uv.x/resolution - intensity*n.x, 1.-uv.y/resolution - intensity*n.y)).rgb + 5.*pow(clamp(dot(n, normalize(vec3(1., 0.7, 0.5))), 0., 1.), 6.);
 	fragColor = vec4(color, 1.0);
 }
 
