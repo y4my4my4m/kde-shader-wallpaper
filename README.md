@@ -9,6 +9,14 @@
 - Click on the "[Get New Plugins](https://user-images.githubusercontent.com/8145020/92334553-c1f1f480-f054-11ea-959d-1017fec92db4.png)" button
 - Search and Install the latest version of "Shader Wallpaper"
 
+#### Install from AUR
+- For the latest git version:
+  - `yay -S plasma5-shader-wallpaper-git` 
+  - https://aur.archlinux.org/packages/plasma5-shader-wallpaper-git
+- For the latest release version:
+  - `yay -S plasma5-shader-wallpaper`
+  - https://aur.archlinux.org/packages/plasma5-shader-wallpaper
+
 #### Install from Source
 - clone this repository or [download the latest release](https://github.com/y4my4my4m/kde-shader-wallpaper/releases)
 - install from folder: `kpackagetool5 -t Plasma/Wallpaper -i kde-shader-wallpaper`
