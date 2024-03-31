@@ -1,11 +1,16 @@
 #version 450
 
-layout(location = 0) out vec4 outColor; // Output color of the fragment
+layout(location = 0) out vec4 outColor;
 
 layout(std140, binding = 0) uniform Globals {
-    vec2 iResolution; // The resolution of the viewport
+    // vec2 iResolution; // The resolution of the viewport
+    // int screenWidth;
+    // int screenHeight;
     float iTime;      // Shader time for animations
 };
+const int screenWidth = 1920;
+const int screenHeight = 1080;
+// float iTime = 1;
 
 const float cloudscale = 1.1;
 const float speed = 0.03;
@@ -47,8 +52,9 @@ float fbm(vec2 n) {
 }
 
 void main() {
-    vec2 p = gl_FragCoord.xy / iResolution;
-    vec2 uv = p * vec2(iResolution.x / iResolution.y, 1.0);
+    vec2 screenResolution = vec2(screenWidth, screenHeight);
+    vec2 p = gl_FragCoord.xy / screenResolution;
+    vec2 uv = p * vec2(screenWidth / screenHeight, 1.0);
     float time = iTime * speed;
     float q = fbm(uv * cloudscale * 0.5);
 
@@ -65,7 +71,7 @@ void main() {
 
     // Noise shape
     float f = 0.0;
-    uv = p * vec2(iResolution.x / iResolution.y, 1.0);
+    uv = p * vec2(screenWidth / screenHeight, 1.0);
     uv *= cloudscale;
     uv -= q - time;
     weight = 0.7;
@@ -80,7 +86,7 @@ void main() {
     // Noise colour
     float c = 0.0;
     time = iTime * speed * 2.0;
-    uv = p * vec2(iResolution.x / iResolution.y, 1.0);
+    uv = p * vec2(screenWidth / screenHeight, 1.0);
     uv *= cloudscale * 2.0;
     uv -= q - time;
     weight = 0.4;
@@ -93,7 +99,7 @@ void main() {
     // Noise ridge colour
     float c1 = 0.0;
     time = iTime * speed * 3.0;
-    uv = p * vec2(iResolution.x / iResolution.y, 1.0);
+    uv = p * vec2(screenWidth / screenHeight, 1.0);
     uv *= cloudscale * 3.0;
     uv -= q - time;
     weight = 0.4;

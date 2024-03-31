@@ -44,25 +44,36 @@ import Qt5Compat.GraphicalEffects
 
 WallpaperItem {
     id: main
-    // ShaderEffect {
-    //   //id: shaderEngine
-    //   width: 1920; height: 1080
-    //   property variant src: main
-    //   anchors.fill: parent
-    //   fragmentShader: "shader.frag.qsb"
-    //   // running: wallpaper.configuration.running
-    // }
-    ShaderEffect {
-        width: parent.width
-        height: parent.height
-        property real time: 0
-
-        NumberAnimation on time {
-            from: 0
-            to: 360
-            duration: 5000
-            loops: Animation.Infinite
+    anchors.fill: parent
+    Timer {
+        id: timer1
+        running: true
+        triggeredOnStart: true
+        interval: 16
+        repeat: true
+        onTriggered: {
+            shader.iTime += 0.016 * wallpaper.configuration.shaderSpeed; // TODO: surely not the right way to do this?.. oh well..
         }
-        fragmentShader: "shader.frag.qsb"
+    }
+    ShaderEffect {
+        anchors.fill: parent
+        id: shader
+        property var screen: Screen
+        property var screenSize: !!screen.geometry ? Qt.size(screen.geometry.width, screen.geometry.height):  Qt.size(screen.width, screen.height)
+        property vector3d   iResolution: screenSize
+        property int        screenWidth: Screen.width
+        property int        screenHeight: Screen.height
+        property real       iTime: 0
+        property real       iTimeDelta: 100
+        property int        iFrame: 10
+        property real       iFrameRate
+        property double     shaderSpeed: 1.0
+        property vector4d   iMouse;
+        property vector4d   iDate;
+        property real       iSampleRate: 44100
+
+        fragmentShader: "clouds.frag.qsb"
+        Component.onCompleted: console.log(Screen.width);
+        // readonly property vector3d defaultResolution: Qt.vector3d(shader.width, shader.height, shader.width / shader.height)
     }
 }
