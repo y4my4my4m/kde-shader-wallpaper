@@ -5,7 +5,7 @@ layout(location = 0) out vec4 outColor;
 layout(std140, binding = 0) uniform buf { 
     mat4 qt_Matrix;
     float qt_Opacity;
-    float zt;
+    float iTime;
 } ubuf;
 
 const int screenWidth = 1920;
@@ -54,7 +54,7 @@ void main() {
     vec2 screenResolution = vec2(screenWidth, screenHeight);
     vec2 p = gl_FragCoord.xy / screenResolution;
     vec2 uv = p * vec2(screenWidth / screenHeight, 1.0);
-    float time = ubuf.zt * speed;
+    float time = ubuf.iTime * speed;
     float q = fbm(uv * cloudscale * 0.5);
 
     // Ridged noise shape
