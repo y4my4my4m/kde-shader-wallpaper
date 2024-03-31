@@ -49,7 +49,7 @@ WallpaperItem {
         id: shader
         property var screen: Screen
         property var screenSize: !!screen.geometry ? Qt.size(screen.geometry.width, screen.geometry.height):  Qt.size(screen.width, screen.height)
-        property vector3d   iResolution: screenSize
+        property vector3d      iResolution: screenSize
         // property int        screenWidth: Screen.width
         // property int        screenHeight: Screen.height
         // property real       iTime: 0
@@ -61,7 +61,7 @@ WallpaperItem {
         // property vector4d   iDate;
         // property real       iSampleRate: 44100
 
-        property variant source: theSource;
+        property variant iChannel0: theSource;
 
         property real iTime: 1
         fragmentShader: "_waves.frag.qsb"
