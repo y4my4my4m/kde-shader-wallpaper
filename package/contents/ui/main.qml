@@ -40,15 +40,31 @@ import org.kde.plasma.plasma5support as P5Support
 import org.kde.plasma.plasmoid
 import Qt5Compat.GraphicalEffects
 
-import "./Components"
+//import "./Components"
 
 WallpaperItem {
     id: main
-    ShaderEngine {
-      id: shaderEngine
+    // ShaderEffect {
+    //   //id: shaderEngine
+    //   width: 1920; height: 1080
+    //   property variant src: main
+    //   anchors.fill: parent
+    //   fragmentShader: "shader.frag.qsb"
+    //   // running: wallpaper.configuration.running
+    // }
+    Rectangle {
       anchors.fill: parent
-      vertexShader: Qt.resolvedUrl("shader.vert.qsb")
-      fragmentShader: Qt.resolvedUrl("Shaders6/shader.frag.qsb")
-      // running: wallpaper.configuration.running
-    }
+      Row {
+          Image { 
+            id: img;
+            source: "qt-logo.png"
+            sourceSize { width: 100; height: 100 }
+          }
+          ShaderEffect {
+              width: 100; height: 100
+              property variant src: img
+              fragmentShader: "shader.frag.qsb"
+          }
+      }
+  }
 }
