@@ -2,15 +2,15 @@
 
 layout(location = 0) out vec4 outColor;
 
-layout(std140, binding = 0) uniform Globals {
+// layout(std140, binding = 0) uniform Globals {
     // vec2 iResolution; // The resolution of the viewport
     // int screenWidth;
     // int screenHeight;
-    float iTime;      // Shader time for animations
-};
+    // float iTime;      // Shader time for animations
+// };
 const int screenWidth = 1920;
 const int screenHeight = 1080;
-// float iTime = 1;
+float iTime = 1;
 
 const float cloudscale = 1.1;
 const float speed = 0.03;

@@ -2,9 +2,11 @@
 
 layout(location = 0) out vec4 outColor; // Output color of the fragment
 
-layout(std140, binding = 0) uniform TimeBlock {
-    float iTime; // Time uniform inside a block
-};
+// layout(std140, binding = 0) uniform TimeBlock {
+//     float iTime; // Time uniform inside a block
+// };
+
+float iTime = 1;
 
 // Simplified function definitions or direct calculations without texture sampling
 // For example, a procedural wave based on time and screen position
