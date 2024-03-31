@@ -52,19 +52,17 @@ WallpaperItem {
     //   fragmentShader: "shader.frag.qsb"
     //   // running: wallpaper.configuration.running
     // }
-    Rectangle {
-      anchors.fill: parent
-      Row {
-          Image { 
-            id: img;
-            source: "qt-logo.png"
-            sourceSize { width: 100; height: 100 }
-          }
-          ShaderEffect {
-              width: 100; height: 100
-              property variant src: img
-              fragmentShader: "shader.frag.qsb"
-          }
-      }
-  }
+    ShaderEffect {
+        width: parent.width
+        height: parent.height
+        property real time: 0
+
+        NumberAnimation on time {
+            from: 0
+            to: 360
+            duration: 5000
+            loops: Animation.Infinite
+        }
+        fragmentShader: "shader.frag.qsb"
+    }
 }
