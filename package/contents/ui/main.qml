@@ -26,16 +26,27 @@
  *  Thanks to github.com/simons-public for his contributions
  */
 
-import QtQuick 2.12
-import QtQuick.Controls 2.12
+import QtQuick
+import QtQuick.Controls
+
+import org.kde.plasma.core
+import org.kde.plasma.components as PlasmaComponents
+import org.kde.plasma.extras as PlasmaExtras
+
+import org.kde.plasma.plasmoid
+import org.kde.plasma.core as PlasmaCore
+
+import org.kde.plasma.plasma5support as P5Support
+import org.kde.plasma.plasmoid
+import Qt5Compat.GraphicalEffects
+
 import "./Components"
 
-Item {
+WallpaperItem {
     id: main
     ShaderEngine {
       id: shaderEngine
       anchors.fill: parent
       running: wallpaper.configuration.running
     }
-
 }

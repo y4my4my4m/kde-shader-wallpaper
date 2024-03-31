@@ -280,17 +280,17 @@ ShaderEffect {
 
         // onActiveTaskChanged: updateWindowsinfo(shader.smartPlay)
         // onDataChanged: updateWindowsinfo(shader.smartPlay)
-        Component.onCompleted: {
-            onlyWindowsModel.sourceModel = tasksModel
-        }
+        // Component.onCompleted: {
+        //     onlyWindowsModel.sourceModel = tasksModel
+        // }
     }
 
-    PlasmaCore.SortFilterModel {
-        id: onlyWindowsModel
-        filterRole: 'IsWindow'
-        filterRegExp: 'true'
-        onDataChanged: updateWindowsinfo(shader.smartPlay)
-    }
+    // PlasmaCore.SortFilterModel {
+    //     id: onlyWindowsModel
+    //     filterRole: 'IsWindow'
+    //     filterRegExp: 'true'
+    //     onDataChanged: updateWindowsinfo(shader.smartPlay)
+    // }
     
     function setRunning(running) {
         //console.log(running?'shader restarted':'shader stopped')
@@ -305,30 +305,30 @@ ShaderEffect {
             rectOuter.right >= rectInner.right
     }
 
-    function updateWindowsinfo(smartPlay) {
-        if(!smartPlay){
-            setRunning(true)
-        } else {
-            const screenGeometry = shader.parent.parent.parent.screenGeometry
-            for (let i = 0 ; i < onlyWindowsModel.count ; i++){
-                let appWindow = onlyWindowsModel.get(i)
-                if (!appWindow.IsMinimized){
-                    if (appWindow.IsFullScreen || appWindow.IsMaximized){
-                        // This is a crude way to check if window is on the same
-                        // screen as the shader for multi monitor setups.
-                        // Ideally it would check the other way around
-                        // (check if screenGeometry is contained within window,
-                        // which would mean that the whole screen is covered 
-                        // by the window), but this doesn't work on the main
-                        // screen because of the taskbar
-                        if (contains(screenGeometry, appWindow.Geometry)){
-                            setRunning(false)                    
-                            return
-                        }
-                    }
-                }
-            }
-            setRunning(true)
-        }
-    }
+    // function updateWindowsinfo(smartPlay) {
+    //     if(!smartPlay){
+    //         setRunning(true)
+    //     } else {
+    //         const screenGeometry = shader.parent.parent.parent.screenGeometry
+    //         for (let i = 0 ; i < onlyWindowsModel.count ; i++){
+    //             let appWindow = onlyWindowsModel.get(i)
+    //             if (!appWindow.IsMinimized){
+    //                 if (appWindow.IsFullScreen || appWindow.IsMaximized){
+    //                     // This is a crude way to check if window is on the same
+    //                     // screen as the shader for multi monitor setups.
+    //                     // Ideally it would check the other way around
+    //                     // (check if screenGeometry is contained within window,
+    //                     // which would mean that the whole screen is covered 
+    //                     // by the window), but this doesn't work on the main
+    //                     // screen because of the taskbar
+    //                     if (contains(screenGeometry, appWindow.Geometry)){
+    //                         setRunning(false)                    
+    //                         return
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //         setRunning(true)
+    //     }
+    // }
 }

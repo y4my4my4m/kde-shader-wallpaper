@@ -1,11 +1,17 @@
-import QtQuick 2.12
-import QtQuick.Layouts 1
-import QtQuick.Controls 2.12
-import QtQuick.Dialogs 1.3
-import Qt.labs.folderlistmodel 2
-import "./Components"
+import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls
+import QtQuick.Dialogs
+import Qt.labs.folderlistmodel
 
-import org.kde.plasma.core 2.0 as PlasmaCore
+import org.kde.plasma.core
+import org.kde.plasma.components as PlasmaComponents
+import org.kde.plasma.extras as PlasmaExtras
+
+import org.kde.plasma.plasmoid
+import org.kde.plasma.core as PlasmaCore
+
+import "./Components"
 
 Item {
   property alias cfg_selectedShader:   selectedShaderField.text
@@ -133,14 +139,14 @@ Item {
         Button {
           id: imageButton
           implicitWidth: height
-          PlasmaCore.IconItem {
-            anchors.fill: parent
-            source: "document-open"
-            PlasmaCore.ToolTipArea {
-              anchors.fill: parent
-              subText: "Pick Shader"
-            }
-          }
+          // PlasmaCore.IconItem {
+          //   anchors.fill: parent
+          //   source: "document-open"
+          //   PlasmaCore.ToolTipArea {
+          //     anchors.fill: parent
+          //     subText: "Pick Shader"
+          //   }
+          // }
           MouseArea {
             anchors.fill: parent
             onClicked: {
@@ -289,14 +295,14 @@ Item {
 
                 Button {
                   implicitWidth: height
-                  PlasmaCore.IconItem {
-                    anchors.fill: parent
-                    source: "document-open"
-                    PlasmaCore.ToolTipArea {
-                      anchors.fill: parent
-                      subText: "Load iChannel Image/Shader"
-                    }
-                  }
+                  // PlasmaCore.IconItem {
+                  //   anchors.fill: parent
+                  //   source: "document-open"
+                  //   PlasmaCore.ToolTipArea {
+                  //     anchors.fill: parent
+                  //     subText: "Load iChannel Image/Shader"
+                  //   }
+                  // }
                   MouseArea {
                     anchors.fill: parent
                     onClicked: {
@@ -340,14 +346,14 @@ Item {
                 }
                 Button {
                   implicitWidth: height
-                  PlasmaCore.IconItem {
-                    anchors.fill: parent
-                    source: "document-open"
-                    PlasmaCore.ToolTipArea {
-                      anchors.fill: parent
-                      subText: "Load iChannel Image/Shader"
-                    }
-                  }
+                  // PlasmaCore.IconItem {
+                  //   anchors.fill: parent
+                  //   source: "document-open"
+                  //   PlasmaCore.ToolTipArea {
+                  //     anchors.fill: parent
+                  //     subText: "Load iChannel Image/Shader"
+                  //   }
+                  // }
                   MouseArea {
                     anchors.fill: parent
                     onClicked: {
@@ -389,14 +395,14 @@ Item {
                 }
                 Button {
                   implicitWidth: height
-                  PlasmaCore.IconItem {
-                    anchors.fill: parent
-                    source: "document-open"
-                    PlasmaCore.ToolTipArea {
-                      anchors.fill: parent
-                      subText: "Load iChannel Image/Shader"
-                    }
-                  }
+                  // PlasmaCore.IconItem {
+                  //   anchors.fill: parent
+                  //   source: "document-open"
+                  //   PlasmaCore.ToolTipArea {
+                  //     anchors.fill: parent
+                  //     subText: "Load iChannel Image/Shader"
+                  //   }
+                  // }
                   MouseArea {
                     anchors.fill: parent
                     onClicked: {
@@ -439,14 +445,14 @@ Item {
 
                 Button {
                   implicitWidth: height
-                  PlasmaCore.IconItem {
-                    anchors.fill: parent
-                    source: "document-open"
-                    PlasmaCore.ToolTipArea {
-                      anchors.fill: parent
-                      subText: "Load iChannel Image/Shader"
-                    }
-                  }
+                  // PlasmaCore.IconItem {
+                  //   anchors.fill: parent
+                  //   source: "document-open"
+                  //   PlasmaCore.ToolTipArea {
+                  //     anchors.fill: parent
+                  //     subText: "Load iChannel Image/Shader"
+                  //   }
+                  // }
                   MouseArea {
                     anchors.fill: parent
                     onClicked: {
@@ -786,12 +792,12 @@ Item {
     id: colorDialog
     title: "Please choose a color"
     property string previousColor: colorDialog.color.r + ", " + colorDialog.color.g + ", " + colorDialog.color.b;
-    color: getInitialColor(number);
+    // color: getInitialColor(number);
     property int number: 0
-    onCurrentColorChanged: {
-      let color = colorDialog.currentColor.r + ", " + colorDialog.currentColor.g + ", " + colorDialog.currentColor.b;
-      findAndReplaceColor(color, number, true);
-    }
+    // onCurrentColorChanged: {
+    //   let color = colorDialog.currentColor.r + ", " + colorDialog.currentColor.g + ", " + colorDialog.currentColor.b;
+    //   findAndReplaceColor(color, number, true);
+    // }
     onAccepted: {
       // let color = colorDialog.currentColor.r + ", " + colorDialog.currentColor.g + ", " + colorDialog.currentColor.b;
       // findAndReplaceColor(color, number, true);
