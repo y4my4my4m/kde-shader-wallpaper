@@ -47,6 +47,8 @@ WallpaperItem {
     ShaderEngine {
       id: shaderEngine
       anchors.fill: parent
-      running: wallpaper.configuration.running
+      vertexShader: Qt.resolvedUrl("shader.vert.qsb")
+      fragmentShader: Qt.resolvedUrl("Shaders6/shader.frag.qsb")
+      // running: wallpaper.configuration.running
     }
 }
