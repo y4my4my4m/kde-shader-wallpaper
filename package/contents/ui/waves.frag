@@ -2,35 +2,27 @@
 
 layout(location = 0) out vec4 outColor; // Output color of the fragment
 
-layout(binding = 0) uniform sampler2D iChannel0; // Texture sampler for iChannel0
-
-layout(std140, binding = 1) uniform TimeBlock {
+layout(std140, binding = 0) uniform TimeBlock {
     float iTime; // Time uniform inside a block
 };
 
-// Function to sample amplitude based on frequency
-float getAmp(float frequency, vec2 texCoord) {
-    return texture(iChannel0, vec2(frequency / 512.0, texCoord.y)).x;
-}
+// Simplified function definitions or direct calculations without texture sampling
+// For example, a procedural wave based on time and screen position
 
-// Function to calculate weight based on frequency and texture coordinates
-float getWeight(float f, vec2 texCoord) {
-    return (getAmp(f - 2.0, texCoord) + getAmp(f - 1.0, texCoord) +
-            getAmp(f + 2.0, texCoord) + getAmp(f + 13.0, texCoord) +
-            getAmp(f, texCoord)) / 5.0;
+float wavePattern(vec2 position, float time) {
+    // Procedural wave pattern, replacing the need for texture-based amplitude calculation
+    float wave = sin(position.x * 10.0 + time) * cos(position.y * 10.0 + time);
+    return wave;
 }
 
 void main() {
-    vec2 texCoord = gl_FragCoord.xy / vec2(textureSize(iChannel0, 0)); // Normalized texture coordinates
-    vec3 C = vec3(0.12, 0.11, 0.37);
-    float GWM = 1.15;
-    float TM = 0.25;
-    vec3 color = vec3(0.0);
-    vec2 uv = 2.5 * texCoord - 1.33;
-    for(float i = 0.0; i < 5.0; i++) {
-        uv.y += 0.2 * sin(uv.x + i / 7.0);
-        float weight = getWeight(pow(i, 2.0) * 20.0, texCoord);
-        color += mix(C * weight, vec3(weight), 0.5);
-    }
+    vec2 position = gl_FragCoord.xy / vec2(800, 600); // Example resolution, adjust as needed
+    position = position * 2.0 - 1.0; // Transform to [-1, 1] range
+
+    float wave = wavePattern(position, iTime);
+
+    // Use the wave calculation for color modulation
+    vec3 color = mix(vec3(0.12, 0.11, 0.37), vec3(0.5, 0.5, 0.5), (wave + 1.0) / 2.0);
+
     outColor = vec4(color, 1.0);
 }
