@@ -1,5 +1,6 @@
 #version 450
 
+layout(location = 0) in vec2 coord; // Receive texture coordinates from the vertex shader
 layout(location = 0) out vec4 outColor; // Output color of the fragment
 
 layout(binding = 0) uniform sampler2D iChannel0; // Texture sampler for iChannel0
@@ -17,15 +18,15 @@ float getWeight(float f, vec2 texCoord) {
 }
 
 void main() {
-    vec2 texCoord = gl_FragCoord.xy / vec2(textureSize(iChannel0, 0)); // Normalized texture coordinates
+    // Use 'coord' directly as texture coordinates, received from the vertex shader
     vec3 C = vec3(0.12, 0.11, 0.37);
     float GWM = 1.15;
     float TM = 0.25;
     vec3 color = vec3(0.0);
-    vec2 uv = 2.5 * texCoord - 1.33;
+    vec2 uv = 2.5 * coord - 1.33; // Adjust 'texCoord' to 'coord' to match the vertex shader's output
     for(float i = 0.0; i < 5.0; i++) {
         uv.y += 0.2 * sin(uv.x + i / 7.0);
-        float weight = getWeight(pow(i, 2.0) * 20.0, texCoord);
+        float weight = getWeight(pow(i, 2.0) * 20.0, coord); // Use 'coord' for texture coordinate calculations
         color += mix(C * weight, vec3(weight), 0.5);
     }
     outColor = vec4(color, 1.0);
