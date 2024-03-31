@@ -1,20 +1,32 @@
-# Plasma6 - Shader Wallpaper plugin
+# KDE / Plasma - Shader Wallpaper plugin
 
 
-## Shader Wallpaper is a Wallpaper Plugin that allows you to run shaders as your wallpaper.
+## Shader Wallpaper is a KDE/Plasma Wallpaper Plugin that allows you to run shaders as your wallpaper.
 
 ### Installation:
+#### Install through KDE
+- Right click on your desktop > Configure Desktop
+- Click on the "[Get New Plugins](https://user-images.githubusercontent.com/8145020/92334553-c1f1f480-f054-11ea-959d-1017fec92db4.png)" button
+- Search and Install the latest version of "Shader Wallpaper"
+
+#### Install from AUR
+- For the latest git version:
+  - `yay -S plasma5-shader-wallpaper-git` 
+  - https://aur.archlinux.org/packages/plasma5-shader-wallpaper-git
+- For the latest release version:
+  - `yay -S plasma5-shader-wallpaper`
+  - https://aur.archlinux.org/packages/plasma5-shader-wallpaper
 
 #### Install from Source
-- clone this repository (https://github.com/y4my4my4m/kde-shader-wallpaper/releases)
-- remove old installation: `rm -rf ~/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/`
-- install from folder: `kpackagetool6 -t Plasma/Wallpaper -i kde-shader-wallpaper`
+- clone this repository or [download the latest release](https://github.com/y4my4my4m/kde-shader-wallpaper/releases)
+- install from folder: `kpackagetool5 -t Plasma/Wallpaper -i kde-shader-wallpaper`
+- install from archive: `kpackagetool5 -t Plasma/Wallpaper -i online.knowmad.shaderwallpaper-2.0.1-alpha.tar.gz`
 
 #### Upgrade
-- `kpackagetool6 -t Plasma/Wallpaper --upgrade kde-shader-wallpaper`
+- `kpackagetool5 -t Plasma/Wallpaper --upgrade kde-shader-wallpaper`
 
 #### Uninstall
-- You can uninstall it via KDE's desktop settings otherwise, you can uninstall like this: `kpackagetool6 -t Plasma/Wallpaper --remove online.knowmad.shaderwallpaper`
+- You can uninstall it via KDE's desktop settings otherwise, you can uninstall like this: `kpackagetool5 -t Plasma/Wallpaper --remove online.knowmad.shaderwallpaper`
 
 ### Repo:
 I'll probably maintain it on Github principally for issues/PR but I'll try my best to maintain both, if anything contact me on twitter [@y4my4my4m](https://twitter.com/@y4my4my4m).
@@ -24,14 +36,13 @@ I'll probably maintain it on Github principally for issues/PR but I'll try my be
 - Opencode: https://www.opencode.net/y4my4my4m/kde-shader-wallpaper
 
 #### Roadmap:
-- [ ] Version 3.0 - Plasma6 Edition!
-- [ ] ~Version 2.x  - Save/Load edits, better customization, better buffers/channel~
-- [x] Version 2.0.1a - Breaking bug fix regarding the pause/fullscreen feature(current version) **(current version)**
-- [x] Version 2.0a - Customize shaders via GUI, directly load shaders from shadertoy.com or file
-- [x] Version 1.3  - 70 new shaders + autolisting
-- [x] Version 1.2  - iGPU fix
-- [x] Version 1.1  - File Dialog added
 - [x] Version 1.0  - Simply load shaders
+- [x] Version 1.1  - File Dialog added
+- [x] Version 1.2  - iGPU fix
+- [x] Version 1.3  - 70 new shaders + autolisting
+- [x] Version 2.0a - Customize shaders via GUI, directly load shaders from shadertoy.com or file **(current version)**
+- [x] Version 2.0.1a - Breaking bug fix regarding the pause/fullscreen feature(current version)
+- [ ] Version 2.x  - Save/Load edits, better customization, better buffers/channel
 
 #### Notes:
 - GUI Customization is highly experimental, bugs will occur.

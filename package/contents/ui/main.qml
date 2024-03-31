@@ -64,7 +64,7 @@ WallpaperItem {
         property variant iChannel0: theSource;
 
         property real iTime: 1
-        fragmentShader: "_waves.frag.qsb"
+        fragmentShader: "waves.frag.qsb"
 
         // Component.onCompleted: console.log(Screen.width);
         // readonly property vector3d defaultResolution: Qt.vector3d(shader.width, shader.height, shader.width / shader.height)
@@ -88,7 +88,7 @@ WallpaperItem {
             interval: 16
             repeat: true
             onTriggered: {
-                shader.iTime += 0.016 * 1.2; // TODO: surely not the right way to do this?.. oh well..
+                shader.iTime += 0.016 * (wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0) // TODO: surely not the right way to do this?.. oh well..
             }
         }
     }
