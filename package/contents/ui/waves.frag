@@ -4,36 +4,31 @@
 
 //TODO: will make this customizable via GUI
 #version 440
+layout(location = 0) in vec2 inPosition; // Vertex position, assuming vec2 for simplicity
+layout(location = 1) in vec2 inTexCoord; // Texture coordinate
+layout(location = 0) out vec4 outColor; // Output color of the fragment
 
-#define varying in
-#define gl_FragColor coord
-precision mediump float;
-// forward string
-// varying vec2 qt_TexCoord0;
-// varying vec4 vertex;
-// uniform lowp   float qt_Opacity;
+uniform vec3 iResolution;
+uniform float iTime;
+uniform sampler2D iChannel0;
 
-// out vec4 fragColor;
-
-layout(location = 0) in vec2 coord;
-layout(location = 0) out vec4 vertex;
 layout(std140, binding = 0) uniform buf {
     mat4 qt_Matrix;
     float qt_Opacity;
 
-    uniform vec3   iResolution;
-    uniform float  iTime;
-    uniform float  iTimeDelta;
-    uniform int    iFrame;
-    uniform float  iFrameRate;
-    uniform float  iChannelTime[4];
-    uniform vec3   iChannelResolution[4];
-    uniform vec4   iMouse;
-    uniform vec4    iDate;
-    uniform float   iSampleRate;
 };
-layout(binding = 1) uniform sampler2D src;
-layout(binding = 2) uniform sampler2D iChannel0;
+uniform vec3   iResolution;
+uniform float  iTime;
+uniform float  iTimeDelta;
+uniform int    iFrame;
+uniform float  iFrameRate;
+uniform float  iChannelTime[4];
+uniform vec3   iChannelResolution[4];
+uniform vec4   iMouse;
+uniform vec4    iDate;
+uniform float   iSampleRate;
+
+//layout(binding = 1) uniform sampler2D src;
 
 vec3 C = vec3(0.12, 0.11, 0.37);
 float GWM = 1.15;
@@ -47,6 +42,13 @@ float getWeight(float f) {
     return (getAmp(f - 2.0) + getAmp(f - 1.0) + \
             getAmp(f + 2.0) + getAmp(f + 13.0) + \
             getAmp(f)) / 5.0;
+}
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord );
+
+void main() {
+    vec2 fragCoord = inPosition.xy * iResolution.xy;
+    mainImage(outColor, fragCoord);
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
@@ -84,9 +86,4 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 	}
 
 	fragColor = vec4(color + backdrop, 0.5);
-}
-
-void main(void)
-{
-    mainImage(gl_FragColor, vec2(vertex.x,  iResolution.y - vertex.y));
 }
