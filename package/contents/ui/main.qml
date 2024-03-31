@@ -45,35 +45,56 @@ import Qt5Compat.GraphicalEffects
 WallpaperItem {
     id: main
     anchors.fill: parent
-    Timer {
-        id: timer1
-        running: true
-        triggeredOnStart: true
-        interval: 16
-        repeat: true
-        onTriggered: {
-            shader.iTime += 0.016 * wallpaper.configuration.shaderSpeed; // TODO: surely not the right way to do this?.. oh well..
-        }
-    }
+
+    // ShaderEffectSource {
+    //     anchors.fill: parent
+    //     id: theSource
+    //     sourceItem: theItem
+    // }
     ShaderEffect {
         anchors.fill: parent
         id: shader
-        property var screen: Screen
-        property var screenSize: !!screen.geometry ? Qt.size(screen.geometry.width, screen.geometry.height):  Qt.size(screen.width, screen.height)
-        property vector3d   iResolution: screenSize
-        property int        screenWidth: Screen.width
-        property int        screenHeight: Screen.height
-        property real       iTime: 0
-        property real       iTimeDelta: 100
-        property int        iFrame: 10
-        property real       iFrameRate
-        property double     shaderSpeed: 1.0
-        property vector4d   iMouse;
-        property vector4d   iDate;
-        property real       iSampleRate: 44100
+        // property var screen: Screen
+        // property var screenSize: !!screen.geometry ? Qt.size(screen.geometry.width, screen.geometry.height):  Qt.size(screen.width, screen.height)
+        // property vector3d   iResolution: screenSize
+        // property int        screenWidth: Screen.width
+        // property int        screenHeight: Screen.height
+        // property real       iTime: 0
+        // property real       iTimeDelta: 100
+        // property int        iFrame: 10
+        // property real       iFrameRate
+        // property double     shaderSpeed: 1.0
+        // property vector4d   iMouse;
+        // property vector4d   iDate;
+        // property real       iSampleRate: 44100
+
+        // property variant source: theSource
+        // property real amplitude: 0.04
+        // property real frequency: 20
+        // property real t: 1
+        property real zt: 10
+        // NumberAnimation on zt { loops: Animation.Infinite; from: 0; to: Math.PI * 2; duration: 6000 }
 
         fragmentShader: "clouds.frag.qsb"
-        Component.onCompleted: console.log(Screen.width);
+
+        // Component.onCompleted: console.log(Screen.width);
         // readonly property vector3d defaultResolution: Qt.vector3d(shader.width, shader.height, shader.width / shader.height)
+
+        // ShaderEffectSource {
+        //     id: iChannel0Source
+        //     live: true
+        //     hideSource: true
+        //     // sourceItem: Image {}
+        // }
+        Timer {
+            id: timer1
+            running: true
+            triggeredOnStart: true
+            interval: 16
+            repeat: true
+            onTriggered: {
+                shader.zt += 0.016 * 1.2; // TODO: surely not the right way to do this?.. oh well..
+            }
+        }
     }
 }
