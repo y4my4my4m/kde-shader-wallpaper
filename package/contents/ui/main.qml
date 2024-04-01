@@ -58,13 +58,23 @@ WallpaperItem {
         // property real       iFrameRate
         // property double     shaderSpeed: 1.0
         // property vector4d   iMouse;
-        // property vector4d   iDate;
+        // property var currentDateVector: (function() {
+        //     var now = new Date();
+        //     var year = now.getFullYear();
+        //     var month = now.getMonth() +1;
+        //     var day = now.getDate();
+        //     var hour = now.getHours();
+        //     return Qt.vector4d(year, month, day, hour);
+        // })
+        property var      iDate;
         // property real       iSampleRate: 44100
 
         property variant iChannel0: theSource;
 
         property real iTime: 1
-        fragmentShader: "waves.frag.qsb"
+        fragmentShader: "Shaders6/clock.frag.qsb"
+        // fragmentShader: "waves.frag.qsb"
+
 
         // Component.onCompleted: console.log(Screen.width);
         // readonly property vector3d defaultResolution: Qt.vector3d(shader.width, shader.height, shader.width / shader.height)
@@ -88,7 +98,21 @@ WallpaperItem {
             interval: 16
             repeat: true
             onTriggered: {
+                var now = new Date();
+                var year = now.getFullYear();
+                var month = now.getMonth() +1;
+                var day = now.getDate();
+                var hour = now.getHours();
+                var minute = now.getMinutes();
+                var second = now.getSeconds();
+                // var iDateTime =  hour+minute;
+                // console.log(iDateTime);
+                var now = new Date();
+                var startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                var secondsSinceMidnight = (now - startOfDay) / 1000;
+
                 shader.iTime += 0.016 * (wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0) // TODO: surely not the right way to do this?.. oh well..
+                shader.iDate = Qt.vector4d(0., 0., 0., secondsSinceMidnight);
             }
         }
     }
