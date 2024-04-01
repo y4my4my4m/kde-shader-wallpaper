@@ -72,7 +72,7 @@ WallpaperItem {
         property variant iChannel0: theSource;
 
         property real iTime: 1
-        fragmentShader: "Shaders6/clock.frag.qsb"
+        fragmentShader: "Shaders6/ps3menu.frag.qsb"
         // fragmentShader: "waves.frag.qsb"
 
 
