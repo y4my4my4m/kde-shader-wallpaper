@@ -28,19 +28,19 @@ Kirigami.FormLayout {
     RowLayout {
         Button {
             id: imageButton
-            icon.name: "folder-videos-symbolic"
-            text: i18nd("@button:toggle_show_videos", "Add new videos")
+            icon.name: "folder-shaders-symbolic"
+            text: i18nd("@button:toggle_show_shaders", "Add new shaders")
             onClicked: {
                 fileDialog.open()
             }
         }
         Button {
             icon.name: "visibility-symbolic"
-            text: i18nd("@button:toggle_show_videos", videosList.visible ? "Hide videos list" : "Show videos list")
+            text: i18nd("@button:toggle_show_shaders", shadersList.visible ? "Hide shaders list" : "Show shaders list")
             checkable: true
-            checked: videosList.visible
+            checked: shadersList.visible
             onClicked: {
-                videosList.visible = !videosList.visible
+                shadersList.visible = !shadersList.visible
             }
         }
     }
@@ -99,7 +99,7 @@ Kirigami.FormLayout {
     FileDialog {
         id: fileDialog
         fileMode : FileDialog.OpenFiles
-        title: i18nd("@dialog_title:pick_video", "Pick a video file")
+        title: i18nd("@dialog_title:pick_shader", "Pick a shader")
         nameFilters: [ "Shader files (*.frag, *.frag.qsb)", "All files (*)" ]
         onAccepted: {
             
