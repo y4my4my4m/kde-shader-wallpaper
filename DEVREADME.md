@@ -11,3 +11,6 @@ https://doc.qt.io/qt-6/qtshadertools-qsb.html
 ## Install the package
 
 `kpackagetool6 -t Plasma/Wallpaper -i package`
+
+
+https://invent.kde.org/plasma/libplasma

@@ -5,14 +5,14 @@
   <kcfgfile name=""/>
 
   <group name="General">
-    <entry name="selectedShader" type="String">
+    <entry name="selectedShaderPath" type="String">
       <label>SelectedShader</label>
-      <default>./Shaders/2D_Clouds/2D_Clouds</default>
+      <default>Shaders6/ps3menu.frag.qsb</default>
     </entry>
-      <entry name="selectedShaderContent" type="String">
-        <label>selectedShaderContent</label>
-        <default></default>
-      </entry>
+    <entry name="selectedShaderContent" type="String">
+      <label>selectedShaderContent</label>
+      <default></default>
+    </entry>
     <entry name="running" type="bool">
       <label>Shader is running.</label>
       <default>true</default>
