@@ -31,7 +31,7 @@
     </entry>
     <entry name="iChannel0" type="string">
       <label>iChannel0's path</label>
-      <default>./Resources/Shadertoy_Pebbles.png</default>
+      <default>./Resources/wallpaper2.png</default>
     </entry>
     <entry name="iChannel0_flag" type="bool">
       <label>iChannel0 on/off flag</label>
@@ -39,7 +39,7 @@
     </entry>
     <entry name="iChannel1" type="string">
       <label>iChannel1's path</label>
-      <default>./Resources/wallpaper.jpg</default>
+      <default>./Resources/wallpaper2.png</default>
     </entry>
     <entry name="iChannel1_flag" type="bool">
       <label>iChannel1 on/off flag</label>

@@ -54,11 +54,32 @@ WallpaperItem {
         property int            iFrame: 10
         property vector4d       iMouse;
         property var            iDate;
-        property var            iChannel0: bufferAOutput; //only Image or ShaderEffectSource
-        property var            iChannel1: ich1; //only Image or ShaderEffectSource
-        property var            iChannel2: ich2; //only Image or ShaderEffectSource
-        property var            iChannel3: ich3; //only Image or ShaderEffectSource
+        // property var            iChannel0: bufferAOutput; //only Image or ShaderEffectSource
+
+        property var            iChannel0: ich1;
+        property var            iChannel1: ich1;
+        property var            iChannel2: ich2;
+        property var            iChannel3: ich3;
         
+        property var            iChannelResolution: [
+            calcResolution(iChannel0), 
+            calcResolution(iChannel1), 
+            calcResolution(iChannel2), 
+            calcResolution(iChannel3)
+        ]
+        readonly property vector3d defaultResolution: Qt.vector3d(shader.width, shader.height, shader.width / shader.height)
+        function calcResolution(channel) {
+            if (channel) {
+                // return Qt.vector3d(channel.width, channel.height, channel.width / channel.height);
+
+                return Qt.vector3d(1920, 1080, 1920 / 1080);
+            } else {
+
+                return Qt.vector3d(1920, 1080, 1920 / 1080);
+                // return defaultResolution;
+            }
+        }
+        // Qt.vector3d(channel.width, channel.height, channel.width / channel.height);
         // property var         bufferA: bufferAOutput
         // property real        iTimeDelta: 100
         // property real        iFrameRate
@@ -67,7 +88,7 @@ WallpaperItem {
         // property var         iChannelResolution: [calcResolution(iChannel0), calcResolution(iChannel1), calcResolution(iChannel2), calcResolution(iChannel3)]
 
         // fragmentShader: wallpaper.configuration.selectedShaderPath
-        fragmentShader: "Shaders6/wave_propagation.frag.qsb"
+        fragmentShader: "Shaders6/kaleidoscope.frag.qsb"
 
         Image {
             id: ich0
@@ -109,27 +130,37 @@ WallpaperItem {
             // }
         }
     }
+
+    // ShaderEffectSource {
+    //     id: mainOutput
+    //     sourceItem: shader
+    //     width: shader.width
+    //     height: shader.height
+    //     recursive: true
+    //     hideSource: true
+    //     live: true
+    // }
     // Buffer A
-    ShaderEffect {
-        id: bufferAEffect
-        anchors.fill: parent
-        property vector3d       iResolution: (wallpaper.width, wallpaper.height, 0);
-        property real           iTime: shader.iTime
-        property int            iFrame: shader.iFrame
-        property vector4d       iMouse: shader.iMouse
-        property var            iDate;
-        property var            iChannel0: bufferAOutput;
-        fragmentShader: "Shaders6/wave_propagation_bufferA.frag.qsb"
-    }
-    ShaderEffectSource {
-        id: bufferAOutput
-        sourceItem: bufferAEffect
-        width: bufferAEffect.width
-        height: bufferAEffect.height
-        // recursive: true
-        hideSource: true
-        live: true
-    }
+    // ShaderEffect {
+    //     id: bufferAEffect
+    //     anchors.fill: parent
+    //     property vector3d       iResolution: (wallpaper.width, wallpaper.height, 0);
+    //     property real           iTime: shader.iTime
+    //     property int            iFrame: shader.iFrame
+    //     property vector4d       iMouse: shader.iMouse
+    //     property var            iDate;
+    //     property var            iChannel0: bufferAOutput;
+    //     fragmentShader: "Shaders6/wave_propagation_bufferA.frag.qsb"
+    // }
+    // ShaderEffectSource {
+    //     id: bufferAOutput
+    //     sourceItem: bufferAEffect
+    //     width: bufferAEffect.width
+    //     height: bufferAEffect.height
+    //     recursive: true
+    //     hideSource: true
+    //     live: true
+    // }
 
 
     Component.onCompleted: Qt.createQmlObject(

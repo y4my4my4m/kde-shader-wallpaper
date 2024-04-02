@@ -1,6 +1,19 @@
-#ifdef GL_ES
-precision mediump float;
-#endif
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    vec4 iMouse;
+    vec3 iResolution;
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 2) uniform sampler2D iChannel1;
 
 // configuration
 #define MIRRORS (5.0)
@@ -27,22 +40,22 @@ mat2 rotate(float aDeg){
 }
 
 vec3 compute(vec2 xy, sampler2D Texture, float mirrors, float density, vec2 repeat) {
-  float my_time = iTime / 4.00;
-  vec2 my_mouse = iMouse.xy; //vec2(643.0,815.0);// iMouse;
-  vec2 coord = xy / iResolution.xy;
+  float my_time = ubuf.iTime / 4.00;
+  vec2 my_mouse = ubuf.iMouse.xy; //vec2(643.0,815.0);// ubuf.iMouse;
+  vec2 coord = xy / ubuf.iResolution.xy;
   coord = fract(coord * repeat);
   coord -= 0.5; // place at center
-  // coord -= my_mouse/iResolution-0.5; // follow mouse
+  // coord -= my_mouse/ubuf.iResolution-0.5; // follow mouse
   coord *= density;
-  coord.x *= iResolution.x/iResolution.y;
+  coord.x *= ubuf.iResolution.x/ubuf.iResolution.y;
   coord.x /= repeat.x/repeat.y;
   // coord *= rotate(60.0);
-  float lfo1 = sin(2.0*iTime/3.14)*0.20+0.25;
-  float lfo2 = sin(2.0*iTime/2.44)*0.20+0.25;
-  float lfo3 = sin(2.0*iTime/5.16)*0.20+0.25;
+  float lfo1 = sin(2.0*ubuf.iTime/3.14)*0.20+0.25;
+  float lfo2 = sin(2.0*ubuf.iTime/2.44)*0.20+0.25;
+  float lfo3 = sin(2.0*ubuf.iTime/5.16)*0.20+0.25;
   float lfo = (lfo1/1.13+lfo2+lfo3)/4.0;
   coord *= rotate(180.0 * lfo);
-  coord *= rotate(deg(sin((length(coord)-iTime/5.0)*6.0)*(sin((length(coord)))*0.5+0.5)*0.2));
+  coord *= rotate(deg(sin((length(coord)-ubuf.iTime/5.0)*6.0)*(sin((length(coord)))*0.5+0.5)*0.2));
 
 
   float dp = dot(base, coord);
@@ -61,8 +74,8 @@ vec3 compute(vec2 xy, sampler2D Texture, float mirrors, float density, vec2 repe
   texOffset += vec2(0.5, 0.5);
 
   // texture follows mouse
-  texOffset += vec2(-1.0, 1.0)*(my_mouse/iResolution.xy*iChannelResolution[0].xy)/iChannelResolution[0].xy;//vec2(-0.05, 0.0);
-
+  // texOffset += vec2(-1.0, 1.0)*(my_mouse/ubuf.iResolution.xy*ubuf.iChannelResolution[0].xy)/ubuf.iChannelResolution[0].xy;//vec2(-0.05, 0.0);
+  texOffset += vec2(-1.0, 1.0)*(my_mouse/ubuf.iResolution.xy);
   // texture slides
   texOffset += (texOffset/2.0) * vec2(sin(my_time/2.05)*density, -cos(my_time/2.00)*density/5.0) + (texOffset/2.0);
 
@@ -122,17 +135,19 @@ vec3 computeWithMsaa(vec2 coord, sampler2D Texture, float mirrors, float density
     return vec3(accum);
 }
 
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
+void main()
 {
-  	float lfo1 = sin(2.0*iTime/2.88)*0.20+0.25;
-  	float lfo2 = sin(2.0*iTime/2.06)*0.20+0.25;
-  	float lfo3 = sin(2.0*iTime/3.33)*0.20+0.25;
+    vec2 coord = qt_TexCoord0 * ubuf.iResolution.xy; // Scale back to pixel coordinates
+
+  	float lfo1 = sin(2.0*ubuf.iTime/2.88)*0.20+0.25;
+  	float lfo2 = sin(2.0*ubuf.iTime/2.06)*0.20+0.25;
+  	float lfo3 = sin(2.0*ubuf.iTime/3.33)*0.20+0.25;
   	float lfoA = (lfo1-lfo2*lfo3)/3.0+0.5;
     float lfoB = (lfo1+lfo2+lfo3)/3.0+0.5;
 
-    vec3 color1 = computeWithMsaa(fragCoord.xy, iChannel0, MIRRORS*1.0, ZOOM*3.0*lfoA, vec2(1.0, 1.0)).brr/2.5;
-    vec3 color2 = computeWithMsaa(fragCoord.xy, iChannel1, MIRRORS*2.0, ZOOM*2.0*lfoB, vec2(1.0, 1.0)).gbr;
-    //vec3 color = mix(color1, color2, sin(iTime)/4.0+0.25);
+    vec3 color1 = computeWithMsaa(coord, iChannel0, MIRRORS * 1.0, ZOOM * 3.0 * lfoA, vec2(1.0, 1.0)).brr / 2.5;
+    vec3 color2 = computeWithMsaa(coord, iChannel1, MIRRORS * 2.0, ZOOM * 2.0 * lfoB, vec2(1.0, 1.0)).gbr;
+    //vec3 color = mix(color1, color2, sin(ubuf.iTime)/4.0+0.25);
     vec3 color = mix(dot(color1, vec3(1.0)) > dot(color2, vec3(1.0)) ? color1 : color2, color2/(color1*5.0), lfo1+lfo3);
     //vec3 color = dot(color1, vec3(1.0)) > dot(color2, vec3(1.0)) ? color1 : color2;
     fragColor = vec4(color, 1.0);
