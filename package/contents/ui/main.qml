@@ -87,8 +87,8 @@ WallpaperItem {
         // property var         iChannelTime: [0, 1, 2, 3]
         // property var         iChannelResolution: [calcResolution(iChannel0), calcResolution(iChannel1), calcResolution(iChannel2), calcResolution(iChannel3)]
 
-        // fragmentShader: wallpaper.configuration.selectedShaderPath
-        fragmentShader: "Shaders6/kaleidoscope.frag.qsb"
+        fragmentShader: Qt.resolvedUrl(wallpaper.configuration.selectedShaderPath)
+        // fragmentShader: "Shaders6/kaleidoscope.frag.qsb"
 
         Image {
             id: ich0
@@ -173,7 +173,9 @@ WallpaperItem {
             anchors.fill: parent
             hoverEnabled: true
             onPositionChanged: {
-                shader.iMouse = Qt.vector4d(mouseX, mouseY, 0, 0)
+                // shader.iMouse = Qt.vector4d(mouseX, mouseY, 0, 0)
+                shader.iMouse.x = mouseX
+                shader.iMouse.y = mouseY
             }
             onClicked: {
                 shader.iMouse.z = mouseX

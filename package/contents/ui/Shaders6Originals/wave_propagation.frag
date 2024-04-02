@@ -1,3 +1,5 @@
+// shadertoy.com/view/Xsd3DB
+// actually were using teh one buffer version here: 4dK3Ww
 #version 440
 
 layout(location = 0) in vec2 qt_TexCoord0;

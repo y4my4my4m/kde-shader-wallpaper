@@ -29,7 +29,7 @@ Kirigami.FormLayout {
         Button {
             id: imageButton
             icon.name: "folder-shaders-symbolic"
-            text: i18nd("@button:toggle_show_shaders", "Add new shaders")
+            text: i18nd("@button:toggle_show_shaders", "Select shader")
             onClicked: {
                 fileDialog.open()
             }
@@ -98,11 +98,14 @@ Kirigami.FormLayout {
 
     FileDialog {
         id: fileDialog
-        fileMode : FileDialog.OpenFiles
+        fileMode : FileDialog.OpenFile
         title: i18nd("@dialog_title:pick_shader", "Pick a shader")
         nameFilters: [ "Shader files (*.frag, *.frag.qsb)", "All files (*)" ]
+        visible: false
+        currentFolder: Qt.resolvedUrl("./package/contents/ui/Shaders6")
         onAccepted: {
-            
+            console.log(selectedFile);
+            wallpaper.configuration.selectedShaderPath = selectedFile; 
         }
     }
 }
