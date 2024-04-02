@@ -45,6 +45,7 @@ import Qt5Compat.GraphicalEffects
 WallpaperItem {
     id: main
 
+    // Main
     ShaderEffect {
         anchors.fill: parent
         id: shader
@@ -53,10 +54,12 @@ WallpaperItem {
         property int            iFrame: 10
         property vector4d       iMouse;
         property var            iDate;
-        property var            iChannel0: ich0; //only Image or ShaderEffectSource
+        property var            iChannel0: bufferAOutput; //only Image or ShaderEffectSource
         property var            iChannel1: ich1; //only Image or ShaderEffectSource
         property var            iChannel2: ich2; //only Image or ShaderEffectSource
         property var            iChannel3: ich3; //only Image or ShaderEffectSource
+        
+        // property var         bufferA: bufferAOutput
         // property real        iTimeDelta: 100
         // property real        iFrameRate
         // property double      shaderSpeed: 1.0
@@ -64,7 +67,7 @@ WallpaperItem {
         // property var         iChannelResolution: [calcResolution(iChannel0), calcResolution(iChannel1), calcResolution(iChannel2), calcResolution(iChannel3)]
 
         // fragmentShader: wallpaper.configuration.selectedShaderPath
-        fragmentShader: "Shaders6/channelImage.frag.qsb"
+        fragmentShader: "Shaders6/wave_propagation.frag.qsb"
 
         Image {
             id: ich0
@@ -105,36 +108,29 @@ WallpaperItem {
             //     console.log(property + ": " + wallpaper[property]);
             // }
         }
-
-        Timer {
-            id: timer1
-            running: true
-            triggeredOnStart: true
-            interval: 16
-            repeat: true
-            onTriggered: {
-                var now = new Date();
-                var year = now.getFullYear();
-                var month = now.getMonth() +1;
-                var day = now.getDate();
-                var hour = now.getHours();
-                var minute = now.getMinutes();
-                var second = now.getSeconds();
-                // console.log(iDateTime);
-                var now = new Date();
-                var startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-                var secondsSinceMidnight = (now - startOfDay) / 1000;
-                // for (var property in shader.parent.parent.parent.parent) {
-
-                //     console.log(property + ": " + shader.parent.parent.parent.parent[property])
-                // }
-                // console.log(shader.iMouse.w, shader.iMouse.z);
-                shader.iTime += 0.016 * (wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0) // TODO: surely not the right way to do this?.. oh well..
-                shader.iFrame += 1;
-                shader.iDate = Qt.vector4d(0., 0., 0., secondsSinceMidnight);
-            }
-        }
     }
+    // Buffer A
+    ShaderEffect {
+        id: bufferAEffect
+        anchors.fill: parent
+        property vector3d       iResolution: (wallpaper.width, wallpaper.height, 0);
+        property real           iTime: shader.iTime
+        property int            iFrame: shader.iFrame
+        property vector4d       iMouse: shader.iMouse
+        property var            iDate;
+        property var            iChannel0: bufferAOutput;
+        fragmentShader: "Shaders6/wave_propagation_bufferA.frag.qsb"
+    }
+    ShaderEffectSource {
+        id: bufferAOutput
+        sourceItem: bufferAEffect
+        width: bufferAEffect.width
+        height: bufferAEffect.height
+        // recursive: true
+        hideSource: true
+        live: true
+    }
+
 
     Component.onCompleted: Qt.createQmlObject(
         `import QtQuick
@@ -146,8 +142,7 @@ WallpaperItem {
             anchors.fill: parent
             hoverEnabled: true
             onPositionChanged: {
-                shader.iMouse.x = mouseX
-                shader.iMouse.y = mouseY
+                shader.iMouse = Qt.vector4d(mouseX, mouseY, 0, 0)
             }
             onClicked: {
                 shader.iMouse.z = mouseX
@@ -156,5 +151,39 @@ WallpaperItem {
         }`,
         parent.parent.parent,
         "mouseTrackerArea"
-    );
+    )
+
+    Timer {
+        id: timer1
+        running: true
+        triggeredOnStart: true
+        interval: 16
+        repeat: true
+        onTriggered: {
+            var now = new Date();
+            var year = now.getFullYear();
+            var month = now.getMonth() +1;
+            var day = now.getDate();
+            var hour = now.getHours();
+            var minute = now.getMinutes();
+            var second = now.getSeconds();
+            // console.log(iDateTime);
+            var now = new Date();
+            var startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            var secondsSinceMidnight = (now - startOfDay) / 1000;
+            // for (var property in shader.parent.parent.parent.parent) {
+
+            //     console.log(property + ": " + shader.parent.parent.parent.parent[property])
+            // }
+            // console.log(shader.iMouse.w, shader.iMouse.z);
+            // bufferAEffect.iTime = += 0.016 * (wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0);
+            shader.iTime += 0.016 * (wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0);
+
+            // bufferAEffect.iFrame += 1;
+            shader.iFrame += 1;
+
+            shader.iDate = Qt.vector4d(0., 0., 0., secondsSinceMidnight);
+
+        }
+    }
 }
