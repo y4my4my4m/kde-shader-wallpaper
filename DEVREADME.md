@@ -14,3 +14,38 @@ https://doc.qt.io/qt-6/qtshadertools-qsb.html
 
 
 https://invent.kde.org/plasma/libplasma
+
+
+## Add this to shaders
+
+```hlsl
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    vec3 iResolution;
+    vec3 iChannelResolution[4];
+    //add more bindings here
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+// more ichannels
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
+// link em here for easy rewrite (kinda costs performance tho to dup them i assume?)
+float iTime = ubuf.iTime;
+vec3 iResolution = ubuf.iResolution;
+
+// ---
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
+}
+```
