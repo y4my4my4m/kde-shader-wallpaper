@@ -8,7 +8,7 @@ import org.kde.kirigami as Kirigami
 import org.kde.kquickcontrols 2.0 as KQuickControls
 import org.kde.plasma.core as PlasmaCore
 import org.kde.kirigami as Kirigami
-
+import QtCore
 
 Kirigami.FormLayout {
     id: root
@@ -102,9 +102,8 @@ Kirigami.FormLayout {
         title: i18nd("@dialog_title:pick_shader", "Pick a shader")
         nameFilters: [ "Shader files (*.frag, *.frag.qsb)", "All files (*)" ]
         visible: false
-        currentFolder: Qt.resolvedUrl("./package/contents/ui/Shaders6")
+        currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders6/`
         onAccepted: {
-            console.log(selectedFile);
             wallpaper.configuration.selectedShaderPath = selectedFile; 
         }
     }
