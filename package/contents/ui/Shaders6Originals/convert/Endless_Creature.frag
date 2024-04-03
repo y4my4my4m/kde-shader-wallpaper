@@ -10,6 +10,33 @@
 // Inigo Quilez
 // Morgan McGuire
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 // tweak zone
 const int count = 15;
 const float speed = 1.;
@@ -40,7 +67,7 @@ float geometry (vec3 pos, float time) {
     float scene = 1., a = 1.;
     float t = time * .5 + pos.x / 30.;
     t = floor(t)+smoothstep(0.0,.9,pow(fract(t),2.));
-    pos.x = repeat(pos.x+iTime, 5.);
+    pos.x = repeat(pos.x+ubuf.iTime, 5.);
     for (int i = count; i > 0; --i) {
         pos.x = abs(pos.x)-range*a;
         pos.xy *= rot(cos(t)*balance/a+a*2.);
@@ -67,8 +94,8 @@ float raymarch ( vec3 eye, vec3 ray, float time, out float total ) {
 }
 
 vec3 camera (vec3 eye) {
-    vec2 mouse = iMouse.xy/iResolution.xy*2.-1.;
-    if (iMouse.z > 0.5) {
+    vec2 mouse = ubuf.iMouse.xy/ubuf.iResolution.xy*2.-1.;
+    if (ubuf.iMouse.z > 0.5) {
         eye.yz *= rot(mouse.y*PI);
         eye.xz *= rot(mouse.x*PI);
     }
@@ -76,14 +103,14 @@ vec3 camera (vec3 eye) {
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ){
-    vec2 uv = 2.*(fragCoord-0.5*iResolution.xy)/iResolution.y;
+    vec2 uv = 2.*(fragCoord-0.5*ubuf.iResolution.xy)/ubuf.iResolution.y;
     vec3 eye = camera(vec3(0,0,4));
     vec3 ray = look(eye, vec3(0), uv, 1.);
     float total = 0.0;
     fragColor = vec4(0);
     for (float index = motion_frames; index > 0.; --index) {
-        float dither = random(ray.xy+fract(iTime+index));
-        float time = iTime*speed+(dither+index)/10./motion_frames;
+        float dither = random(ray.xy+fract(ubuf.iTime+index));
+        float time = ubuf.iTime*speed+(dither+index)/10./motion_frames;
         fragColor += vec4(raymarch(eye, ray, time, total))/motion_frames;
     }
     
@@ -91,4 +118,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     fragColor.rgb *= vec3(.7,.8,.9);
     float d = smoothstep(7.,0.,total);
     fragColor.rgb += vec3(0.8,.6,.5) * d;
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

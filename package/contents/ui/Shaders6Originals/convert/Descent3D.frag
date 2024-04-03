@@ -1,6 +1,33 @@
 // URL: Shadertoy.com/view/wdfGW4
 // By: mhnewman
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 //#define FAST_DESCENT
 
 //#define BLACK_AND_WHITE
@@ -248,7 +275,7 @@ vec3 addSign(vec3 color, vec3 pos, float side, vec2 id) {
     vec3 outlineColor = mix(signColorA, signColorB, hash3(id + 0.6));
     float flash = 6.0 - 24.0 * hash1(id + 0.8);
     flash *= step(3.0, flash);
-    flash = smoothstep(0.1, 0.5, 0.5 + 0.5 * cos(flash * iTime));
+    flash = smoothstep(0.1, 0.5, 0.5 + 0.5 * cos(flash * ubuf.iTime));
 
     vec2 halfSize = vec2(halfWidth, halfWidth * char2Count);
     center.y -= halfSize.y;
@@ -259,7 +286,7 @@ vec3 addSign(vec3 color, vec3 pos, float side, vec2 id) {
     vec2 char2Id = id + 0.05 + 0.1 * floor(char2Pos);
     float flicker = hash1(char2Id);
     flicker = step(0.93, flicker);
-    flicker = 1.0 - flicker * step(0.96, hash1(char2Id, iTime));
+    flicker = 1.0 - flicker * step(0.96, hash1(char2Id, ubuf.iTime));
 
     float char2 = -3.5 + 8.0 * noise(id + 6.0 * char2Pos);
     char2Pos = fract(char2Pos);
@@ -272,14 +299,14 @@ vec3 addSign(vec3 color, vec3 pos, float side, vec2 id) {
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 center = -speed * iTime * cameraDir.xy;
+    vec2 center = -speed * ubuf.iTime * cameraDir.xy;
     vec3 eye = vec3(center, 0.0) - cameraDist * cameraDir;
 
     vec3 forward = normalize(cameraDir);
     vec3 right = normalize(cross(forward, vec3(0.0, 0.0, 1.0)));
     vec3 up = cross(right, forward);
-    vec2 xy = 2.0 * fragCoord - iResolution.xy;
-    vec3 ray = normalize(xy.x * right + xy.y * up + zoom * forward * iResolution.y);
+    vec2 xy = 2.0 * fragCoord - ubuf.iResolution.xy;
+    vec3 ray = normalize(xy.x * right + xy.y * up + zoom * forward * ubuf.iResolution.y);
 
     vec4 res = castRay(eye, ray, center);
     vec3 p = eye + res.x * ray;
@@ -293,7 +320,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float fog = exp(-fogDensity * max(res.x - fogOffset, 0.0));
     color = mix(fogColor, color, fog);
 
-    float time = lightSpeed * iTime;
+    float time = lightSpeed * ubuf.iTime;
     color += addLight(eye.xyz, ray.xyz, res.x, time, lightHeight - 0.6);
     color += addLight(eye.yxz, ray.yxz, res.x, time, lightHeight - 0.4);
     color += addLight(vec3(-eye.xy, eye.z), vec3(-ray.xy, ray.z), res.x, time, lightHeight - 0.2);
@@ -308,3 +335,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     fragColor = vec4(color, 1.0);
 }
 
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
+}

@@ -7,6 +7,33 @@
    Demonstrate triangulation of jittered triangular lattice.
 
 */
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 const float s3 = 1.7320508075688772;
 const float i3 = 0.5773502691896258;
 
@@ -111,7 +138,7 @@ vec2 randCircleSpline(vec2 p, float t) {
 
 vec2 triPoint(vec2 p) {
     float t0 = hash12(p);
-    return tri2cart*p + 0.45*randCircleSpline(p, 0.15*iTime + t0);
+    return tri2cart*p + 0.45*randCircleSpline(p, 0.15*ubuf.iTime + t0);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -177,11 +204,11 @@ void tri_color(in vec2 p,
         vec2 pctr = (t0.xy + t1.xy + t2.xy) / 3.0;
 
         // angle of scene-wide color gradient
-        float theta = 1.0 + 0.01*iTime;
+        float theta = 1.0 + 0.01*ubuf.iTime;
         vec2 dir = vec2(cos(theta), sin(theta));
 
         // how far are we along gradient?
-        float grad_input = dot(pctr, dir) - sin(0.05*iTime);
+        float grad_input = dot(pctr, dir) - sin(0.05*ubuf.iTime);
 
         // h0 varies smoothly from 0 to 1
         float h0 = sin(0.7*grad_input)*0.5 + 0.5;
@@ -214,10 +241,10 @@ void tri_color(in vec2 p,
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
 	
-    float scl = 4.1 / iResolution.y;
+    float scl = 4.1 / ubuf.iResolution.y;
     
     // get 2D scene coords
-    vec2 p = (fragCoord - 0.5 - 0.5*iResolution.xy) * scl;
+    vec2 p = (fragCoord - 0.5 - 0.5*ubuf.iResolution.xy) * scl;
     
     // get triangular base coords
     vec2 tfloor = floor(cart2tri * p + 0.5);
@@ -260,3 +287,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
 }
 
 
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
+}

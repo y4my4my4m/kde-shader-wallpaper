@@ -1,6 +1,33 @@
 // https://www.shadertoy.com/view/XlfGRj
 // Credits to Pablo Roman Andrioli <Kali>
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 // Star Nest by Pablo Roman Andrioli
 
 // This content is under the MIT License.
@@ -24,14 +51,14 @@
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
 	//get coords and direction
-	vec2 uv=fragCoord.xy/iResolution.xy-.5;
-	uv.y*=iResolution.y/iResolution.x;
+	vec2 uv=fragCoord.xy/ubuf.iResolution.xy-.5;
+	uv.y*=ubuf.iResolution.y/ubuf.iResolution.x;
 	vec3 dir=vec3(uv*zoom,1.);
-	float time=iTime*speed+.25;
+	float time=ubuf.iTime*speed+.25;
 
 	//mouse rotation
-	float a1=.5+iMouse.x/iResolution.x*2.;
-	float a2=.8+iMouse.y/iResolution.y*2.;
+	float a1=.5+ubuf.iMouse.x/ubuf.iResolution.x*2.;
+	float a2=.8+ubuf.iMouse.y/ubuf.iResolution.y*2.;
 	mat2 rot1=mat2(cos(a1),sin(a1),-sin(a1),cos(a1));
 	mat2 rot2=mat2(cos(a2),sin(a2),-sin(a2),cos(a2));
 	dir.xz*=rot1;
@@ -65,4 +92,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	v=mix(vec3(length(v)),v,saturation); //color adjust
 	fragColor = vec4(v*.01,1.);
 
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

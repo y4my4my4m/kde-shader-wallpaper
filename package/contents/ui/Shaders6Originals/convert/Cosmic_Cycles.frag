@@ -14,6 +14,33 @@
 // After trying it with a circle inversion I decided to make it into some
 // sort of big bang scenario.
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 #define BURST
 #define NUM_LAYERS 5.
 
@@ -77,12 +104,12 @@ vec3 StarLayer(vec2 uv, float t, float sparkle) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 uv = (fragCoord-.5*iResolution.xy)/iResolution.y;
-    vec2 M = iMouse.xy/iResolution.xy;
+    vec2 uv = (fragCoord-.5*ubuf.iResolution.xy)/ubuf.iResolution.y;
+    vec2 M = ubuf.iMouse.xy/ubuf.iResolution.xy;
 
     M *= 10.;
 
-    float t = -iTime*.3;
+    float t = -ubuf.iTime*.3;
 
     float twirl = sin(t*.1);
     twirl *= twirl*twirl*sin(dot(uv,uv));
@@ -99,7 +126,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     float a = atan(uv.x, uv.y);
     uv /= d;
-    float burst = sin(iTime*.05);
+    float burst = sin(ubuf.iTime*.05);
     uv *= burst+.2;
     #endif
 
@@ -115,7 +142,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
 
     #ifdef BURST
-    //t = iTime*.5;
+    //t = ubuf.iTime*.5;
     float burstFade = smoothstep(0., .02, abs(burst));
     float size = .9*sin(t)+1.;
     size = max(size, sqrt(size));
@@ -135,4 +162,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     #endif
 
     fragColor = vec4(col,1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

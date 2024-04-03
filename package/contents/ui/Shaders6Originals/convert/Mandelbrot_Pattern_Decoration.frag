@@ -54,6 +54,34 @@
 */
 
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord ){
 
 
@@ -67,21 +95,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord ){
         for(int i=0; i<AA; i++){
 
             // Offset centered coordinate -- Standard AA stuff.
-            vec2 p = (fragCoord + vec2(i, j)/float(AA) - iResolution.xy*.5)/iResolution.y;
+            vec2 p = (fragCoord + vec2(i, j)/float(AA) - ubuf.iResolution.xy*.5)/ubuf.iResolution.y;
 
             // Time, rotating back and forth.
-            float ttm = cos(sin(iTime/8.))*6.2831;
+            float ttm = cos(sin(ubuf.iTime/8.))*6.2831;
 
             // Rotating and translating the canvas... More effort needs to be put in here,
             // but it does the job.
             p *= mat2(cos(ttm), sin(ttm), -sin(ttm), cos(ttm));
-            p -= vec2(cos(iTime/2.)/2., sin(iTime/3.)/5.);
+            p -= vec2(cos(ubuf.iTime/2.)/2., sin(ubuf.iTime/3.)/5.);
 
 
             // Jump off point and zoom... Where and how much you zoom in greatly effects what
             // you see, so I probably should have put more effort in here as well, but this
             // shows you a enough.
-            float zm = (200. + sin(iTime/7.)*50.);
+            float zm = (200. + sin(ubuf.iTime/7.)*50.);
             vec2 cc = vec2(-.57735 + .004, .57735) + p/zm;
 
 
@@ -224,8 +252,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord ){
     //col = (1. - exp(-col))*1.25;
 
      // Subtle vignette.
-    vec2 uv = fragCoord/iResolution.xy;
+    vec2 uv = fragCoord/ubuf.iResolution.xy;
     col *= pow(16.*(1. - uv.x)*(1. - uv.y)*uv.x*uv.y, 1./8.)*1.15;
 
     fragColor = vec4(sqrt(max(col, 0.)), 1.0 );
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

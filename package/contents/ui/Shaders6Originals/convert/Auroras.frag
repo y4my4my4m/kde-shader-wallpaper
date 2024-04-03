@@ -1,7 +1,6 @@
 // Auroras by nimitz 2017 (twitter: @stormoid)
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
 // Contact the author for other licensing options
-
 /*
 	
 	There are two main hurdles I encountered rendering this effect. 
@@ -23,7 +22,34 @@
 	direction. But this was not required for this demo and would be trivial to fix.
 */
 
-#define time iTime
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
+#define time ubuf.iTime
 
 mat2 mm2(in float a){float c = cos(a), s = sin(a);return mat2(c,s,-s,c);}
 mat2 m2 = mat2(0.95534, 0.29552, -0.29552, 0.95534);
@@ -102,7 +128,7 @@ vec3 nmzHash33(vec3 q)
 vec3 stars(in vec3 p)
 {
     vec3 c = vec3(0.);
-    float res = iResolution.x*1.;
+    float res = ubuf.iResolution.x*1.;
     
 	for (float i=0.;i<4.;i++)
     {
@@ -129,15 +155,15 @@ vec3 bg(in vec3 rd)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-	vec2 q = fragCoord.xy / iResolution.xy;
+	vec2 q = fragCoord.xy / ubuf.iResolution.xy;
     vec2 p = q - 0.5;
-	p.x*=iResolution.x/iResolution.y;
+	p.x*=ubuf.iResolution.x/ubuf.iResolution.y;
     
     vec3 ro = vec3(0,0,-6.7);
     vec3 rd = normalize(vec3(p,1.3));
-    vec2 mo = iMouse.xy / iResolution.xy-.5;
+    vec2 mo = ubuf.iMouse.xy / ubuf.iResolution.xy-.5;
     mo = (mo==vec2(-.5))?mo=vec2(-0.1,0.1):mo;
-	mo.x *= iResolution.x/iResolution.y;
+	mo.x *= ubuf.iResolution.x/ubuf.iResolution.y;
     rd.yz *= mm2(mo.y);
     rd.xz *= mm2(mo.x + sin(time*0.05)*0.2);
     
@@ -165,4 +191,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
     
 	fragColor = vec4(col, 1.);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

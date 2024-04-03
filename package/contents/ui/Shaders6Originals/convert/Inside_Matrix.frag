@@ -8,6 +8,34 @@
   These random runes look good as matrix symbols and have acceptable performance.
 */
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
+
 const int ITERATIONS = 40;   //use less value if you need more performance
 const float SPEED = 1.;
 
@@ -249,9 +277,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         return;
     }
 
-	vec2 uv = (fragCoord.xy * 2. - iResolution.xy) / iResolution.y;
+	vec2 uv = (fragCoord.xy * 2. - ubuf.iResolution.xy) / ubuf.iResolution.y;
 
-    float time = iTime * SPEED;
+    float time = ubuf.iTime * SPEED;
 
     const float turn_rad = 0.25 / BLOCKS_BEFORE_TURN;   //0 .. 0.5
     const float turn_abs_time = (PI/2.*turn_rad) * 1.5;  //multiplier different than 1 means a slow down on turns
@@ -360,8 +388,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         angle += fifth_turn_drift_angle * (1.5*min(1., (1.-t1)/turn_time) - 0.5*smoothstep1(1. - min(1.,t1/(1.-turn_time))));
     }
 
-    if (iMouse.x > 10. || iMouse.y > 10.) {
-        vec2 mouse = iMouse.xy / iResolution.xy * 2. - 1.;
+    if (ubuf.iMouse.x > 10. || ubuf.iMouse.y > 10.) {
+        vec2 mouse = ubuf.iMouse.xy / ubuf.iResolution.xy * 2. - 1.;
         up_down = -0.7 * mouse.y;
         angle += mouse.x;
         rotate_on_turns = 1.;
@@ -400,4 +428,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 col = rain(ro, rd, time);
 
     fragColor = vec4(col, 1.);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

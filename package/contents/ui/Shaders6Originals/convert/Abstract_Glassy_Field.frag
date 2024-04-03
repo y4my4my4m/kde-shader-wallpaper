@@ -23,6 +23,33 @@
 
 */
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 #define FAR 50. // Far plane, or maximum distance.
 
 //float objID = 0.; // Object ID
@@ -219,13 +246,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 
 
 	// Screen coordinates.
-	vec2 u = (fragCoord - iResolution.xy*.5)/iResolution.y;
+	vec2 u = (fragCoord - ubuf.iResolution.xy*.5)/ubuf.iResolution.y;
 
 	// Camera Setup.
     float speed = 4.;
-    vec3 o = camPath(iTime*speed); // Camera position, doubling as the ray origin.
-    vec3 lk = camPath(iTime*speed + .25);  // "Look At" position.
-    vec3 l = camPath(iTime*speed + 2.) + vec3(0, 1, 0); // Light position, somewhere near the moving camera.
+    vec3 o = camPath(ubuf.iTime*speed); // Camera position, doubling as the ray origin.
+    vec3 lk = camPath(ubuf.iTime*speed + .25);  // "Look At" position.
+    vec3 l = camPath(ubuf.iTime*speed + 2.) + vec3(0, 1, 0); // Light position, somewhere near the moving camera.
 
 
     // Using the above to produce the unit ray-direction vector.
@@ -335,11 +362,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 
 
         // Purple electric charge.
-        float hi = abs(mod(t/1. + iTime/3., 8.) - 8./2.)*2.;
+        float hi = abs(mod(t/1. + ubuf.iTime/3., 8.) - 8./2.)*2.;
         vec3 cCol = vec3(.01, .05, 1)*col*1./(.001 + hi*hi*.2);
         col += mix(cCol.yxz, cCol, n3D(p*3.));
  		// Similar effect.
-        //vec3 cCol = vec3(.01, .05, 1)*col*abs(tan(t/1.5 + iTime/3.));
+        //vec3 cCol = vec3(.01, .05, 1)*col*abs(tan(t/1.5 + ubuf.iTime/3.));
         //col += cCol;
 
 
@@ -356,7 +383,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 
 
     // Subtle vignette.
-    u = fragCoord/iResolution.xy;
+    u = fragCoord/ubuf.iResolution.xy;
     col = mix(vec3(0), col, pow( 16.0*u.x*u.y*(1.0-u.x)*(1.0-u.y) , .125)*.5 + .5);
 
 
@@ -365,4 +392,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     fragColor = vec4(sqrt(clamp(col, 0., 1.)), 1);
 
 
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

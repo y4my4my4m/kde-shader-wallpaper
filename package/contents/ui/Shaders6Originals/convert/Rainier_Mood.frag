@@ -13,6 +13,32 @@ Zavie / Ctrl-Alt-Test
 
 */
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
 // Maximum number of cells a ripple can cross.
 #define MAX_RADIUS 2
 
@@ -41,8 +67,8 @@ vec2 hash22(vec2 p)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    float resolution = 10. * exp2(-3.*iMouse.x/iResolution.x);
-	vec2 uv = fragCoord.xy / iResolution.xy * resolution;
+    float resolution = 10. * exp2(-3.*ubuf.iMouse.x/ubuf.iResolution.x);
+	vec2 uv = fragCoord.xy / ubuf.iResolution.xy * resolution;
     vec2 p0 = floor(uv);
 
     vec2 circles = vec2(0.);
@@ -58,7 +84,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             #endif
             vec2 p = pi + hash22(hsh);
 
-            float t = fract(0.3*iTime + hash12(hsh));
+            float t = fract(0.3*ubuf.iTime + hash12(hsh));
             vec2 v = p - uv;
             float d = length(v) - (float(MAX_RADIUS) + 1.)*t;
 
@@ -72,7 +98,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
     circles /= float((MAX_RADIUS*2+1)*(MAX_RADIUS*2+1));
 
-    float intensity = mix(0.01, 0.15, smoothstep(0.1, 0.6, abs(fract(0.05*iTime + 0.5)*2.-1.)));
+    float intensity = mix(0.01, 0.15, smoothstep(0.1, 0.6, abs(fract(0.05*ubuf.iTime + 0.5)*2.-1.)));
     vec3 n = vec3(circles, sqrt(1. - dot(circles, circles)));
 
     // edited until can VFLIP from ShaderEngine.qml
@@ -81,3 +107,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	fragColor = vec4(color, 1.0);
 }
 
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
+}

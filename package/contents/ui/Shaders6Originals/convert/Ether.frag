@@ -6,7 +6,35 @@
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
 // Contact the author for other licensing options
 
-#define t iTime
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
+#define t ubuf.iTime
+
 mat2 m(float a){float c=cos(a), s=sin(a);return mat2(c,-s,s,c);}
 float map(vec3 p){
     p.xz*= m(t*0.4);p.xy*= m(t*0.3);
@@ -15,7 +43,7 @@ float map(vec3 p){
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ){	
-	vec2 p = fragCoord.xy/iResolution.y - vec2(.9,.5);
+	vec2 p = fragCoord.xy/ubuf.iResolution.y - vec2(.9,.5);
     vec3 cl = vec3(0.);
     float d = 2.5;
     for(int i=0; i<=5; i++)	{
@@ -27,4 +55,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 		d += min(rz, 1.);
 	}
     fragColor = vec4(cl, 1.);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

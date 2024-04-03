@@ -18,6 +18,32 @@
 
 // This is under CC-BY-NC-SA (shadertoy default licence)
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
 
 mat2 r2d(float a) {
 	float c = cos(a), s = sin(a);
@@ -35,8 +61,8 @@ float de(vec3 p) {
 
 	float d = -length(p.xy) + 4.;// tunnel (inverted cylinder)
 
-	p.xy += vec2(cos(p.z + iTime)*sin(iTime), cos(p.z + iTime));
-	p.z -= 6. + iTime * 6.;
+	p.xy += vec2(cos(p.z + ubuf.iTime)*sin(ubuf.iTime), cos(p.z + ubuf.iTime));
+	p.z -= 6. + ubuf.iTime * 6.;
 	d = min(d, dot(p, normalize(sign(p))) - 1.); // octahedron (LJ's formula)
 	// I added this in the last 1-2 minutes, but I'm not sure if I like it actually!
 
@@ -49,10 +75,10 @@ float de(vec3 p) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
-	vec2 uv = fragCoord / iResolution.xy - .5;
-	uv.x *= iResolution.x / iResolution.y;
+	vec2 uv = fragCoord / ubuf.iResolution.xy - .5;
+	uv.x *= ubuf.iResolution.x / ubuf.iResolution.y;
 
-	float dt = iTime * 6.;
+	float dt = ubuf.iTime * 6.;
 	vec3 ro = vec3(0, 0, -5. + dt);
 	vec3 ta = vec3(0, 0, dt);
 
@@ -103,8 +129,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 	vec3 c = vec3(1) * length(mask * vec3(1., .5, .75));
 	c = mix(vec3(.2, .2, .7), vec3(.2, .1, .2), c);
 	c += g * .4;
-	c.r += sin(iTime)*.2 + sin(p.z*.5 - iTime * 6.);// red rings
+	c.r += sin(ubuf.iTime)*.2 + sin(p.z*.5 - ubuf.iTime * 6.);// red rings
 	c = mix(c, vec3(.2, .1, .2), 1. - exp(-.001*t*t));// fog
 
 	fragColor = vec4(c, 1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

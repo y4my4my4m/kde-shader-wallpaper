@@ -1,6 +1,33 @@
 // Url: https://www.shadertoy.com/view/stSfDt
 // Credits: Wabrion
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 #define DRAW_GRID 01
 #define DRAW_TRI 01
 #define DRAW_POLAR_GRID 0
@@ -8,7 +35,7 @@
 #define R    1.0
 #define ZOOM 5.0
 #define GLOW(r, d, i) pow(r/(d), i)
-#define RX 1.0 / min(iResolution.x, iResolution.y)
+#define RX 1.0 / min(ubuf.iResolution.x, ubuf.iResolution.y)
 #define CIRCLE(r, p) length(p) - abs(r)
 
 mat2 rot2D(float angle, float clock) {
@@ -40,13 +67,13 @@ float gridp(float x, float t) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 uv = fragCoord / iResolution.xy - 0.5;
-    float aspect = iResolution.x / iResolution.y;
+    vec2 uv = fragCoord / ubuf.iResolution.xy - 0.5;
+    float aspect = ubuf.iResolution.x / ubuf.iResolution.y;
     
     uv.x *= aspect;
     uv *= ZOOM;
 
-    float t = -1.25*iTime;
+    float t = -1.25*ubuf.iTime;
 
     float pos = -0.1;
 
@@ -240,3 +267,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     fragColor = vec4(col, 1);
 }
 
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
+}

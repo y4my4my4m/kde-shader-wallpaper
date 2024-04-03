@@ -1,6 +1,5 @@
 // url: https://www.shadertoy.com/view/tdGfz1
 // credits: leon
-
 //
 // Shader coded for the Cookie Collective live coding stream
 // https://cookie.paris/
@@ -8,7 +7,33 @@
 // 
 // Leon Denise 2020.11.28
 // Licensed under hippie love conspiracy
-//
+
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
 
 // constants
 const float PI = 3.1415;
@@ -30,10 +55,10 @@ vec3 palette(float t)
 
 void mainImage(out vec4 color, in vec2 coordinate)
 {
-    vec2 p = (coordinate-0.5*iResolution.xy)/iResolution.y;
+    vec2 p = (coordinate-0.5*ubuf.iResolution.xy)/ubuf.iResolution.y;
     
     // space distortion
-    p = normalize(p) * sin(pow(length(p), 0.5)*PI - iTime * 0.3);
+    p = normalize(p) * sin(pow(length(p), 0.5)*PI - ubuf.iTime * 0.3);
     
     vec2 origin = p;
     vec3 tint = vec3(0);
@@ -46,7 +71,7 @@ void mainImage(out vec4 color, in vec2 coordinate)
         float ratio = float(i)/float(disks-1);
         
         // rotation
-        p *= rotation(sin(iTime * 0.1) * 0.1 / falloff + 0.1 * iTime / falloff);
+        p *= rotation(sin(ubuf.iTime * 0.1) * 0.1 / falloff + 0.1 * ubuf.iTime / falloff);
         
         // fold
         p.x = abs(p.x)-0.3*falloff;
@@ -66,8 +91,8 @@ void mainImage(out vec4 color, in vec2 coordinate)
     for (int i = 0; i < dots; ++i)
     {
         float ratio = float(i)/float(dots);
-        float timeline = fract(ratio * 135.1654 + iTime * 0.5);
-        float angle = TAU * ratio * 15.547 + iTime * 0.1;
+        float timeline = fract(ratio * 135.1654 + ubuf.iTime * 0.5);
+        float angle = TAU * ratio * 15.547 + ubuf.iTime * 0.1;
         float radius = (0.5 + 0.5 * abs(sin(float(i)*1654.))) * timeline * 2.;
         
         // reset transform
@@ -84,4 +109,10 @@ void mainImage(out vec4 color, in vec2 coordinate)
     }
 
     color = vec4(tint,1);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

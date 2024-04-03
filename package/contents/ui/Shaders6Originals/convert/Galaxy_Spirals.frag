@@ -5,6 +5,32 @@
 // Created by S.Guillitte
 // Galaxy morphology based on http://iopscience.iop.org/0004-637X/783/2/138/pdf/0004-637X_783_2_138.pdf
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
 
 int windows = 0;
 vec2 m = vec2(2.,6.);
@@ -121,7 +147,7 @@ vec2 rotate(in vec2 p, in float t)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
 
-    vec2 p = 2.*fragCoord.xy /iResolution.xy-1.;
+    vec2 p = 2.*fragCoord.xy /ubuf.iResolution.xy-1.;
     p*=2.;
     if(p.y>0.){
         if(p.x>0.)windows =1;
@@ -131,9 +157,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
         else windows =2;}
 
 
-    p = rotate(p,-.02*iTime);
+    p = rotate(p,-.02*ubuf.iTime);
 
-    if(iMouse.z>0.)m = floor(iMouse.xy/iResolution.xy*10.);
+    if(ubuf.iMouse.z>0.)m = floor(ubuf.iMouse.xy/ubuf.iResolution.xy*10.);
     m.y*=2.;
 
     float r;
@@ -144,4 +170,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     r=.2;
 
     fragColor = clamp(vec4(r*k*k, r*k, k*.5+b*.4, 1.0),0.,1.);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

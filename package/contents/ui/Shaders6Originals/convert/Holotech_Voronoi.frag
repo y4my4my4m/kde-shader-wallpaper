@@ -1,6 +1,33 @@
 // url: https://www.shadertoy.com/view/flSBWG
 // credits: Dubswitcher
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 float hash(in vec2 uv){
     return fract(sin(dot(uv, vec2(14.478473612, 53.252567))) * 37482.1);
 }
@@ -64,8 +91,14 @@ float voronoi (in vec2 uv, in float zPos, in float seed, in float wall)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 uv = (fragCoord-0.5*iResolution.xy)/iResolution.y;
-    float c = voronoi(uv*4.,iTime,0.,0.1);
+    vec2 uv = (fragCoord-0.5*ubuf.iResolution.xy)/ubuf.iResolution.y;
+    float c = voronoi(uv*4.,ubuf.iTime,0.,0.1);
     vec3 col = mix(vec3(0.,0.1,0.2),vec3(0.7,0.8,1.),c);
     fragColor = vec4(col,1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

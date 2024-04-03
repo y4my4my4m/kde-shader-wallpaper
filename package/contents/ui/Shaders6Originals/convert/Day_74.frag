@@ -1,11 +1,37 @@
 
-#define iTime (iTime - 7.4)
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
 
 #define SPEED 0.3
 #define FL_H 0.3
 
+#define ubuf.iTime (ubuf.iTime - 7.4)
 
-#define mx (10.*iMouse.x/iResolution.x)
+#define mx (10.*ubuf.iMouse.x/ubuf.iResolution.x)
 #define rot(x) mat2(cos(x),-sin(x),sin(x),cos(x))
 #define pal(a,b,c,d,e) ((a) + (b)*sin(6.28*((c)*(d) + (e))))
 
@@ -37,7 +63,7 @@ float map(vec3 p){
 	p -= path(p.z);
     
     p.xy *= rot(
-        sin(w.z*2.9 + p.z*0.7 + sin( w.x*2. + w.z*4. + iTime*0. + 0.5) + w.z*0.1)*1.6
+        sin(w.z*2.9 + p.z*0.7 + sin( w.x*2. + w.z*4. + ubuf.iTime*0. + 0.5) + w.z*0.1)*1.6
     ); 
     
     float flTop =(-p.y + FL_H )*0.3;
@@ -52,9 +78,9 @@ float map(vec3 p){
     
     vec3 z = p;
     // random attenuation to feed to the glowy lines
-    float atten = pow(abs(sin(z.z*0.2 + iTime*0.1)), 50.);
-    float attenC = pow(abs(sin(z.z*0.1  + sin(z.x + iTime)*0.2 + sin(z.y*3.)*4. + iTime*0.2)), 100.);
-    float attenB = pow(abs(sin(w.z*0.2  + sin(w.x + iTime)*0.2 + sin(w.y*0.7)*4. + w.y*20. + iTime*0.2)), 10.);
+    float atten = pow(abs(sin(z.z*0.2 + ubuf.iTime*0.1)), 50.);
+    float attenC = pow(abs(sin(z.z*0.1  + sin(z.x + ubuf.iTime)*0.2 + sin(z.y*3.)*4. + ubuf.iTime*0.2)), 100.);
+    float attenB = pow(abs(sin(w.z*0.2  + sin(w.x + ubuf.iTime)*0.2 + sin(w.y*0.7)*4. + w.y*20. + ubuf.iTime*0.2)), 10.);
     vec3 col = pal(0.1,0.6 - attenC*0.5,vec3(1.7  - atten*0.6,1.1,0.8),0.2 - atten*0.4 ,0.5 - attenB*0.6 );
 	col = max(col, 0.);
     
@@ -107,7 +133,7 @@ vec3 getNormal(vec3 p){
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 uv = (fragCoord - 0.5*iResolution.xy)/iResolution.y;
+    vec2 uv = (fragCoord - 0.5*ubuf.iResolution.xy)/ubuf.iResolution.y;
 
     uv *= 1. - dot(uv,uv)*-0.2;
     
@@ -119,7 +145,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 ro = vec3(0);
     
     ro.z += mx*2.;
-    ro.z += iTime*SPEED - sin(iTime)*SPEED*0.3;
+    ro.z += ubuf.iTime*SPEED - sin(ubuf.iTime)*SPEED*0.3;
     ro += path(ro.z);
     
     vec3 lookAt = vec3(0,0,ro.z + 1.);
@@ -128,7 +154,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     vec3 rd = getRd(ro, lookAt, uv);
     
-    rd.xy *= rot(sin(iTime)*0.05);
+    rd.xy *= rot(sin(ubuf.iTime)*0.05);
     
     bool hit; float t; vec3 p;
     
@@ -156,4 +182,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col = pow(col, vec3(1.3));
     
     fragColor = vec4(col,1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

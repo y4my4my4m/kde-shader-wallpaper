@@ -36,6 +36,33 @@
 */
 
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 #define FAR 40.
 
 // 2x2 matrix rotation. Note the absence of "cos." It's there, but in disguise, and comes courtesy
@@ -283,10 +310,10 @@ vec2 path(in float z){ float s = sin(z/36.)*cos(z/18.); return vec2(s*16., 0.); 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 
 	// Screen coordinates.
-	vec2 uv = (fragCoord - iResolution.xy*.5)/iResolution.y;
+	vec2 uv = (fragCoord - ubuf.iResolution.xy*.5)/ubuf.iResolution.y;
 
 	// Camera Setup.
-	vec3 lk = vec3(0, 3.5, iTime*6.);  // "Look At" position.
+	vec3 lk = vec3(0, 3.5, ubuf.iTime*6.);  // "Look At" position.
 	vec3 ro = lk + vec3(0, .25, -.25); // Camera position, doubling as the ray origin.
 
     // Light positioning. One is just in front of the camera, and the other is in front of that.
@@ -320,7 +347,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     // Mouse controls, as per TambakoJaguar's suggestion.
     // Works better if the line above is commented out.
 	vec2 ms = vec2(0);
-    if (iMouse.z > 1.0) ms = (2.*iMouse.xy - iResolution.xy)/iResolution.xy;
+    if (ubuf.iMouse.z > 1.0) ms = (2.*ubuf.iMouse.xy - ubuf.iResolution.xy)/ubuf.iResolution.xy;
     vec2 a = sin(vec2(1.5707963, 0) - ms.x);
     mat2 rM = mat2(a, -a.y, a.x);
     rd.xz = rd.xz*rM;
@@ -421,4 +448,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 
 	fragColor = vec4(sqrt(clamp(sceneCol, 0., 1.)), 1.0);
 
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

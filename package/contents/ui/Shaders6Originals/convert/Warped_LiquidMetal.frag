@@ -1,6 +1,33 @@
 // url: https://www.shadertoy.com/view/3t2czh
 // credits: mrange
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 // Licence CC0: Liquid Metal
 // Some experimenting with warped FBM and very very fake lighting turned out ok 
     
@@ -142,17 +169,17 @@ float fbm3(vec2 p) {
 float warp(vec2 p) {
   vec2 v = vec2(fbm1(p), fbm1(p+0.7*vec2(1.0, 1.0)));
   
-  rot(v, 1.0+iTime*0.1);
+  rot(v, 1.0+ubuf.iTime*0.1);
   
   vec2 vv = vec2(fbm2(p + 3.7*v), fbm2(p + -2.7*v.yx+0.7*vec2(1.0, 1.0)));
 
-  rot(vv, -1.0+iTime*0.21315);
+  rot(vv, -1.0+ubuf.iTime*0.21315);
     
   return fbm3(p + 1.4*vv);
 }
 
 float height(vec2 p) {
-  float a = 0.005*iTime;
+  float a = 0.005*ubuf.iTime;
   p += 5.0*vec2(cos(a), sin(a));
   p *= 2.0;
   p += 13.0;
@@ -163,7 +190,7 @@ float height(vec2 p) {
 
 vec3 normal(vec2 p) {
   // As suggested by IQ, thanks!
-  vec2 eps = -vec2(2.0/iResolution.y, 0.0);
+  vec2 eps = -vec2(2.0/ubuf.iResolution.y, 0.0);
   
   vec3 n;
   
@@ -184,9 +211,9 @@ vec3 postProcess(vec3 col, vec2 q)  {
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
-  vec2 q = fragCoord/iResolution.xy;
+  vec2 q = fragCoord/ubuf.iResolution.xy;
   vec2 p = -1. + 2. * q;
-  p.x*=iResolution.x/iResolution.y;
+  p.x*=ubuf.iResolution.x/ubuf.iResolution.y;
  
   const vec3 lp1 = vec3(0.9, -0.5, 0.8);
   const vec3 lp2 = vec3(-0.9, -1.5, 0.9);
@@ -221,3 +248,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
   fragColor = vec4(col, 1.0);
 }
 
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
+}

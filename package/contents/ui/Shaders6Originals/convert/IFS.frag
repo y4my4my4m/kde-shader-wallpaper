@@ -2,13 +2,40 @@
 // Credits to vox
 //-----------------CONSTANTS MACROS-----------------
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 #define PI 3.14159265359
 #define E 2.7182818284
 #define GR 1.61803398875
 
 //-----------------UTILITY MACROS-----------------
 
-#define time ((sin(float(__LINE__))*GR/2.0/PI+GR/PI)*iTime+100.0)
+#define time ((sin(float(__LINE__))*GR/2.0/PI+GR/PI)*ubuf.iTime+100.0)
 #define flux(x) (vec3(cos(x),cos(4.0*PI/3.0+x),cos(2.0*PI/3.0+x))*.5+.5)
 #define rotatePoint(p,n,theta) (p*cos(theta)+cross(n,p)*sin(theta)+n*dot(p,n) *(1.0-cos(theta)))
 
@@ -30,10 +57,10 @@ vec3 saw(vec3 x)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-	vec2 uv = fragCoord.xy / iResolution.xy*2.0-1.0;
-    uv.x *= iResolution.x/iResolution.y;
+	vec2 uv = fragCoord.xy / ubuf.iResolution.xy*2.0-1.0;
+    uv.x *= ubuf.iResolution.x/ubuf.iResolution.y;
     
-	vec3 eye = vec3(cos(iTime), sin(iTime*.5), sin(iTime))*2.0;
+	vec3 eye = vec3(cos(ubuf.iTime), sin(ubuf.iTime*.5), sin(ubuf.iTime))*2.0;
     vec3 look = vec3(0.0, 0.0, 0.0);
     vec3 up = vec3(0.0, 1.0, 0.0);
     vec3 foward = normalize(look-eye);
@@ -81,7 +108,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             
             float dist = length((eye+ray*t1)-(p1+ray2*t2));
             
-            float lineWidth = 50.0/max(iResolution.x, iResolution.y);
+            float lineWidth = 50.0/max(ubuf.iResolution.x, ubuf.iResolution.y);
             
             float lineLength = 2.5+.5*sin(time);
             
@@ -99,4 +126,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
     
 	fragColor = vec4(flux(PI*map/sum+time)*clamp(map, 0.0, 1.0), 1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

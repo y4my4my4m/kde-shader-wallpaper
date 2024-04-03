@@ -1,6 +1,33 @@
 // url: https://www.shadertoy.com/view/7lBBzd
 // credits: bsodium
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 //#define Use_Perlin
 //#define Use_Value
 #define Use_Simplex
@@ -216,7 +243,7 @@ float caustics(vec3 p, vec3 lp) {
     float beforeHit = bottom(waterSurface, refractRay);
     vec3 beforePos = waterSurface + refractRay * beforeHit;
 
-    vec3 noisePos = waterSurface + vec3(0.,iTime * 2.0,0.);
+    vec3 noisePos = waterSurface + vec3(0.,ubuf.iTime * 2.0,0.);
     float height = noise(noisePos);
     vec3 deformedWaterSurface = waterSurface + vec3(0., height, 0.);
 
@@ -251,10 +278,10 @@ mat3 createCamera(vec3 ro, vec3 ta, float cr )
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     // fragment position
-    vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
+    vec2 p = (fragCoord.xy * 2.0 - ubuf.iResolution.xy) / min(ubuf.iResolution.x, ubuf.iResolution.y);
 
     // camera
-    vec3 ro = vec3(sin(iTime * ROTSPEED) * 10.0, 0.0, cos(iTime * ROTSPEED) * 10.0) * 2.0;
+    vec3 ro = vec3(sin(ubuf.iTime * ROTSPEED) * 10.0, 0.0, cos(ubuf.iTime * ROTSPEED) * 10.0) * 2.0;
     vec3 ta = vec3(0.0, -8.0, 0.0);
     mat3 cm = createCamera(ro, ta, 0.0);
     vec3 ray = cm * normalize(vec3(p, 4.0));
@@ -278,4 +305,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     } else {
         fragColor = vec4(vec3(0.10,0.34,0.49), 1.0);
     }
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

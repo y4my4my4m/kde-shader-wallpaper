@@ -1,6 +1,33 @@
 // url: https://www.shadertoy.com/view/MlVcDt
 // credits: JuliaPoo
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 mat2 rot( float a )
 { 
     float s = sin(a);
@@ -39,14 +66,14 @@ float pattern (in vec2 p, out vec2 q, out vec2 r, float t){
 
 void mainImage(out vec4 C, in vec2 U){
     
-    vec2 uv = (U.xy - iMouse.xy)/iResolution.xy * 2.;
-    uv.x *= iResolution.x/iResolution.y;
+    vec2 uv = (U.xy - ubuf.iMouse.xy)/ubuf.iResolution.xy * 2.;
+    uv.x *= ubuf.iResolution.x/ubuf.iResolution.y;
 	
     vec2 q,r;
     vec3 col1 = vec3(0.,.9,.8);
     vec3 col2 = vec3(1.,.6,.5);
     
-    float f = pattern(uv, q, r, 0.1*iTime);
+    float f = pattern(uv, q, r, 0.1*ubuf.iTime);
     
     vec3 c = mix(col1, vec3(0), smoothstep(.0,.95,f));
     vec3 a = col2 * smoothstep(0., .8, dot(q,r)*0.6);
@@ -55,3 +82,9 @@ void mainImage(out vec4 C, in vec2 U){
     C = vec4( c, 1. );
 }
 
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
+}

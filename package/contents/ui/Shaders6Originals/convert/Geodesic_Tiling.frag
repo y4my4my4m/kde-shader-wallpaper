@@ -1,6 +1,33 @@
 // https://www.shadertoy.com/view/llVXRd
 // Credits to tdhooper
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 #define MODEL_ROTATION vec2(.3, .25)
 #define CAMERA_ROTATION vec2(.5, .5)
 
@@ -227,7 +254,7 @@ mat3 sphericalMatrix(float theta, float phi) {
 
 mat3 mouseRotation(bool enable, vec2 xy) {
     if (enable) {
-        vec2 mouse = iMouse.xy / iResolution.xy;
+        vec2 mouse = ubuf.iMouse.xy / ubuf.iResolution.xy;
 
         if (mouse.x != 0. && mouse.y != 0.) {
             xy.x = mouse.x;
@@ -666,7 +693,7 @@ vec3 linearToScreen(vec3 linearRGB) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    time = iTime;
+    time = ubuf.iTime;
 
     #ifdef LOOP
         #if LOOP == 1
@@ -682,15 +709,15 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     initIcosahedron();
 
-    vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
-    vec2 m = iMouse.xy / iResolution.xy;
+    vec2 p = (-ubuf.iResolution.xy + 2.0*fragCoord.xy)/ubuf.iResolution.y;
+    vec2 m = ubuf.iMouse.xy / ubuf.iResolution.xy;
 
     vec3 camPos = vec3( 0., 0., 2.);
     vec3 camTar = vec3( 0. , 0. , 0. );
     float camRoll = 0.;
 
     // camera movement
-    doCamera(camPos, camTar, camRoll, iTime, m);
+    doCamera(camPos, camTar, camRoll, ubuf.iTime, m);
 
     // camera matrix
     mat3 camMat = calcLookAtMatrix( camPos, camTar, camRoll );  // 0.0 is the camera roll
@@ -707,4 +734,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     #endif
 
     fragColor = vec4(color,1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

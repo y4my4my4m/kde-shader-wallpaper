@@ -1,17 +1,44 @@
 // https://www.shadertoy.com/view/wscGWl
 // Credits to reyemxela
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 float rand(vec2 co){ return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453); } // random noise
 
 float getCellBright(vec2 id) {
-    return sin((iTime+2.)*rand(id)*2.)*.5+.5; // returns 0. to 1.
+    return sin((ubuf.iTime+2.)*rand(id)*2.)*.5+.5; // returns 0. to 1.
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
-	float mx = max(iResolution.x, iResolution.y);
+	float mx = max(ubuf.iResolution.x, ubuf.iResolution.y);
 	vec2 uv = fragCoord.xy / mx;
 
-    float time = iTime*.5;
+    float time = ubuf.iTime*.5;
 
     uv *= 30.; // grid size
 
@@ -36,4 +63,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
 
 	fragColor = vec4(color, 1.0);
 
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

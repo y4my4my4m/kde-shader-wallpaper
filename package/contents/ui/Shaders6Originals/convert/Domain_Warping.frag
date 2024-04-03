@@ -1,11 +1,38 @@
 // url: https://www.shadertoy.com/view/4sBfDw
 // zaiyugi
-
 /*
 Zachary Shore
 DPA8090: Rendering and Shading
 HW2: Fractal Brownian Motion
 */
+
+
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
 
 #define M_PI 3.14159265359
 
@@ -206,13 +233,13 @@ float pattern(in vec3 p, inout vec3 q, inout vec3 r)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 st = fragCoord.xy / iResolution.xy;
-    float aspect = iResolution.x / iResolution.y;
+    vec2 st = fragCoord.xy / ubuf.iResolution.xy;
+    float aspect = ubuf.iResolution.x / ubuf.iResolution.y;
     st.x *= aspect;
 
     vec2 uv = st;
 
-    float t = iTime * 0.1;
+    float t = ubuf.iTime * 0.1;
 
     vec3 spectrum[4];
     spectrum[0] = vec3(0.94, 0.02, 0.03);
@@ -236,4 +263,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     color = pow(color, vec3(2.0));
 
     fragColor = vec4(color, 1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

@@ -2,6 +2,33 @@
 // Credits to movAX13h
 // Modified to remove sound channel
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 // I/O fragment shader by movAX13h, August 2013
 
 #define SHOW_BLOCKS
@@ -38,8 +65,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 	float pulse = sampleMusic();
 
-	vec2 uv = fragCoord.xy / iResolution.xy - 0.5;
-	float aspect = iResolution.x / iResolution.y;
+	vec2 uv = fragCoord.xy / ubuf.iResolution.xy - 0.5;
+	float aspect = ubuf.iResolution.x / ubuf.iResolution.y;
 	vec3 baseColor = uv.x > 0.0 ? vec3(0.0,0.3, 0.6) : vec3(0.6, 0.0, 0.3);
 
 	vec3 color = pulse*baseColor*0.5*(0.9-cos(uv.x*8.0));
@@ -48,7 +75,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	for (int i = 0; i < numBlocks; i++)
 	{
 		float z = 1.0-0.7*rand(float(i)*1.4333); // 0=far, 1=near
-		float tickTime = iTime*z*speed + float(i)*1.23753;
+		float tickTime = ubuf.iTime*z*speed + float(i)*1.23753;
 		float tick = floor(tickTime);
 
 		vec2 pos = vec2(0.6*aspect*(rand(tick)-0.5), sign(uv.x)*ySpread*(0.5-fract(tickTime)));
@@ -69,4 +96,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 	color -= rand(uv)*0.04;
 	fragColor = vec4(color, 1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

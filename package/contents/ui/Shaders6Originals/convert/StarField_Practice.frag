@@ -1,6 +1,33 @@
 // https://www.shadertoy.com/view/tllfRX
 // Credits to Deadtotem
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 #define NUM_LAYERS 6.
 #define TAU 6.28318
 #define PI 3.141592
@@ -40,7 +67,7 @@ vec3 StarLayer(vec2 uv){
             float star = Star(gv-offs-vec2(n, fract(n*34.))+.5, smoothstep(.8,.9,size)*.46);
             vec3 color = sin(vec3(.2,.3,.9)*fract(n*2345.2)*TAU)*.25+.75;
             color = color*vec3(.9,.59,.9+size);
-            star *= sin(iTime*3.+n*TAU)*.25+.5;
+            star *= sin(ubuf.iTime*3.+n*TAU)*.25+.5;
             col += star*size*color;
         }
     }
@@ -48,10 +75,10 @@ vec3 StarLayer(vec2 uv){
 }
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 uv = (fragCoord-.5*iResolution.xy)/iResolution.y;
-    vec2 M = (iMouse.xy-iResolution.xy*.5)/iResolution.y;
+    vec2 uv = (fragCoord-.5*ubuf.iResolution.xy)/ubuf.iResolution.y;
+    vec2 M = (ubuf.iMouse.xy-ubuf.iResolution.xy*.5)/ubuf.iResolution.y;
 
-    float t = iTime*.0162;
+    float t = ubuf.iTime*.0162;
     uv *= Rot(t);
 
     vec3 col = vec3(0);
@@ -60,8 +87,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         float depth = fract(i+t);
         float scale = mix(20., .5, depth);
         float fade = depth*smoothstep(1.,.9,depth);
-        col += StarLayer(uv*scale+i*453.2-iTime*.05-M)*fade;
+        col += StarLayer(uv*scale+i*453.2-ubuf.iTime*.05-M)*fade;
     }
 
     fragColor = vec4(col,1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

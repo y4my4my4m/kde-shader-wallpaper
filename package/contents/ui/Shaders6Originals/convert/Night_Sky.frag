@@ -16,6 +16,33 @@ color and luminance is not based on something accurate like Hertzsprung-Russell.
 
 // Hashes https://www.shadertoy.com/view/4djSRW
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 float hash11(float p){
     p = fract(p*0.1031);
     p *= p+33.33;
@@ -110,9 +137,9 @@ vec3 blackbody(float temperature){
 // Stars
 vec3 stars(vec2 coord){
     float luminance = max(0.0, (hash12(coord)-0.985));
-    float temperature = (hash12(coord+iResolution.xy)*6000.0)+4000.0;
-    vec3 colorshift = normalize(colorednoise(coord, float(iTime*16.0)));
-    return (luminance*noise(coord, iTime*4.0))*blackbody(temperature)*4.0*(colorshift*0.5+1.0);
+    float temperature = (hash12(coord+ubuf.iResolution.xy)*6000.0)+4000.0;
+    vec3 colorshift = normalize(colorednoise(coord, float(ubuf.iTime*16.0)));
+    return (luminance*noise(coord, ubuf.iTime*4.0))*blackbody(temperature)*4.0*(colorshift*0.5+1.0);
 }
 
 // Galaxy
@@ -133,7 +160,7 @@ float nebula(vec2 coord){
 
 // Main Image
 void mainImage(out vec4 fragColor, vec2 fragCoord){
-    vec2 uv = 2.0*(fragCoord.xy-0.5*iResolution.xy)/max(iResolution.x, iResolution.y);
+    vec2 uv = 2.0*(fragCoord.xy-0.5*ubuf.iResolution.xy)/max(ubuf.iResolution.x, ubuf.iResolution.y);
     if(fbm((uv.x+4.0)*4.0) > (uv.y+0.5)*4.0){
         fragColor = vec4(0.0, 0.0, 0.0, 1.0);
         return;
@@ -144,4 +171,10 @@ void mainImage(out vec4 fragColor, vec2 fragCoord){
     vec3 nebulae = nebula(uv)*vec3(0.6, 0.5, 0.75);
     vec3 color = star+mix(vec3(gas), dust*0.5, 0.75)+nebulae;
     fragColor = vec4(color, 1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

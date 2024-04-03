@@ -1,6 +1,5 @@
 // https://www.shadertoy.com/view/4lSXzh
 // Credits to Shane
-
 /*
     Simplified, Traced Minkowski Tube.
     ----------------------------------
@@ -56,6 +55,32 @@
 
 */
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
 
 // 2D rotation. Always handy.
 mat2 rot(float th){ float cs = cos(th), si = sin(th); return mat2(cs, -si, si, cs); }
@@ -112,12 +137,12 @@ float Voronesque( in vec3 p ){
 void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 
     // Screen coordinates, plus some movement about the center.
-    vec2 uv = (fragCoord.xy - iResolution.xy*0.5)/iResolution.y + vec2(0.5*cos(iTime*0.5), 0.25*sin(iTime*0.5));
+    vec2 uv = (fragCoord.xy - ubuf.iResolution.xy*0.5)/ubuf.iResolution.y + vec2(0.5*cos(ubuf.iTime*0.5), 0.25*sin(ubuf.iTime*0.5));
 
     // Unit direction ray.
     vec3 rd = normalize(vec3(uv, 1.));
-    rd.xy *= rot(sin(iTime*0.25)*0.5); // Very subtle look around, just to show it's a 3D effect.
-    rd.xz *= rot(sin(iTime*0.25)*0.5);
+    rd.xy *= rot(sin(ubuf.iTime*0.25)*0.5); // Very subtle look around, just to show it's a 3D effect.
+    rd.xz *= rot(sin(ubuf.iTime*0.25)*0.5);
 
     // Screen color. Initialized to black.
     vec3 col = vec3(0);
@@ -139,7 +164,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
         // Using the the distance sDist above to calculate the surface position. Ie: sp = ro + rd*t;
         // I've hardcoded ro to reduce line count. Note that ro.xy is centered on zero. The cheap
         // ray-intersection formula above relies on that.
-        vec3 sp = vec3(0.0, 0.0, iTime*2.) + rd*sDist;
+        vec3 sp = vec3(0.0, 0.0, ubuf.iTime*2.) + rd*sDist;
 
         // The surface normal. Based on the derivative of the surface description function. See above.
         //vec3 sn = normalize(vec3(-sp.xy, 0.)); // Cylinder normal.
@@ -161,7 +186,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
         // Lighting.
         //
         // The light is hovering just in front of the viewer.
-        vec3 lp = vec3(0.0, 0.0, iTime*2. + 3.);
+        vec3 lp = vec3(0.0, 0.0, ubuf.iTime*2. + 3.);
         vec3 ld = lp - sp; // Light direction.
         float dist = max(length(ld), 0.001); // Distance from light to the surface.
         ld /= dist; // Use the distance to normalize ld.
@@ -190,4 +215,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     //}
 
     fragColor = vec4(min(col, 1.), 1.);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

@@ -38,6 +38,33 @@
 
 */
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 // property Image iChannel0: Image { source: "./Shadertoy_London.jpg" }
 
 #define FAR 2.
@@ -89,7 +116,7 @@ vec2 hash22(vec2 p) {
     // up the cells ever so slightly for a more even spread. In fact, lower numbers work
     // even better, but then the random movement would become too restricted. Zero would
     // give you square cells.
-    return sin( p*6.2831853 + iTime )*.45 + .5;
+    return sin( p*6.2831853 + ubuf.iTime )*.45 + .5;
 
 }
 
@@ -243,7 +270,7 @@ vec3 eMap(vec3 rd, vec3 sn){
     vec3 sRd = rd; // Save rd, just for some mixing at the end.
 
     // Add a time component, scale, then pass into the noise function.
-    rd.xy -= iTime*.25;
+    rd.xy -= ubuf.iTime*.25;
     rd *= 3.;
 
     //vec3 tx = tex3D(iChannel0, rd/3., sn);
@@ -263,11 +290,11 @@ vec3 eMap(vec3 rd, vec3 sn){
 void mainImage(out vec4 c, vec2 u){
 
     // Unit direction ray, camera origin and light position.
-    vec3 r = normalize(vec3(u - iResolution.xy*.5, iResolution.y)),
+    vec3 r = normalize(vec3(u - ubuf.iResolution.xy*.5, ubuf.iResolution.y)),
          o = vec3(0), l = o + vec3(0, 0, -1);
 
     // Rotate the canvas. Note that sine and cosine are kind of rolled into one.
-    vec2 a = sin(vec2(1.570796, 0) + iTime/8.); // Fabrice's observation.
+    vec2 a = sin(vec2(1.570796, 0) + ubuf.iTime/8.); // Fabrice's observation.
     r.xy = mat2(a, -a.y, a.x) * r.xy;
 
 
@@ -324,7 +351,7 @@ void mainImage(out vec4 c, vec2 u){
         else c.xyz *= .1;
 
         // Hue rotation, for anyone who's interested.
-        //c.xyz = rotHue(c.xyz, mod(iTime/16., 6.283));
+        //c.xyz = rotHue(c.xyz, mod(ubuf.iTime/16., 6.283));
 
 
         float df = max(dot(l, n), 0.); // Diffuse.
@@ -355,11 +382,17 @@ void mainImage(out vec4 c, vec2 u){
 
 
     // Vignette.
-    //vec2 uv = u/iResolution.xy;
+    //vec2 uv = u/ubuf.iResolution.xy;
     //c.xyz = mix(c.xyz, vec3(0, 0, .5), .1 -pow(16.*uv.x*uv.y*(1.-uv.x)*(1.-uv.y), 0.25)*.1);
 
     // Apply some statistically unlikely (but close enough) 2.0 gamma correction. :)
     c = vec4(sqrt(clamp(c.xyz, 0., 1.)), 1.);
 
 
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

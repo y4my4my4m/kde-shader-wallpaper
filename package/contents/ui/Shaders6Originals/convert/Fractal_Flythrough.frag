@@ -49,6 +49,33 @@
 
 */
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 // property Image iChannel0: Image { source: "./Shader_Fractal_Flythrough_iChannel0.png" }
 
 const float FAR = 50.0; // Far plane.
@@ -337,9 +364,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 
 
     // Screen coordinates.
-    vec2 u = (fragCoord - iResolution.xy*0.5)/iResolution.y;
+    vec2 u = (fragCoord - ubuf.iResolution.xy*0.5)/ubuf.iResolution.y;
 
-    float speed = iTime*0.35 + 8.;
+    float speed = ubuf.iTime*0.35 + 8.;
 
     // Initiate the camera path spline points. Kind of wasteful not making this global, but I wanted
     // it self contained... for better or worse. I'm not really sure what the GPU would prefer.
@@ -492,4 +519,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     // Done.
     fragColor = vec4(sqrt(max(col, 0.)), 1.0);
 
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

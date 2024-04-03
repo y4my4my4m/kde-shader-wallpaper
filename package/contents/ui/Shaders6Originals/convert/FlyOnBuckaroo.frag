@@ -4,6 +4,33 @@
 //CC0 1.0 Universal https://creativecommons.org/publicdomain/zero/1.0/
 //To the extent possible under law, Blackle Mori has waived all copyright and related or neighboring rights to this work.
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 vec3 erot(vec3 p, vec3 ax, float ro) {
   return mix(dot(ax,p)*ax, p, cos(ro))+sin(ro)*cross(ax,p);
 }
@@ -16,11 +43,11 @@ float comp(vec3 p, vec3 ax, float ro) {
 }
 
 float cloudssdf(vec3 p) {
-  p.y += iTime*.2;
+  p.y += ubuf.iTime*.2;
   float d1 = comp(p, normalize(vec3(1,2,5)), 0.5);
-  p.y += iTime*.2;
+  p.y += ubuf.iTime*.2;
   float d3 = comp(p*2., normalize(vec3(3,1,1)), 2.5)/2.;
-  p.y += iTime*.2;
+  p.y += ubuf.iTime*.2;
   float d4 = comp(p*3., normalize(vec3(4,-2,5)), 3.5)/3.;
   return (d1+d3+d4)/3.;
 }
@@ -33,9 +60,9 @@ float linedist (vec3 p, vec3 a, vec3 b) {
 float body;
 float beamm;
 float scene(vec3 p) {
-  p.z += sin(iTime);
-  p = erot(p, vec3(0,1,0), cos(iTime)*.2);
-  beamm = 0.9*(linedist(p, vec3(0), vec3(0,0,-10))-.3-sin(p.z*3.+iTime*4.)*.05 - sin(iTime)*.2);
+  p.z += sin(ubuf.iTime);
+  p = erot(p, vec3(0,1,0), cos(ubuf.iTime)*.2);
+  beamm = 0.9*(linedist(p, vec3(0), vec3(0,0,-10))-.3-sin(p.z*3.+ubuf.iTime*4.)*.05 - sin(ubuf.iTime)*.2);
   vec3 p2 =p;
   p2.z = sqrt(p2.z*p2.z+0.02);
   p2.z+=3.;
@@ -48,10 +75,10 @@ float scene(vec3 p) {
 float bpm = 125.;
 float eye;
 float buckaroo(vec3 p) {
-  float bpmt = iTime/60.*bpm;
+  float bpmt = ubuf.iTime/60.*bpm;
   float t = pow(sin(fract(bpmt)*3.14/2.), 20.);
-  p.z += sin(iTime);
-  p = erot(p, vec3(0,1,0), cos(iTime)*.2);
+  p.z += sin(ubuf.iTime);
+  p = erot(p, vec3(0,1,0), cos(ubuf.iTime)*.2);
   p-=vec3(0,0,0.9);
   p.z += t*.1;
   p.x = abs(p.x);
@@ -94,11 +121,11 @@ vec3 clouds(inout vec3 p, vec3 cam, vec3 init, int depth) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-  vec2 uv = (fragCoord-.5*iResolution.xy)/iResolution.y;
+  vec2 uv = (fragCoord-.5*ubuf.iResolution.xy)/ubuf.iResolution.y;
 
   vec3 cam = normalize(vec3(1,uv));
   
-  float bpmt = iTime/60.*bpm;
+  float bpmt = ubuf.iTime/60.*bpm;
   float t = mix(floor(bpmt) + pow(sin(fract(bpmt)*3.14/2.), 20.), bpmt, 0.8);
   vec3 init = vec3(-8.+sin(t)*2.,0,0.1);
   cam = erot(cam, vec3(0,0,1), t*.2);
@@ -153,4 +180,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
   fragColor.xyz = mix(clds, obj, fctr) + glow*glow*.9*sqrt(fctr*.5+.5);
   fragColor.xyz = sqrt(fragColor.xyz);
   fragColor.xyz = abs(erot(fragColor.xyz, normalize(sin(clp*.3+t)), 0.2));
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

@@ -1,6 +1,5 @@
 // https://www.shadertoy.com/view/wdSXzK
 // Credits to dracusa
-
 /*
 A raymarching shader. I thought it would be interesting to tile iq's ellipsoid
 approximation, since it can be smoothly turned into an infinite cylinder,
@@ -19,6 +18,34 @@ field).
 This is part of a series of explorations on the log-spherical mapping:
 https://www.osar.fr/notes/logspherical/
 */
+
+
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
 
 // definitely try changing this value:
 #define DENSITY 12.0
@@ -145,11 +172,11 @@ vec3 shade(in vec3 pos)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     // Normalized pixel coordinates (from 0 to 1)
-    vec2 uv = fragCoord/iResolution.xy;
+    vec2 uv = fragCoord/ubuf.iResolution.xy;
 
 	// alternate between moving the camera+color and moving the world
-	worldtime = ss1(iTime+6.)*0.5;
-	float camtime = ss2(iTime+M_PI+6.);
+	worldtime = ss1(ubuf.iTime+6.)*0.5;
+	float camtime = ss2(ubuf.iTime+M_PI+6.);
 	centerhue = abs(fract(camtime*0.03)-0.5)*2.2+0.1;
 
 	 // camera movement
@@ -171,9 +198,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	{
 		// pixel coordinates
 		vec2 o = vec2(float(m),float(n)) / float(AA) - 0.5;
-		vec2 p = (-iResolution.xy + 2.0*(fragCoord+o))/iResolution.y;
+		vec2 p = (-ubuf.iResolution.xy + 2.0*(fragCoord+o))/ubuf.iResolution.y;
 		#else
-		vec2 p = (-iResolution.xy + 2.0*fragCoord)/iResolution.y;
+		vec2 p = (-ubuf.iResolution.xy + 2.0*fragCoord)/ubuf.iResolution.y;
 		#endif
 
 		// create view ray
@@ -212,4 +239,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	tot = gain(clamp(tot, 0., 1.), 1.5);
 	tot = pillow(tot, uv);
 	fragColor = vec4(tot, 1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

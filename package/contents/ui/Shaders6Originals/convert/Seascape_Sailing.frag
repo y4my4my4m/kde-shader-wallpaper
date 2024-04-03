@@ -14,11 +14,41 @@
 // PI is a mathematical constant relating the ratio of a circle's circumference (distance around
 // the edge) to its diameter (distance between two points opposite on the edge).
 // Change pi at your own peril, with your own apologies to God.
+
+
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
+
 const float PI	 	= 3.1415;
 
 // Can you explain these epsilons to a wide graphics audience?  YOUR comment could go here.
 const float EPSILON	= 1e-3;
-#define  EPSILON_NRM	(0.5 / iResolution.x)
+#define  EPSILON_NRM	(0.5 / ubuf.iResolution.x)
 
 // Constant indicaing the number of steps taken while marching the light ray.
 const int NUM_STEPS = 6;
@@ -36,7 +66,7 @@ const float SEA_SPEED = 1.9;
 const float SEA_FREQ = 0.24;
 const vec3 SEA_BASE = vec3(0.11,0.19,0.22);
 const vec3 SEA_WATER_COLOR = vec3(0.55,0.9,0.7);
-#define SEA_TIME (iTime * SEA_SPEED)
+#define SEA_TIME (ubuf.iTime * SEA_SPEED)
 
 //Matrix to permute the water surface into a complex, realistic form
 mat2 octave_m = mat2(1.7,1.2,-1.2,1.4);
@@ -393,21 +423,21 @@ float heightMapTracing(vec3 ori, vec3 dir, out vec3 p) {
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     // bteitler: 2D Pixel location passed in as raw pixel, let's divide by resolution
     // to convert to coordinates between 0 and 1
-    vec2 uv = fragCoord.xy / iResolution.xy;
+    vec2 uv = fragCoord.xy / ubuf.iResolution.xy;
 
     uv = uv * 2.0 - 1.0; //  bteitler: Shift pixel coordinates from 0 to 1 to between -1 and 1
-    uv.x *= iResolution.x / iResolution.y; // bteitler: Aspect ratio correction - if you don't do this your rays will be distorted
-    float time = iTime * 2.7; // bteitler: Animation is based on time, but allows you to scrub the animation based on mouse movement
+    uv.x *= ubuf.iResolution.x / ubuf.iResolution.y; // bteitler: Aspect ratio correction - if you don't do this your rays will be distorted
+    float time = ubuf.iTime * 2.7; // bteitler: Animation is based on time, but allows you to scrub the animation based on mouse movement
 
     // ray
 
     // bteitler: Calculated a vector that smoothly changes over time in a sinusoidal (wave) pattern.
     // This will be used to drive where the user is looking in world space.
    // vec3 ang = vec3(sin(time*3.0)*0.1,sin(time)*0.2+0.3,time);
-    float roll = PI + sin(iTime)/14.0 + cos(iTime/2.0)/14.0 ;
-    float pitch = PI*1.021 + (sin(iTime/2.0)+ cos(iTime))/40.0
-        + (iMouse.y/iResolution.y - .8)*PI/3.0  ;
-    float yaw = iMouse.x/iResolution.x * PI * 4.0;
+    float roll = PI + sin(ubuf.iTime)/14.0 + cos(ubuf.iTime/2.0)/14.0 ;
+    float pitch = PI*1.021 + (sin(ubuf.iTime/2.0)+ cos(ubuf.iTime))/40.0
+        + (ubuf.iMouse.y/ubuf.iResolution.y - .8)*PI/3.0  ;
+    float yaw = ubuf.iMouse.x/ubuf.iResolution.x * PI * 4.0;
     vec3 ang = vec3(roll,pitch,yaw);
    // vec3 ang = vec3(roll,pitch,0);
 
@@ -559,4 +589,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     //CaliCoastReplay:
     //Replace the final color with the adjusted, translated HSV values
     fragColor.xyz = hsv2rgb(hsv);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

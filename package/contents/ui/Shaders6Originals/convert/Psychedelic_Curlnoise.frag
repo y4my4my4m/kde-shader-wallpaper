@@ -1,6 +1,33 @@
 // url: https://www.shadertoy.com/view/tdcXDf
 // credits: pitushslayer
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 // Remap function to perform an affine transformation on a float
 float remap(float x, float a, float b, float c, float d)
 {
@@ -96,12 +123,12 @@ vec3 fbmCurlWorley(vec2 uv, float freq, float t)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    float aspectRatio = iResolution.x/iResolution.y;
-    vec2 uv = fragCoord / iResolution.xy;
+    float aspectRatio = ubuf.iResolution.x/ubuf.iResolution.y;
+    vec2 uv = fragCoord / ubuf.iResolution.xy;
     uv.x *= aspectRatio;
     uv += curl(uv * 7.); // offset uvs for advection
     
-    float t = iTime * .3;
+    float t = ubuf.iTime * .3;
     
     vec3 curlWorleyFbm = fbmCurlWorley(uv, 4., t);
     float curlWorley = curlWorleyFbm.r * .625 + curlWorleyFbm.g * .25 + 
@@ -111,4 +138,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col += remap(curlWorley, 0., 1., .25, 1.);
     col *= cos(t * 3. + uv.xyx + vec3(0, 2, 4)) + .5;
     fragColor = vec4(col, 1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

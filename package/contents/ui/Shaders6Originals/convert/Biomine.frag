@@ -31,6 +31,33 @@
 
 */
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 // Max ray distance.
 #define FAR 50.
 
@@ -139,7 +166,7 @@ float map(vec3 p){
     float d = dot(cos(p*1.5707963), sin(p.yzx*1.5707963)) + 1.;
 
     // Biotube lattice. The final time-based term makes is heave in and out.
-    float bio = d + .25 +  dot(sin(p*1. + iTime*6.283 + sin(p.yzx*.5)), vec3(.033));
+    float bio = d + .25 +  dot(sin(p*1. + ubuf.iTime*6.283 + sin(p.yzx*.5)), vec3(.033));
 
     // The tunnel. Created with a bit of trial and error. The smooth maximum against the gyroid rounds it off
     // a bit. The abs term at the end just adds some variation via the beveled edges. Also trial and error.
@@ -338,7 +365,7 @@ vec3 eMap(vec3 rd, vec3 sn){
 
 
     // Add a time component, scale, then pass into the noise function.
-    rd.y += iTime;
+    rd.y += ubuf.iTime;
     rd /= 3.;
 
     // Biotube texturing.
@@ -351,10 +378,10 @@ vec3 eMap(vec3 rd, vec3 sn){
 void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 
     // Screen coordinates.
-    vec2 uv = (fragCoord - iResolution.xy*0.5)/iResolution.y;
+    vec2 uv = (fragCoord - ubuf.iResolution.xy*0.5)/ubuf.iResolution.y;
 
     // Camera Setup.
-    vec3 lookAt = vec3(0, 1, iTime*2. + 0.1);  // "Look At" position.
+    vec3 lookAt = vec3(0, 1, ubuf.iTime*2. + 0.1);  // "Look At" position.
     vec3 camPos = lookAt + vec3(0.0, 0.0, -0.1); // Camera position, doubling as the ray origin.
 
 
@@ -514,4 +541,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     // Clamp and present the pixel to the screen.
     fragColor = vec4(sqrt(clamp(sceneCol, 0., 1.)), 1.0);
 
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

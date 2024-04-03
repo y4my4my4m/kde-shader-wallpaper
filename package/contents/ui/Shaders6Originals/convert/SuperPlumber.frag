@@ -4,6 +4,33 @@
 // -Hills, clouds and bushes weren't placed manually. Every background object type is repeated after 768 pixels.
 // -Overworld (main theme) drum sound uses only the APU noise generator
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 #define SPRITE_DEC( x, i ) 	mod( floor( i / pow( 4.0, mod( x, 8.0 ) ) ), 4.0 )
 #define SPRITE_DEC2( x, i ) mod( floor( i / pow( 4.0, mod( x, 11.0 ) ) ), 4.0 )
 #define RGB( r, g, b ) vec3( float( r ) / 255.0, float( g ) / 255.0, float( b ) / 255.0 )
@@ -1386,7 +1413,7 @@ void DrawVignette( inout vec3 color, vec2 uv )
 
 void DrawScanline( inout vec3 color, vec2 uv )
 {
-    float scanline 	= clamp( 0.95 + 0.05 * cos( 3.14 * ( uv.y + 0.008 * iTime ) * 240.0 * 1.0 ), 0.0, 1.0 );
+    float scanline 	= clamp( 0.95 + 0.05 * cos( 3.14 * ( uv.y + 0.008 * ubuf.iTime ) * 240.0 * 1.0 ), 0.0, 1.0 );
     float grille 	= 0.85 + 0.15 * clamp( 1.5 * cos( 3.14 * uv.x * 640.0 * 1.0 ), 0.0, 1.0 );
     color *= scanline * grille * 1.2;
 }
@@ -1394,13 +1421,13 @@ void DrawScanline( inout vec3 color, vec2 uv )
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     // we want to see at least 224x192 (overscan) and we want multiples of pixel size
-    float resMultX  = floor( iResolution.x / 224.0 );
-    float resMultY  = floor( iResolution.y / 192.0 );
+    float resMultX  = floor( ubuf.iResolution.x / 224.0 );
+    float resMultY  = floor( ubuf.iResolution.y / 192.0 );
     float resRcp	= 1.0 / max( min( resMultX, resMultY ), 1.0 );
 
-    float time			= iTime;
-    float screenWidth	= floor( iResolution.x * resRcp );
-    float screenHeight	= floor( iResolution.y * resRcp );
+    float time			= ubuf.iTime;
+    float screenWidth	= floor( ubuf.iResolution.x * resRcp );
+    float screenHeight	= floor( ubuf.iResolution.y * resRcp );
     float pixelX 		= floor( fragCoord.x * resRcp );
     float pixelY 		= floor( fragCoord.y * resRcp );
 
@@ -1413,7 +1440,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 
     // CRT effects (curvature, vignette, scanlines and CRT grille)
-    vec2 uv    = fragCoord.xy / iResolution.xy;
+    vec2 uv    = fragCoord.xy / ubuf.iResolution.xy;
     vec2 crtUV = CRTCurveUV( uv );
     if ( crtUV.x < 0.0 || crtUV.x > 1.0 || crtUV.y < 0.0 || crtUV.y > 1.0 )
     {
@@ -1424,4 +1451,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     fragColor.xyz 	= color;
     fragColor.w		= 1.0;
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

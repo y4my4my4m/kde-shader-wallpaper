@@ -1,6 +1,33 @@
 // https://www.shadertoy.com/view/slBfWD
 // Credits to VPaltoDance
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 #define COORDS_SCALE 10.0
 
 #define OFFSET 0.7
@@ -18,10 +45,10 @@
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     // Normalized pixel coordinates (from 0 to 1)
-    vec2 uv = fragCoord/iResolution.xy;
+    vec2 uv = fragCoord/ubuf.iResolution.xy;
 
     vec2 coords = uv * COORDS_SCALE;
-    float var = coords.x + coords.y + WAVE_SPEED * iTime + WAVE_OFFSET + WAVE_SCALE * sin(coords.x + WAVE_FREQ * iTime);
+    float var = coords.x + coords.y + WAVE_SPEED * ubuf.iTime + WAVE_OFFSET + WAVE_SCALE * sin(coords.x + WAVE_FREQ * ubuf.iTime);
     
     float coeff = OFFSET + SCALE * smoothstep(0.0, 1.0, fract(var)) 
                          - SCALE * smoothstep(0.97, 1.0, fract(var)); // anti-aliasing
@@ -29,4 +56,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 res = mix(NEAR_COLOR, FAR_COLOR, uv.x + uv.y) * coeff;
     
     fragColor = vec4(res, 1.0);
+}
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

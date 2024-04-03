@@ -1,6 +1,33 @@
 // URL: shadertoy.com/view/XssXRH
 // By: Branch
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 struct polygon{
 	vec2 A, B, C;
 };
@@ -51,27 +78,27 @@ int PIT(vec2 pt, polygon X){
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-	float vasenKulmakarva=floor(mod(iTime*0.8,2.0))*0.1;
-	float oikeaKulmakarva=floor(mod(iTime*0.3,2.0))*0.1;
-	float vasenSilma=min(max(0.24*sin(iTime),0.006),0.06);
-	float oikeaSilma=min(max(0.24*sin(iTime),0.006),0.06);
-	float suu=iTime*10.0;
+	float vasenKulmakarva=floor(mod(ubuf.iTime*0.8,2.0))*0.1;
+	float oikeaKulmakarva=floor(mod(ubuf.iTime*0.3,2.0))*0.1;
+	float vasenSilma=min(max(0.24*sin(ubuf.iTime),0.006),0.06);
+	float oikeaSilma=min(max(0.24*sin(ubuf.iTime),0.006),0.06);
+	float suu=ubuf.iTime*10.0;
 	vec4 tulos;
 	vec4 lopullinentulos=vec4(1.0);
-	vec2 uv = fragCoord.xy / iResolution.xy;
-	float aspectCorrection = (iResolution.x/iResolution.y);
+	vec2 uv = fragCoord.xy / ubuf.iResolution.xy;
+	float aspectCorrection = (ubuf.iResolution.x/ubuf.iResolution.y);
 	vec2 coordinate_entered = 2.0 * uv - 1.0;
 	for(float rgbare=0.0; rgbare<2.0; rgbare++){
 	vec2 coord = vec2(aspectCorrection,1.0) *coordinate_entered;
 	coord.x*=1.0+rgbare*0.009;
-	coord*=1.0+rand(coord+iTime)/(pow(iTime,7.0)*3.0)-length(coord)*10.0/(pow(iTime*1.1,24.0));
-	coord*=1.0+0.1*sin(iTime*0.1);
+	coord*=1.0+rand(coord+ubuf.iTime)/(pow(ubuf.iTime,7.0)*3.0)-length(coord)*10.0/(pow(ubuf.iTime*1.1,24.0));
+	coord*=1.0+0.1*sin(ubuf.iTime*0.1);
 	tulos=vec4(vec3(200.0/255.0, 10.0/255.0, 65.0/255.0),1.0);
 	if(mod(coord.x+coord.y,0.2)>0.1){
 		if(sun(coord,vec2(0.0),0.7)==1.0)
 		   tulos.xyz=vec3(1.0,262.0/512.0, 74.0/255.0);
 	}
-	if(mod(coord.x+coord.y+iTime*0.1,0.2)<0.1){
+	if(mod(coord.x+coord.y+ubuf.iTime*0.1,0.2)<0.1){
 		for(float j=-6.0; j<6.0; j++)
 		for(float i=-5.0; i<5.0; i++){
 			vec2 posi=vec2(i/2.0,j/2.0);
@@ -82,7 +109,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	}
 	
 	for(float i=0.0; i<3.141*2.0; i+=3.141*0.2){
-		float aikakerroin=iTime*0.6;
+		float aikakerroin=ubuf.iTime*0.6;
 		vec2 A=vec2(0.0,0.0);
 		vec2 B=vec2(cos(aikakerroin+i), sin(aikakerroin+i));
 		vec2 C=vec2(cos(aikakerroin+i-3.141*0.1), sin(aikakerroin+i-3.141*0.1));
@@ -118,7 +145,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	
 	if(roundBox(coord, vec2(-0.3,0.0+vasenKulmakarva), vec2(0.08, 0.001) )<0.008)
 		tulos.xyz-=vec3(0.7, 0.7, 0.7);
-	tulos.xyz=tulos.xyz-vec3(min(max(-0.44+length(coord)*0.41,0.0),1.0))+vec3(0.06*rand(vec2(coord.x+coord.y,iTime*coord.y*coord.x)));
+	tulos.xyz=tulos.xyz-vec3(min(max(-0.44+length(coord)*0.41,0.0),1.0))+vec3(0.06*rand(vec2(coord.x+coord.y,ubuf.iTime*coord.y*coord.x)));
 	
 	if(rgbare==0.0)
 		lopullinentulos.r=tulos.r;
@@ -128,4 +155,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	if(mod(fragCoord.y,2.0)<1.0)   /////////////////////////
 	lopullinentulos.xyz=lopullinentulos.xyz/1.3;
 	fragColor = lopullinentulos;
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

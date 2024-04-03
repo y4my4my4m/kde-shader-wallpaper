@@ -1,12 +1,38 @@
 // url: https://www.shadertoy.com/view/tdBSWR
 // credits: Blokatt
-
 // Channel Soup
 // 24/03/19:
 // Tiny thing written by @blokatt on his phone (hence why the code might be messy).
 // Might clean it up later, right now, I'm lazy.
 // 10/04/19: Update.
 
+
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
 
 mat2 rotate(float a) {
   return mat2(
@@ -34,7 +60,7 @@ float noise(vec2 uv){
     float amp = 0.4;
     uv  += 2.;
     for (int i = 0; i < 5; ++i) {
-    	v += valueNoise((uv + iTime) * freq) * amp;
+    	v += valueNoise((uv + ubuf.iTime) * freq) * amp;
         amp *= .6;
         freq *= 1.75;
     }
@@ -44,9 +70,9 @@ float noise(vec2 uv){
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-  float time = iTime;
-  vec2 uv = fragCoord/iResolution.xy - .5;
-  uv.x *= iResolution.x / iResolution.y;
+  float time = ubuf.iTime;
+  vec2 uv = fragCoord/ubuf.iResolution.xy - .5;
+  uv.x *= ubuf.iResolution.x / ubuf.iResolution.y;
   uv *= .5;  
   vec2 nuv = uv;
   uv *= rotate((length(uv) * 5. + time * .5));
@@ -66,3 +92,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 }
 
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
+}

@@ -2,9 +2,36 @@
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
 // self https://www.shadertoy.com/view/NslGRN
 
-
 // --defines for "DESKTOP WALLPAPERS" that use this shader--
 // comment or uncomment every define to make it work (add or remove "//" before #define)
+
+
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
 
 
 // this shadertoy use ALPHA, NO_ALPHA set alpha to 1, BG_ALPHA set background as alpha
@@ -73,7 +100,7 @@ const vec3 color_red=vec3(0.99,0.2,0.1);
 // Camera with mouse
 #define MOUSE_control
 
-// min(iFrame,0) does not speedup compilation in ANGLE
+// min(ubuf.iFrame,0) does not speedup compilation in ANGLE
 #define ANGLE_loops 0
 
 
@@ -97,7 +124,7 @@ mat3 rotz(float a){float s = sin(a);float c = cos(a);return mat3(vec3(c, s, 0.0)
 vec3 fcos(vec3 x) {
     vec3 w = fwidth(x);
     //if((length(w)==0.))return vec3(0.); // dFd fix2
-    if((length(w)==0.)){vec3 tc=vec3(0.); for(int i=0;i<8;i++)tc+=cos(x+x*float(i-4)*(0.01*720./iResolution.y));return tc/8.;}
+    if((length(w)==0.)){vec3 tc=vec3(0.); for(int i=0;i<8;i++)tc+=cos(x+x*float(i-4)*(0.01*720./ubuf.iResolution.y));return tc/8.;}
     
     return cos(x) * smoothstep(3.14 * 2.0, 0.0, w);
 }
@@ -114,7 +141,7 @@ vec3 getColor(vec3 p)
     p *= 01.25;
     p = 0.5 * p / dot(p, p);
 #ifdef ANIM_COLOR
-    p+=0.072*iTime;
+    p+=0.072*ubuf.iTime;
 #endif
 
     float t = (0.13) * length(p);
@@ -403,7 +430,7 @@ vec4 insides(vec3 ro, vec3 rd, vec3 nor_c, vec3 l_dir, out float tout)
     }
 
 #ifdef ANIM_SHAPE
-    float curvature = (0.001+1.5-1.5*smoothstep(0.,8.5,mod((iTime+tshift)*0.44,20.))*(1.-smoothstep(10.,18.5,mod((iTime+tshift)*0.44,20.))));
+    float curvature = (0.001+1.5-1.5*smoothstep(0.,8.5,mod((ubuf.iTime+tshift)*0.44,20.))*(1.-smoothstep(10.,18.5,mod((ubuf.iTime+tshift)*0.44,20.))));
     // curvature(to not const above) make compilation on Angle 15+ sec
 #else
 #ifdef STATIC_SHAPE
@@ -560,21 +587,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     l_dir *= rotz(0.5);
     float mouseY = 1.0 * 0.5 * PI;
 #ifdef MOUSE_control
-    mouseY = (1.0 - 1.15 * iMouse.y / iResolution.y) * 0.5 * PI;
-    if(iMouse.y < 1.)
+    mouseY = (1.0 - 1.15 * ubuf.iMouse.y / ubuf.iResolution.y) * 0.5 * PI;
+    if(ubuf.iMouse.y < 1.)
 #endif
 #ifdef CAMERA_POS
     mouseY = PI*CAMERA_POS;
 #else
-    mouseY = PI*0.49 - smoothstep(0.,8.5,mod((iTime+tshift)*0.33,25.))*(1.-smoothstep(14.,24.0,mod((iTime+tshift)*0.33,25.))) * 0.55 * PI;
+    mouseY = PI*0.49 - smoothstep(0.,8.5,mod((ubuf.iTime+tshift)*0.33,25.))*(1.-smoothstep(14.,24.0,mod((ubuf.iTime+tshift)*0.33,25.))) * 0.55 * PI;
 #endif
 #ifdef ROTATION_SPEED
-    float mouseX = -2.*PI-0.25*(iTime*ROTATION_SPEED+tshift);
+    float mouseX = -2.*PI-0.25*(ubuf.iTime*ROTATION_SPEED+tshift);
 #else
-    float mouseX = -2.*PI-0.25*(iTime+tshift);
+    float mouseX = -2.*PI-0.25*(ubuf.iTime+tshift);
 #endif
 #ifdef MOUSE_control
-    mouseX+=-(iMouse.x / iResolution.x) * 2. * PI;
+    mouseX+=-(ubuf.iMouse.x / ubuf.iResolution.x) * 2. * PI;
 #endif
     
 #ifdef CAMERA_FAR
@@ -600,9 +627,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     for( int nx=0; nx<AA; nx++ )
     {
     vec2 o = vec2(mod(float(mx+AA/2),float(AA)),mod(float(nx+AA/2),float(AA))) / float(AA) - 0.5;
-    vec2 uv = (fragCoord + o - 0.5 * iResolution.xy) / iResolution.x;
+    vec2 uv = (fragCoord + o - 0.5 * ubuf.iResolution.xy) / ubuf.iResolution.x;
 #else
-    vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.x;
+    vec2 uv = (fragCoord - 0.5 * ubuf.iResolution.xy) / ubuf.iResolution.x;
 #endif
     vec3 rd = normalize(w * FDIST + uv.x * u + uv.y * v);
 
@@ -614,7 +641,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
     if (t > 0.)
     {
-        float ang = -iTime * 0.33;
+        float ang = -ubuf.iTime * 0.33;
         vec3 col = vec3(0.);
 #ifdef AA_CUBE
         if(in_once)col=incol_once;
@@ -725,8 +752,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 #endif
     fragColor.rgb=clamp(fragColor.rgb,0.,1.);
 #if defined(BG_ALPHA)||defined(ONLY_BOX)||defined(SHADOW_ALPHA)
-    fragColor.rgb=fragColor.rgb*fragColor.w+texture(iChannel0, fragCoord/iResolution.xy).rgb*(1.-fragColor.w);
+    fragColor.rgb=fragColor.rgb*fragColor.w+texture(iChannel0, fragCoord/ubuf.iResolution.xy).rgb*(1.-fragColor.w);
 #endif
     //fragColor=vec4(fragColor.w);
 }
 
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
+}

@@ -2,6 +2,33 @@
 // credits: jiaolyulu1
 
 //https://www.shadertoy.com/view/lsXGzM reference
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 
 float speed=1.;
 float n=2.0;
@@ -21,8 +48,8 @@ float Noise2D(vec2 uv){
 
 
 float blob(float x,float y,float fx,float fy,float size){
-   float xx = x+abs(iMouse.x/ iResolution.x-0.5)*sin(iTime/speed*size+fx)*size*7.*(1.-abs(iMouse.x/ iResolution.x-0.5));
-   float yy = y+abs(iMouse.x/ iResolution.x-0.5)*cos(iTime/speed*size+fy)*size*7.*(1.-abs(iMouse.x/ iResolution.x-0.5));
+   float xx = x+abs(ubuf.iMouse.x/ ubuf.iResolution.x-0.5)*sin(ubuf.iTime/speed*size+fx)*size*7.*(1.-abs(ubuf.iMouse.x/ ubuf.iResolution.x-0.5));
+   float yy = y+abs(ubuf.iMouse.x/ ubuf.iResolution.x-0.5)*cos(ubuf.iTime/speed*size+fy)*size*7.*(1.-abs(ubuf.iMouse.x/ ubuf.iResolution.x-0.5));
    float value=sqrt(xx*xx+yy*yy);
 
    return min(60.,20.0/value);
@@ -30,12 +57,12 @@ float blob(float x,float y,float fx,float fy,float size){
 
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
-   vec2 position = ( fragCoord.xy / iResolution.xy )-0.5;
-   position*=vec2(iResolution.x/iResolution.y,1.);
-   position+=(Noise2D(position*3.+vec2(iTime/4.))-0.5)/5.;
+   vec2 position = ( fragCoord.xy / ubuf.iResolution.xy )-0.5;
+   position*=vec2(ubuf.iResolution.x/ubuf.iResolution.y,1.);
+   position+=(Noise2D(position*3.+vec2(ubuf.iTime/4.))-0.5)/5.;
    position*=0.7;
    
-   float mouseX=abs(iMouse.x/ iResolution.x-0.5);
+   float mouseX=abs(ubuf.iMouse.x/ ubuf.iResolution.x-0.5);
    position*=1.0*pow((1.5-mouseX),2.);
    float x = position.x*2.0;
    float y = position.y*2.0;
@@ -63,4 +90,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
 
 
    fragColor = vec4(d,1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

@@ -1,6 +1,33 @@
 // URL: shadertoy.com/view/Xd2GW3
 // By: srtuss
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 // srtuss, 2014
 
 vec2 rotate(vec2 p, float a)
@@ -13,7 +40,7 @@ float rand11(float p)
     return fract(sin(p * 591.32) * 43758.5357);
 }
 
-#define aav 16.0 / iResolution.y
+#define aav 16.0 / ubuf.iResolution.y
 
 float sig(float x)
 {
@@ -462,23 +489,23 @@ float plane(vec3 ro, vec3 rd, vec3 n, float d, out vec3 its)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-	vec2 uv = fragCoord.xy / iResolution.xy;
+	vec2 uv = fragCoord.xy / ubuf.iResolution.xy;
 	uv = uv * 2.0 - 1.0;
-	uv.x *= iResolution.x / iResolution.y;
+	uv.x *= ubuf.iResolution.x / ubuf.iResolution.y;
 	
 	//uv = floor(uv * 90.0) / 90.0;
 	
-	vec2 co = vec2(iTime * 1.0 * 1.3, 0.0);
+	vec2 co = vec2(ubuf.iTime * 1.0 * 1.3, 0.0);
 	
 	
-	vec3 ro = vec3(co.x, 0.0, -10.0 + sin(iTime * 0.25) * 1.5);
+	vec3 ro = vec3(co.x, 0.0, -10.0 + sin(ubuf.iTime * 0.25) * 1.5);
 	
-	float s = iTime;
-	ro += (vec3(rand11(s), rand11(s - 11.11), rand11(s + 11.11)) * 2.0 - 1.0) * exp(fract(iTime * 0.8) * -10.0) * 0.2;
+	float s = ubuf.iTime;
+	ro += (vec3(rand11(s), rand11(s - 11.11), rand11(s + 11.11)) * 2.0 - 1.0) * exp(fract(ubuf.iTime * 0.8) * -10.0) * 0.2;
 	
 	vec3 rd = normalize(vec3(uv, 1.66));
-	rd.xz = rotate(rd.xz, sin(iTime * 0.2) * 0.04);
-	rd.yz = rotate(rd.yz, sin(iTime * 0.3) * 0.04);
+	rd.xz = rotate(rd.xz, sin(ubuf.iTime * 0.2) * 0.04);
+	rd.yz = rotate(rd.yz, sin(ubuf.iTime * 0.3) * 0.04);
 	
 	vec3 r; float v;
 	
@@ -496,29 +523,29 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	
 	// layer 4
 	plane(ro, rd, normalize(vec3(0.0, 0.0, 1.0)), -20.0, r);
-	v = layerC(r.xy, co, iTime).y;
+	v = layerC(r.xy, co, ubuf.iTime).y;
 	col = mix(col, vec3(0.8), v);
 	
 	// layer 3
 	plane(ro, rd, normalize(vec3(0.0, 0.0, 1.0)), -10.0, r);
-	v = layerC(r.xy, co, iTime).y;
+	v = layerC(r.xy, co, ubuf.iTime).y;
 	col = mix(col, vec3(0.4), v);
 	
 	
 	// layer 2
 	plane(ro, rd, normalize(vec3(0.0, 0.0, 1.0)), -8.0, r);
-	v = layerB(r.xy, iTime).y;
+	v = layerB(r.xy, ubuf.iTime).y;
 	col = mix(col, vec3(0.2), 1.0 - v);
 	
 	// layer 1
 	plane(ro, rd, normalize(vec3(0.0, 0.0, 1.0)), 0.0, r);
-	v = layerA(r.xy, co, iTime).y;
+	v = layerA(r.xy, co, ubuf.iTime).y;
 	col = mix(col, vec3(0.0), 1.0 - v);
 	
 	
 	// layer 0
 	plane(ro, rd, normalize(vec3(0.0, 0.0, 1.0)), 1.5, r);
-	v = layerD(r.xy, iTime).y;
+	v = layerD(r.xy, ubuf.iTime).y;
 	col = mix(col, vec3(0.0), 1.0 - v);
 	
 	
@@ -526,4 +553,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	col = pow(col, vec3(1.0 / 2.2));
 	
 	fragColor = vec4(col, 1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

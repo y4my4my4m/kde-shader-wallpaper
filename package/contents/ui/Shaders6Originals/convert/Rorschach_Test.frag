@@ -6,6 +6,33 @@
  Combined with a second layer of noise to produce an ink on paper effect
 */
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 const vec3 inkColor = vec3(0.01, 0.01, 0.1);
 const vec3 paperColor = vec3(1.0, 0.98, 0.94);
 
@@ -77,10 +104,10 @@ float fbm(vec3 p)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     //Setup coordinates
-    vec2 uv = 1.0 - fragCoord.xy / iResolution.xy;
+    vec2 uv = 1.0 - fragCoord.xy / ubuf.iResolution.xy;
     vec2 coord = 1.0 - uv * 2.0;
     uv.x = 1.0 - abs(1.0 - uv.x * 2.0);
-    vec3 p = vec3(uv, iTime * speed);
+    vec3 p = vec3(uv, ubuf.iTime * speed);
 
     //Sample a noise function
     float blot = fbm(p * 3.0 + 8.0);
@@ -93,4 +120,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //Color
     fragColor = vec4(mix(paperColor, inkColor, blot), 1.0);
     fragColor.rgb *= 1.0 - pow(max(length(coord) - 0.5, 0.0), 5.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

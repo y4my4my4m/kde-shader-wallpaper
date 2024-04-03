@@ -1,6 +1,33 @@
 // https://www.shadertoy.com/view/3dlSz2
 // Credits to postrediori
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 //Raymarch settings
 
 #define MIN_DIST 0.001
@@ -73,7 +100,7 @@ vec2 sdPlane(vec3 p, vec4 n, float id)
 
 vec2 heightmapNormal(vec2 p)
 {
-    return vec2(sin(p.x+iTime*0.25)*0.15, sin(p.y-iTime*0.125)*0.15);
+    return vec2(sin(p.x+ubuf.iTime*0.25)*0.15, sin(p.y-ubuf.iTime*0.125)*0.15);
 }
 
 //Distance to the scene
@@ -164,21 +191,21 @@ vec3 Shade(MarchResult hit, vec3 direction, vec3 camera)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 res = iResolution.xy / iResolution.y;
-	vec2 uv = fragCoord.xy / iResolution.y;
+    vec2 res = ubuf.iResolution.xy / ubuf.iResolution.y;
+	vec2 uv = fragCoord.xy / ubuf.iResolution.y;
 
     //Camera stuff
     vec3 angles = vec3(0);
 
     //Auto mode
-    if(iMouse.xy == vec2(0,0))
+    if(ubuf.iMouse.xy == vec2(0,0))
     {
         angles.y = tau * (1.4 / 8.0);
-        angles.x = tau * (3.9 / 8.0) + sin(iTime * 0.1) * 0.3;
+        angles.x = tau * (3.9 / 8.0) + sin(ubuf.iTime * 0.1) * 0.3;
     }
     else
     {
-    	angles = vec3((iMouse.xy / iResolution.xy) * pi, 0);
+    	angles = vec3((ubuf.iMouse.xy / ubuf.iResolution.xy) * pi, 0);
         angles.xy *= vec2(2.0, 1.0);
     }
 
@@ -197,4 +224,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 color = Shade(hit, dir, orig);
 
 	fragColor = vec4(color, 1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

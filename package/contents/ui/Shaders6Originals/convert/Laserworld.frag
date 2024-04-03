@@ -6,6 +6,33 @@
 
 // Inspiration: http://kingsanda.tumblr.com/post/166772103767
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 #define LASERCOL vec3(1., 0.1, 0.1)
 
 float notsosmoothstep(float edge0, float edge1, float x)
@@ -115,7 +142,7 @@ float grid(vec2 uv)
     float d = -1./uv.y; //depth
     vec2 pv = vec2(uv.x*d, d); //perspective
     pv *= 1.4545; //scale
-    pv.y += iTime; //offset
+    pv.y += ubuf.iTime; //offset
 
 	// http://iquilezles.org/www/articles/filterableprocedurals/filterableprocedurals.htm
     const float N = 16.;
@@ -132,7 +159,7 @@ float gridAA(vec2 uv)
     #define Ysamps 2
     #define Xoff (1./float(2*Xsamps + 1)*float(i))
     #define Yoff (1./float(2*Ysamps + 1)*float(j))
-    #define PXSIZE ( (vec2(1) / iResolution.xy) * (iResolution.x/iResolution.y) )
+    #define PXSIZE ( (vec2(1) / ubuf.iResolution.xy) * (ubuf.iResolution.x/ubuf.iResolution.y) )
 
     float v = 0.0;
     for(int i=-Xsamps; i <= Xsamps; i++)
@@ -162,13 +189,13 @@ float burst3(vec2 uv)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-	vec2 uvo = (fragCoord.xy * 2. / iResolution.xy) - vec2(1);
-	vec2 uv = uvo * vec2(iResolution.x/iResolution.y, 1);	// uv coordinates with corrected aspect ratio
+	vec2 uvo = (fragCoord.xy * 2. / ubuf.iResolution.xy) - vec2(1);
+	vec2 uv = uvo * vec2(ubuf.iResolution.x/ubuf.iResolution.y, 1);	// uv coordinates with corrected aspect ratio
 
 
 
     float bmask = 0.0;
-    #define sunmaskfeather (7. / iResolution.y)
+    #define sunmaskfeather (7. / ubuf.iResolution.y)
     float sunmask1 = smoothstep(-sunmaskfeather, sunmaskfeather, uvo.y - horizonHeight1(uvo)*0.8 + 0.15);
     bmask += sunmask1 * burst1(uvo);
     float sunmask2 = smoothstep(-sunmaskfeather, sunmaskfeather, uvo.y - horizonHeight2(uvo) - 0.42);
@@ -185,4 +212,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     fragColor.rgb += g*LASERCOL;
 
     fragColor.a = 1.0;
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

@@ -2,6 +2,33 @@
 // Credits to Kali
 // "Jelly-something" by Kali
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 const int Iterations=7;  
 const float Wavelength=.5; 
 const float Scale=1.5; 
@@ -53,14 +80,14 @@ float kaliset(vec3 p) {
 	p.x+=.23;
 	p.z+=.18;
     p*=.5;
-    p.y+=iTime*1.5;
+    p.y+=ubuf.iTime*1.5;
     p.y=abs(2.-mod(p.y,4.));
     for (int i=0;i<8;i++) p=abs(p)/dot(p,p)-.8;
     return p.y;
 }
 
 float rnd(vec2 co){
-	return fract(sin(iTime*.1+dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+	return fract(sin(ubuf.iTime*.1+dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
 }
 
 
@@ -94,11 +121,11 @@ vec3 raymarch(in vec3 from, in vec3 dir)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-	vec2 mouse=iMouse.xy/iResolution.xy;
-	float time=iTime*.5;
-	vec2 uv = fragCoord.xy / iResolution.xy;
+	vec2 mouse=ubuf.iMouse.xy/ubuf.iResolution.xy;
+	float time=ubuf.iTime*.5;
+	vec2 uv = fragCoord.xy / ubuf.iResolution.xy;
 	uv=uv*2.-1.;
-	uv.y*=iResolution.y/iResolution.x;
+	uv.y*=ubuf.iResolution.y/ubuf.iResolution.x;
 	uv=uv.yx;
 	vec3 from=vec3(.5,0.,-18.+cos(time*.8)*4.5);
 	vec3 dir=normalize(vec3(uv*.8,1.));
@@ -119,7 +146,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 float de(vec3 pos)
 {
-	float time=iTime;
+	float time=ubuf.iTime;
 	z=pos;
 	float O=7.;
 	float sc=1.;
@@ -145,4 +172,10 @@ float de(vec3 pos)
 	//z.z*=3.;
 	float wd=-z.z+2.;
 	return length(z)-6.;
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

@@ -8,6 +8,33 @@
 // Using code from Martijn Steinrucken, Dave Hoskins,
 // Inigo Quilez, Antoine Zanuttini, Shane and many more
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 mat2 rot (float a) { return mat2(cos(a),-sin(a),sin(a),cos(a)); }
 float map(vec3 p);
 
@@ -54,8 +81,8 @@ float map(vec3 p) {
   float scale = 3.;
   float gyroid = 100.;
   float a = 1.0;
-  float t = iTime*1.;
-  float w = sin(iTime+length(p)*3.);
+  float t = ubuf.iTime*1.;
+  float w = sin(ubuf.iTime+length(p)*3.);
   float b = .1+.2*w;
   // fractalish gyroid accumulation
   for (float i = 0.; i < 3.; ++i) {
@@ -73,7 +100,7 @@ float map(vec3 p) {
 void mainImage( out vec4 color, in vec2 pixel )
 {
     // coordinates
-    vec2 p = (pixel.xy - iResolution.xy / 2.)/iResolution.y;
+    vec2 p = (pixel.xy - ubuf.iResolution.xy / 2.)/ubuf.iResolution.y;
     vec3 pos = vec3(0,1,1.5);
     vec3 z = normalize(-pos);
     vec3 x = cross(z, vec3(0,1,0));
@@ -92,9 +119,15 @@ void mainImage( out vec4 color, in vec2 pixel )
     vec3 normal = getNormal(pos);
     float rn = abs(dot(ray,normal));
     float lp = length(pos);
-    vec3 rainbow = .5+.5*cos(vec3(.0,.3,.6)*6.28 + lp + iTime);
+    vec3 rainbow = .5+.5*cos(vec3(.0,.3,.6)*6.28 + lp + ubuf.iTime);
     vec3 tint = (1.-rn)*(normal*.5+.5)*.5;
     tint += vec3(.3)*pow(rn,3.);
     tint += rn*rainbow*getAO(pos, normal, 0.2);
     color = vec4(tint*shade, 1.);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

@@ -20,6 +20,34 @@
 // vec3 col_mid3 = vec3(0.0, 0.0, 1.0);
 
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
+
 // number of octaves of fbm
 #define NUM_NOISE_OCTAVES 10
 // size of the planet
@@ -96,7 +124,7 @@ vec3 getColorForCoord(vec2 fragCoord) {
     vec3 color = vec3(0.0);
 
     // planet rotation
-    float theta = iTime * 0.15;  
+    float theta = ubuf.iTime * 0.15;  
     mat3 rot = mat3(
         cos(theta), 0, sin(theta),	// column 1
         0, 1, 0,	                // column 2
@@ -108,7 +136,7 @@ vec3 getColorForCoord(vec2 fragCoord) {
 
     // position of viewpoint (P) and ray of vision (w)
     vec3 P = vec3(0.0, 0.0, 5.0);
-    vec3 w = normalize(vec3(fragCoord.xy - iResolution.xy * 0.5, (iResolution.y) / (-2.0 * tan(verticalFieldOfView / 2.0))));
+    vec3 w = normalize(vec3(fragCoord.xy - ubuf.iResolution.xy * 0.5, (ubuf.iResolution.y) / (-2.0 * tan(verticalFieldOfView / 2.0))));
 
     // calculate intersect with sphere (along the "line" of w from P)
     float t = intersectSphere(vec3(0, 0, 0), PLANET_SIZE, P, w);
@@ -122,9 +150,9 @@ vec3 getColorForCoord(vec2 fragCoord) {
         X = rot*X;
 
         // calculate fbm noise (3 steps)
-        q = vec3(fbm(X + 0.025*iTime), fbm(X), fbm(X));
-        r = vec3(fbm(X + 1.0*q + 0.01*iTime), fbm(X + q), fbm(X + q));
-        v = fbm(X + 5.0*r + iTime*0.005);
+        q = vec3(fbm(X + 0.025*ubuf.iTime), fbm(X), fbm(X));
+        r = vec3(fbm(X + 1.0*q + 0.01*ubuf.iTime), fbm(X + q), fbm(X + q));
+        v = fbm(X + 5.0*r + ubuf.iTime*0.005);
     } else {
         // ray missed the sphere
 		return vec3(0.0);
@@ -180,4 +208,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord ) {
     // just use a single pass
     fragColor.rgb = getColorForCoord(fragCoord);
 #endif
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

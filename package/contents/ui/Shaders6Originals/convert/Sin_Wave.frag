@@ -1,6 +1,33 @@
 // URL: shadertoy.com/view/tsKSzR
 // By: skaplun
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 #define MAX_MARCHING_STEPS 128
 #define MIN_FLOAT 1e-6
 #define MAX_FLOAT 1e6
@@ -34,8 +61,8 @@ mat3 calcLookAtMatrix(in vec3 camPosition, in vec3 camTarget, in float roll) {
 const float PI = acos(-1.);
 
 float heightAtPos(vec3 p){
-	float val = cos(clamp(p.x + sin(p.z*.5+iTime) * 3., -PI, PI)) * .5 + .5;
-    return pow(abs(val), 4.) * sin(p.z*.5+iTime) * 3.;
+	float val = cos(clamp(p.x + sin(p.z*.5+ubuf.iTime) * 3., -PI, PI)) * .5 + .5;
+    return pow(abs(val), 4.) * sin(p.z*.5+ubuf.iTime) * 3.;
 }
 
 float opSubtraction( float d1, float d2 ) { return max(-d1,d2); }
@@ -74,7 +101,7 @@ vec3 color(vec3 camPos, vec3 rayDir){
 }
 
 vec3 makeClr(vec2 fragCoord){
-    vec3 viewDir = rayDirection(60., iResolution.xy, fragCoord);
+    vec3 viewDir = rayDirection(60., ubuf.iResolution.xy, fragCoord);
     vec3 origin = vec3(0., vec2(10.));
     mat4 viewToWorld = viewMatrix(origin, vec3(0.), vec3(0., 1., 0.));
     vec3 dir = (viewToWorld * vec4(viewDir, 1.0)).xyz;
@@ -91,4 +118,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
         }
     
     fragColor.rgb /= float(AA * AA);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

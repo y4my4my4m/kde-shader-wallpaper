@@ -9,7 +9,34 @@
 //The domain is displaced by two fbm calls one for each axis.
 //Turbulent fbm (aka ridged) is used for better effect.
 
-#define time iTime*0.15
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
+#define time ubuf.iTime*0.15
 #define tau 6.2831853
 
 mat2 makem2(in float theta){float c = cos(theta);float s = sin(theta);return mat2(c,-s,s,c);}
@@ -52,8 +79,8 @@ float circ(vec2 p)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
 	//setup system
-	vec2 p = fragCoord.xy / iResolution.xy-0.5;
-	p.x *= iResolution.x/iResolution.y;
+	vec2 p = fragCoord.xy / ubuf.iResolution.xy-0.5;
+	p.x *= ubuf.iResolution.x/ubuf.iResolution.y;
 	p*=4.;
 	
     float rz = dualfbm(p);
@@ -66,4 +93,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	vec3 col = vec3(.2,0.1,0.4)/rz;
 	col=pow(abs(col),vec3(.99));
 	fragColor = vec4(col,1.);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

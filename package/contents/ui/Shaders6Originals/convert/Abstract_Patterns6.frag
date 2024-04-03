@@ -1,7 +1,6 @@
 // url: shadertoy.com/view/ftjBDh
 // credits: leon
 
-
 // Abstract Patterns #6 by Leon Denise 2022/05/09
 
 // Inspired by Martijn Steinrucken "Math Zoo - Alien Orb"
@@ -10,6 +9,34 @@
 
 // Using code from Martijn Steinrucken, Dave Hoskins,
 // Inigo Quilez, Antoine Zanuttini and many more
+
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 
 const float scale = 5.;
 const float shell = .3;
@@ -44,7 +71,7 @@ float map(vec3 p)
     for (float i = 0.; i < 3.; ++i)
     {
         p = pp * scale / a;
-        p.z -= iTime * a;
+        p.z -= ubuf.iTime * a;
         d = smin(d, abs(dot(sin(p),cos(p.yzx))/scale*a), blend);
         a /= falloff;
     }
@@ -53,7 +80,7 @@ float map(vec3 p)
     d = -d;
     
     // ripple surface
-    d += sin(p.z*10.+iTime*20.)*0.002;
+    d += sin(p.z*10.+ubuf.iTime*20.)*0.002;
     
     // substract sphere
     d = smin(d, -(length(pp)-shell), -carve);
@@ -72,7 +99,7 @@ vec3 getNormal (vec3 pos)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     // coordinates
-    vec2 uv = (fragCoord.xy - iResolution.xy / 2.)/iResolution.y;
+    vec2 uv = (fragCoord.xy - ubuf.iResolution.xy / 2.)/ubuf.iResolution.y;
     float dither = hash12(fragCoord);
     vec3 ray = normalize(vec3(uv, -0.5));
     vec3 pos = vec3(0);
@@ -93,10 +120,16 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 color = .5+.2*normal;
     float backLight = dot(normal, vec3(0,0,-1))*.5+.5;
     float bottomLight = dot(normal, vec3(0,-1,0))*.5+.5;
-    vec3 tint = .9*cos(vec3(1,2,3)+pos.z*18.-iTime);
+    vec3 tint = .9*cos(vec3(1,2,3)+pos.z*18.-ubuf.iTime);
     color += vec3(1,-.5,-.5)*backLight;
     color += tint * bottomLight;
     color *= index/count;
 
     fragColor = vec4(color, 1.);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

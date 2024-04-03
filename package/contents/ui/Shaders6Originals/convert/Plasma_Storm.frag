@@ -2,6 +2,33 @@
 // credits: fuzzmoon
 
 //experimenting with 3D Gradient noise from: https://www.shadertoy.com/view/Xsl3Dl
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 #define layers 5 //int how many layers
 #define speed .25 //float speed multiplyer
 #define scale 1.2 //float scale multiplyer
@@ -33,9 +60,9 @@ float noise( in vec3 p )
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     //normalized device coordinates from -1 to 1
-    vec2 uv = (fragCoord-iResolution.xy-.5)/iResolution.y;
+    vec2 uv = (fragCoord-ubuf.iResolution.xy-.5)/ubuf.iResolution.y;
     //time value
-    float t = iTime*speed;
+    float t = ubuf.iTime*speed;
 
     uv *= scale;
     float h = noise(vec3(uv*2.,t));
@@ -55,3 +82,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     fragColor = vec4(col,1.0);
 }
 
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
+}

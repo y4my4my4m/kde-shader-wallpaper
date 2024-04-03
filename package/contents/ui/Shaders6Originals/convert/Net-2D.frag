@@ -2,6 +2,33 @@
 // refer to https://www.youtube.com/watch?v=3CycKKJiwis&list=PLGmrMu-IwbguU_nY2egTFmlg691DN7uE5&index=19
 // 
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 
 // return the distance from point uv to the line ab.
 float distLine2D(vec2 uv, vec2 a, vec2 b) {
@@ -36,7 +63,7 @@ vec2 noise22(vec2 p){
 
 
 vec2 getPos(vec2 id, vec2 off){
-    vec2 n = noise22(id+off)*(iTime+16.1616);
+    vec2 n = noise22(id+off)*(ubuf.iTime+16.1616);
     return off+sin(n)*.4;
 }
 
@@ -60,7 +87,7 @@ float layer(vec2 uv){
         
         // spark
         vec2 d = (p[i] - gv)*40.;
-        m += (1./dot(d, d))*(sin(p[i].x*10.+iTime*5.)*.5+.5);
+        m += (1./dot(d, d))*(sin(p[i].x*10.+ubuf.iTime*5.)*.5+.5);
     }
     m += line(gv, p[1], p[3]);
     m += line(gv, p[1], p[5]);
@@ -73,14 +100,14 @@ float layer(vec2 uv){
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.x;
+    vec2 uv = (fragCoord - 0.5 * ubuf.iResolution.xy) / ubuf.iResolution.x;
     
     uv*=10.;
     
     
     float m = 0.;
     for(float i = 0. ; i < 1.;i += 1./4.){
-        float z = fract(i+iTime*.3);
+        float z = fract(i+ubuf.iTime*.3);
         float size = mix(1.5, .5, z);
         float fade = smoothstep(0., .2, z);
         m += layer(uv*size+i*20.) * fade;
@@ -88,7 +115,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     
     vec3 col = vec3(0.);
-    vec3 base = sin(iTime*vec3(.234325, .398579, .53783))*.5+.5;
+    vec3 base = sin(ubuf.iTime*vec3(.234325, .398579, .53783))*.5+.5;
     col += vec3(m)*base;
     col += uv.y*0.08*base;
     
@@ -99,4 +126,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // --------------------------------------------
     
     fragColor = vec4(col, 1.0);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }

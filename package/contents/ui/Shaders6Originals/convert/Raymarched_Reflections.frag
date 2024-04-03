@@ -1,6 +1,5 @@
 // https://www.shadertoy.com/view/4dt3zn
 // Credits to Shane
-
 /*
 	Raymarched Reflections
 	----------------------
@@ -35,6 +34,34 @@
     https://www.shadertoy.com/view/4slSzj
 
 */
+
+
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
 
 #define FAR 30.
 
@@ -242,7 +269,7 @@ vec3 doColor(in vec3 sp, in vec3 rd, in vec3 sn, in vec3 lp, float t){
 void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 
     // Screen coordinates.
-	vec2 uv = (fragCoord.xy - iResolution.xy*.5) / iResolution.y;
+	vec2 uv = (fragCoord.xy - ubuf.iResolution.xy*.5) / ubuf.iResolution.y;
 
     // Unit direction ray.
     vec3 rd = normalize(vec3(uv, 1));
@@ -250,13 +277,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 
     // Some cheap camera movement, for a bit of a look around. I use this far
     // too often. I'm even beginning to bore myself at this point. :)
-    float cs = cos(iTime * .25), si = sin(iTime * .25);
+    float cs = cos(ubuf.iTime * .25), si = sin(ubuf.iTime * .25);
     rd.xy = mat2(cs, si, -si, cs)*rd.xy;
     rd.xz = mat2(cs, si, -si, cs)*rd.xz;
 
     // Ray origin: Doubling as the surface position, in this particular example.
     // I hope that doesn't confuse anyone.
-    vec3 ro = vec3(0, 0, iTime*1.5);
+    vec3 ro = vec3(0, 0, ubuf.iTime*1.5);
 
     // Light position. Set in the vicinity the ray origin.
     vec3 lp = ro + vec3(0, 1, -.5);
@@ -334,4 +361,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     // Clamping the scene color, performing some rough gamma correction (the "sqrt" bit), then
     // presenting it to the screen.
 	fragColor = vec4(sqrt(clamp(sceneColor, 0., 1.)), 1);
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }
