@@ -21,6 +21,10 @@
       <label>Allow use of mouse in shader</label>
       <default>true</default>
     </entry>
+    <entry name="mouseSpeedBias" type="Double">
+      <label>Change the mouse's bias speed</label>
+      <default>1.0</default>
+    </entry>
     <entry name="running" type="Bool">
       <label>Shader is running.</label>
       <default>true</default>

@@ -174,8 +174,8 @@ WallpaperItem {
             hoverEnabled: true
             onPositionChanged: {
                 if (!wallpaper.configuration.mouseAllowed) return;
-                shader.iMouse.x = mouseX
-                shader.iMouse.y = mouseY
+                shader.iMouse.x = mouseX * wallpaper.configuration.mouseSpeedBias
+                shader.iMouse.y = -mouseY * wallpaper.configuration.mouseSpeedBias
             }
             onClicked: {
                 if (!wallpaper.configuration.mouseAllowed) return;

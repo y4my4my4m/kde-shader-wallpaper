@@ -83,7 +83,7 @@ Kirigami.FormLayout {
                 text: wallpaper.configuration.shaderSpeed ? String(wallpaper.configuration.shaderSpeed.toFixed(2)) : "1.00"
                 inputMethodHints: Qt.NumberInput
                 Layout.preferredWidth: Kirigami.Units.gridUnit * 3
-                onTextEdited: {
+                onEditingFinished: {
                     let inputValue = parseFloat(text);
                     if (isNaN(inputValue) || inputValue < speedSlider.from) {
                         inputValue = speedSlider.from;
@@ -121,6 +121,58 @@ Kirigami.FormLayout {
             checked: wallpaper.configuration.mouseAllowed
             onClicked: {
                 wallpaper.configuration.mouseAllowed = !wallpaper.configuration.mouseAllowed
+            }
+        }
+    }
+
+    RowLayout {
+        visible: wallpaper.configuration.mouseAllowed
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Mouse bias:");
+        ColumnLayout {
+            Slider {
+                Layout.preferredWidth: Kirigami.Units.gridUnit * 16
+                from: -10.0
+                to: 10.0
+                id: mouseBiasSlider
+                stepSize: 0.01
+                value: wallpaper.configuration.mouseSpeedBias ? wallpaper.configuration.mouseSpeedBias : 1.0
+                onValueChanged: {
+                    mouseBiasField.text = String(value.toFixed(2));
+                    wallpaper.configuration.mouseSpeedBias = mouseBiasField.text;
+                }
+            }
+        }
+        ColumnLayout {
+            TextField {
+                id: mouseBiasField
+                text: wallpaper.configuration.mouseSpeedBias ? String(wallpaper.configuration.mouseSpeedBias.toFixed(2)) : "1.00"
+                inputMethodHints: Qt.NumberInput
+                Layout.preferredWidth: Kirigami.Units.gridUnit * 3
+                onEditingFinished: {
+                    let inputValue = parseFloat(text);
+                    if (isNaN(inputValue) || inputValue < mouseBiasSlider.from) {
+                        inputValue = mouseBiasSlider.from;
+                    } else if (inputValue > mouseBiasSlider.to) {
+                        inputValue = mouseBiasSlider.to;
+                    }
+                    text = inputValue.toFixed(2);
+                    mouseBiasSlider.value = inputValue;
+                    wallpaper.configuration.mouseSpeedBias = inputValue;
+                }
+                Keys.onPressed: {
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        mouseBiasField.focus = false; // Unfocus the TextField
+                        event.accepted = true; // Prevent further propagation of the key event
+                    }
+                }
+                background: Rectangle {
+                    color: mouseBiasField.activeFocus ? "white" : "transparent"
+                    border.color: mouseBiasField.activeFocus ? "#3DAEE9" : "transparent"
+                    border.width: 1
+                    radius: 2
+                    anchors.fill: mouseBiasField
+                    anchors.margins: -2
+                }
             }
         }
     }
