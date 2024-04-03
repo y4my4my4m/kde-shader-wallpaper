@@ -17,7 +17,10 @@ Shader Wallpaper is a Wallpaper Plugin that allows you to run shaders as your wa
 - `kpackagetool6 -t Plasma/Wallpaper --upgrade kde-shader-wallpaper/package`
 
 ### Uninstall
-- You can uninstall it via KDE's desktop settings otherwise, you can uninstall like this: `kpackagetool6 -t Plasma/Wallpaper --remove online.knowmad.shaderwallpaper`
+You can uninstall it via KDE's desktop settings otherwise, you can uninstall it like this: `kpackagetool6 -t Plasma/Wallpaper --remove online.knowmad.shaderwallpaper`
+
+## Dev Guide
+Read the README_DEV.md if you want to make custom shaders
 
 ## Repo:
 I'll probably maintain it on Github principally for issues/PR but I'll try my best to maintain both, if anything contact me on twitter [@y4my4my4m](https://twitter.com/@y4my4my4m).

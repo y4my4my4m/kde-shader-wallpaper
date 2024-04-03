@@ -5,7 +5,7 @@ import subprocess
 # otherwise, debug the shader it self
 
 # Paths
-source_directory = 'package/contents/ui/Shaders6Originals/convert'
+source_directory = 'package/contents/ui/Shaders/ConvertMe'
 output_directory = 'package/contents/ui/Shaders6'
 
 # Ensure output directory exists
@@ -34,7 +34,9 @@ for root, dirs, files in os.walk(source_directory):
                 # If the command was successful, delete the source file
                 if (DELETE_AFTER_COMPILATION):
                     os.remove(source_file_path)
-                print(f"Successfully converted and deleted: {file}")
+                    print(f"Successfully converted and deleted: {file}")
+                else:
+                    print(f"Successfully converted: {file}")
             except subprocess.CalledProcessError:
                 # If the command failed, do not delete the source file
                 print(f"Conversion failed for: {file}")

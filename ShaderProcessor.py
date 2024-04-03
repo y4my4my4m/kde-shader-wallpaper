@@ -2,7 +2,7 @@ import os
 import re
 
 # Specify the directory where your .frag files are located
-directory_path = 'package/contents/ui/Shaders6Originals/convert'
+directory_path = 'package/contents/ui/Shaders/ConvertMe'
 
 # List of variables to update
 variables_to_update = [
