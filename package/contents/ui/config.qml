@@ -15,8 +15,6 @@ Kirigami.FormLayout {
     id: root
     twinFormLayouts: parentLayout // required by parent
     property alias formLayout: root // required by parent
-    // property alias cfg_selectedShader:   selectedShaderField.text
-    // property alias cfg_checkGl3Ver:      checkGl3Ver.checked
     // property alias cfg_checkedSmartPlay: checkedSmartPlay.checked
     // property alias cfg_iChannel0_flag:   iChannel0_flag.checked
     // property alias cfg_iChannel1_flag:   iChannel1_flag.checked
@@ -24,7 +22,6 @@ Kirigami.FormLayout {
     // property alias cfg_iChannel3_flag:   iChannel3_flag.checked
     // property alias cfg_fadeToNext:       checkFadeToNext.checked
     // property alias cfg_fadeToRandom:     checkFadeToRandom.checked
-    property int curIndex: 0;
     RowLayout {
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Select shader:");
         ComboBox {
@@ -47,12 +44,14 @@ Kirigami.FormLayout {
 
             textRole: "fileBaseName"
             displayText: currentText.replace("_"," ")
+            currentIndex: wallpaper.configuration.selectedShaderIndex
 
             onCurrentTextChanged: {
-                currentIndex: curIndex;
+                wallpaper.configuration.selectedShaderIndex = currentIndex;
                 wallpaper.configuration.selectedShaderPath = Qt.resolvedUrl("./Shaders6/"+model.get(currentIndex, "fileName"));
             }
         }
+
         Button {
             id: shaderFileButton
             icon.name: "folder-shaders-symbolic"

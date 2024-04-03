@@ -13,67 +13,67 @@
       <label>selectedShaderContent</label>
       <default></default>
     </entry>
-    <entry name="mouseAllowed" type="bool">
+    <entry name="selectedShaderIndex" type="Int">
+      <label>The index of the currently selectedShader</label>
+      <default>0</default>
+    </entry>
+    <entry name="mouseAllowed" type="Bool">
       <label>Allow use of mouse in shader</label>
       <default>true</default>
     </entry>
-    <entry name="running" type="bool">
+    <entry name="running" type="Bool">
       <label>Shader is running.</label>
       <default>true</default>
     </entry>
-    <entry name="checkedSmartPlay" type="bool">
+    <entry name="checkedSmartPlay" type="Bool">
       <label>Pause the video when existing a maximized or full-screen windows.</label>
       <default>false</default>
     </entry>
-    <entry name="checkGl3Ver" type="bool">
-      <label>Change gl3 version for shader compatibility.</label>
-      <default>true</default>
-    </entry>
-    <entry name="shaderSpeed" type="double">
+    <entry name="shaderSpeed" type="Double">
       <label>Change the shader speed</label>
       <default>1.0</default>
     </entry>
-    <entry name="iChannel0" type="string">
+    <entry name="iChannel0" type="String">
       <label>iChannel0's path</label>
       <default>./Resources/wallpaper2.png</default>
     </entry>
-    <entry name="iChannel0_flag" type="bool">
+    <entry name="iChannel0_flag" type="Bool">
       <label>iChannel0 on/off flag</label>
       <default>false</default>
     </entry>
-    <entry name="iChannel1" type="string">
+    <entry name="iChannel1" type="String">
       <label>iChannel1's path</label>
       <default>./Resources/wallpaper2.png</default>
     </entry>
-    <entry name="iChannel1_flag" type="bool">
+    <entry name="iChannel1_flag" type="Bool">
       <label>iChannel1 on/off flag</label>
       <default>false</default>
     </entry>
-    <entry name="iChannel2" type="string">
+    <entry name="iChannel2" type="String">
       <label>iChannel2's path</label>
       <default>./Resources/Shadertoy_Organic_2.jpg</default>
     </entry>
-    <entry name="iChannel2_flag" type="bool">
+    <entry name="iChannel2_flag" type="Bool">
       <label>iChannel0 on/off flag</label>
       <default>false</default>
     </entry>
-    <entry name="iChannel3" type="string">
+    <entry name="iChannel3" type="String">
       <label>iChannel3's path</label>
       <default>./Resources/Shadertoy_Organic_2.jpg</default>
     </entry>
-    <entry name="iChannel3_flag" type="bool">
+    <entry name="iChannel3_flag" type="Bool">
       <label>iChannel3 on/off flag</label>
       <default>false</default>
     </entry>
-    <entry name="iFrameRate" type="double">
+    <entry name="iFrameRate" type="Double">
       <label>iFrameRate</label>
       <default>-1</default>
     </entry>
-    <entry name="fadeToNext" type="bool">
+    <entry name="fadeToNext" type="Bool">
       <label>fade to next shader in folder</label>
       <default>false</default>
     </entry>
-    <entry name="fadeToRandom" type="bool">
+    <entry name="fadeToRandom" type="Bool">
       <label>fade to random shader in folder</label>
       <default>false</default>
     </entry>
