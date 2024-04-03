@@ -363,12 +363,15 @@ Kirigami.FormLayout {
         }
     }
 
-    
     Kirigami.InlineMessage {
         Layout.preferredWidth: Kirigami.Units.gridUnit * 20
         text: qsTr("Submit your shaders on <a href=\"https://github.com/y4my4my4m/kde-shader-wallpaper\">Github</a> or open an issue for support/features!")
         onLinkActivated: Qt.openUrlExternally(link)
         visible: true
+    }
+
+    RowLayout {
+        Layout.bottomMargin: 20 
     }
 
     FileDialog {
