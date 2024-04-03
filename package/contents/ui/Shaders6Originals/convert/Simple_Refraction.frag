@@ -8,6 +8,33 @@
 // Facebook: https://www.facebook.com/groups/theartofcode/
 // https://www.shadertoy.com/view/flcSW2
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 
 
 
@@ -16,7 +43,7 @@
 #define SURF_DIST .001
 
 #define S smoothstep
-#define T iTime
+#define T ubuf.iTime
 
 
 mat2 Rot(float a) {
@@ -149,8 +176,8 @@ vec3 GetRayDir(vec2 uv, vec3 p, vec3 l, float z) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord)
 {
-    vec2 uv = (fragCoord-.5*iResolution.xy)/iResolution.y;
-	vec2 m = iMouse.xy/iResolution.xy;
+    vec2 uv = (fragCoord-.5*ubuf.iResolution.xy)/ubuf.iResolution.y;
+	vec2 m = ubuf.iMouse.xy/ubuf.iResolution.xy;
 
     vec3 ro = vec3(0, 1.5, -5);
     if(dot(m.xy,m.xy)>0.){
@@ -253,3 +280,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord)
     fragColor = vec4(col,1.0);
 }
 
+
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
+}

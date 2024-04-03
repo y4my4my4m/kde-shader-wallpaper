@@ -1,6 +1,33 @@
 // From https://www.shadertoy.com/view/lflGRS
 // Credits to amagitakayosi
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 
 // global vars
 float light = 999.;
@@ -132,9 +159,9 @@ vec3 raymarch(in vec2 p, vec3 ro, vec3 rd) {
 
     // Cheap AO with dither
     float ao = pow(iter, .8);
-    ao *= (0.8 + 0.2 * hash(p + iTime));
+    ao *= (0.8 + 0.2 * hash(p + ubuf.iTime));
 
-    vec3 n = normalize(getNormal(rp) + vec3(0, 0, hash(p * 0.2 + iTime) * 0.03));
+    vec3 n = normalize(getNormal(rp) + vec3(0, 0, hash(p * 0.2 + ubuf.iTime) * 0.03));
     if (hit.y == 1.) {                                   
         // diffuse
         float dif = clamp(dot(n, ld), 0., 1.) * .2;
@@ -199,11 +226,11 @@ float spin(float x, float div, float slope) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 uv = fragCoord/iResolution.xy;
+    vec2 uv = fragCoord/ubuf.iResolution.xy;
     vec2 p = uv * 2. - 1.;
-    p.x *= iResolution.x / iResolution.y;
+    p.x *= ubuf.iResolution.x / ubuf.iResolution.y;
 
-    time = iTime;
+    time = ubuf.iTime;
     
     // motion blur
     float motion = exp(mod((time - PHASE_1), PHASE_12)* -2.);
@@ -243,4 +270,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }    
 
     fragColor = vec4(col,1.0);
+}
+
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
 }
