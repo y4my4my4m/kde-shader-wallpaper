@@ -19,6 +19,7 @@ https://invent.kde.org/plasma/libplasma
 ## Add this to shaders
 
 ```hlsl
+// add this at the top of the file
 #version 450
 
 layout(location = 0) in vec2 qt_TexCoord0;
@@ -28,21 +29,38 @@ layout(std140, binding = 0) uniform buf {
     mat4 qt_Matrix;
     float qt_Opacity;
     float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
     vec3 iResolution;
+    float iChannelTime[4];
     vec3 iChannelResolution[4];
-    //add more bindings here
 } ubuf;
 
 layout(binding = 1) uniform sampler2D iChannel0;
-// more ichannels
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
 vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
 
-// link em here for easy rewrite (kinda costs performance tho to dup them i assume?)
-float iTime = ubuf.iTime;
-vec3 iResolution = ubuf.iResolution;
+// either rename them in the frag or add this (probably costs some performance)
 
-// ---
+// int iFrame = ubuf.iFrame;
+// float iTime = ubuf.iTime;
+// float iTimeDelta = ubuf.iTimeDelta;
+// vec3 iResolution = ubuf.iResolution;
+// vec4 iMouse = ubuf.iMouse;
+// etc...
 
+// these must be modified as you cant do that with arrays afaik:
+// float iChannelTime[4];
+// vec3 iChannelResolution[4];
+
+// add this at the end
 void main() {
     vec4 color = vec4(0.0);
     mainImage(color, fragCoord);
