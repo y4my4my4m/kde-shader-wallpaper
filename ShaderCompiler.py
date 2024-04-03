@@ -11,6 +11,7 @@ output_directory = 'package/contents/ui/Shaders6'
 # Ensure output directory exists
 os.makedirs(output_directory, exist_ok=True)
 
+# THIS WILL DELETE YOUR ORIGINAL FRAG AFTER COMPILING IF SET TO TRUE
 DELETE_AFTER_COMPILATION = False
 
 # Iterate over all .frag files in the source directory
