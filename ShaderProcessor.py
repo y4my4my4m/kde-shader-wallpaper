@@ -42,6 +42,7 @@ vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.x
 '''
 
 footer = '''
+
 void main() {
     vec4 color = vec4(0.0);
     mainImage(color, fragCoord);
