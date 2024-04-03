@@ -61,6 +61,7 @@ for root, dirs, files in os.walk(directory_path):
                     content = re.sub(r'\b' + var + r'\b', 'ubuf.' + var, content)
                 
                 # Insert the header after shader comments (dsnt work oh well)
+                # shouldnt instead check if the line dsnt start with // or /*
                 insert_index = content.find('\n\n') + 1
                 content = content[:insert_index] + header + content[insert_index:]
                 

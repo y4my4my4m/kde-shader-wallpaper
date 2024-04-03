@@ -1,12 +1,65 @@
 // https://www.shadertoy.com/view/XsBXRw
 // Credits to mplanck
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
 // The atmosphere fog effect is a pretty expensive part of the shader since I'm
 // recomputing the effect once per time feature.  I rescale and shift the atmos
 // effect per time feature to provide the illusion of depth.  Decrease the number
 // of ATMOS_DETAIL_ITERATIONS if your gpu is melting, or to get more detail in the
 // atmosphere, increase it to 8.
-//
+
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float ubuf.iTime;
+    float ubuf.iTimeDelta;
+    float ubuf.iFrameRate;
+    float ubuf.iSampleRate;
+    int ubuf.iFrame;
+    vec4 ubuf.iDate;
+    vec4 ubuf.iMouse;
+    vec3 ubuf.iResolution;
+    float ubuf.iChannelTime[4];
+    vec3 ubuf.iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.ubuf.iResolution.xy;
 
 #define ATMOS_DETAIL_ITERATIONS 4
 
@@ -54,8 +107,8 @@ float fbm(vec2 n)
 
 float atmos( vec2 p )
 {
-	float q = fbm(p - iTime * 0.1);
-	vec2 r = vec2(fbm(p + q + iTime * 0.01 - p.x - p.y), fbm(p + q - iTime * 0.04));
+	float q = fbm(p - ubuf.ubuf.iTime * 0.1);
+	vec2 r = vec2(fbm(p + q + ubuf.ubuf.iTime * 0.01 - p.x - p.y), fbm(p + q - ubuf.ubuf.iTime * 0.04));
 	return mix(.1, .4, fbm(p + r)) + mix(.6, .8, r.x) - mix(.0, .4, r.y);
 }
 
@@ -72,7 +125,7 @@ vec3 draw_grid(vec2 uv)
 
 vec3 draw_bg_and_tick(vec2 uv)
 { 
-    float tickCenter = (1. + 2. * TICK_WIDTH) * fract(iTime * .1) - TICK_WIDTH;
+    float tickCenter = (1. + 2. * TICK_WIDTH) * fract(ubuf.ubuf.iTime * .1) - TICK_WIDTH;
     float f = abs(uv.x - tickCenter);
 
     float beamSpread = .1;
@@ -87,7 +140,7 @@ vec3 draw_bg_and_tick(vec2 uv)
 
 vec3 draw_second(vec2 uv) 
 {
-    float secondCenter = fract(floor(iDate.w) / 60.);
+    float secondCenter = fract(floor(ubuf.ubuf.iDate.w) / 60.);
     float f = abs(uv.x - secondCenter);
     
     float lightBeam = max(smoothstep(0., 1., uv.y), 4. * smoothstep(.001, .0, pow(uv.y, 1.5)));    
@@ -104,7 +157,7 @@ vec3 draw_second(vec2 uv)
 
 vec3 draw_minute(vec2 uv) 
 {
-    float minuteCenter = fract(iDate.w / 3600.); 
+    float minuteCenter = fract(ubuf.ubuf.iDate.w / 3600.); 
     float f = abs(uv.x - minuteCenter);
     
     float lightBeam = max(smoothstep(0., 1., uv.y), smoothstep(.02, .0, pow(uv.y, 1.6)));
@@ -121,7 +174,7 @@ vec3 draw_minute(vec2 uv)
 
 vec3 draw_hour(vec2 uv) 
 {
-    float hourCenter = fract(iDate.w / 86400.);  
+    float hourCenter = fract(ubuf.ubuf.iDate.w / 86400.);  
     float f = abs(uv.x - hourCenter);
     
     float lightBeam = max(smoothstep(0., 1., uv.y), smoothstep(.03, .0, pow(uv.y, 1.5)));    
@@ -139,7 +192,7 @@ vec3 draw_hour(vec2 uv)
 
 vec3 draw_day(vec2 uv) 
 {
-    float dayCenter = iDate.z / 31.;
+    float dayCenter = ubuf.ubuf.iDate.z / 31.;
 	float f = abs(uv.x - dayCenter);
     
     float lightBeam = max(smoothstep(0., 1., uv.y), smoothstep(.05, .0, pow(uv.y, 1.4)));
@@ -157,7 +210,7 @@ vec3 draw_day(vec2 uv)
 
 vec3 draw_month(vec2 uv) 
 {
-    float monthCenter = iDate.y / 12.;
+    float monthCenter = ubuf.ubuf.iDate.y / 12.;
     
     float lightBeam = max(smoothstep(0., 1., uv.y), smoothstep(.15, .0, pow(uv.y, 1.3)));        
     float f = .03 + .1 * max(0., pow((1.2 - uv.y), 3.));    
@@ -174,7 +227,7 @@ vec3 draw_month(vec2 uv)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     
-    vec2 uv = fragCoord.xy / iResolution.xy;
+    vec2 uv = fragCoord.xy / ubuf.ubuf.iResolution.xy;
     
     vec3 scene_color = vec3(0.);
     scene_color += draw_month(uv);
@@ -190,3 +243,15 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //fragColor.rgb = vec3(atmos(5. * uv));
 }
                                 
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
+}

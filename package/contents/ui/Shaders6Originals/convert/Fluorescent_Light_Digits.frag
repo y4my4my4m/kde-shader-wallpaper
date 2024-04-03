@@ -1,6 +1,60 @@
 // url: https://www.shadertoy.com/view/NtSBWt
 // credits: jvb
 
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float iTime;
+    float iTimeDelta;
+    float iFrameRate;
+    float iSampleRate;
+    int iFrame;
+    vec4 iDate;
+    vec4 iMouse;
+    vec3 iResolution;
+    float iChannelTime[4];
+    vec3 iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
+
+#version 450
+
+layout(location = 0) in vec2 qt_TexCoord0;
+layout(location = 0) out vec4 fragColor;
+
+layout(std140, binding = 0) uniform buf { 
+    mat4 qt_Matrix;
+    float qt_Opacity;
+    float ubuf.iTime;
+    float ubuf.iTimeDelta;
+    float ubuf.iFrameRate;
+    float ubuf.iSampleRate;
+    int ubuf.iFrame;
+    vec4 ubuf.iDate;
+    vec4 ubuf.iMouse;
+    vec3 ubuf.iResolution;
+    float ubuf.iChannelTime[4];
+    vec3 ubuf.iChannelResolution[4];
+} ubuf;
+
+layout(binding = 1) uniform sampler2D iChannel0;
+layout(binding = 1) uniform sampler2D iChannel1;
+layout(binding = 1) uniform sampler2D iChannel2;
+layout(binding = 1) uniform sampler2D iChannel3;
+
+vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.ubuf.iResolution.xy;
+
 
 const float PI = 3.14159265359;
 
@@ -60,18 +114,14 @@ vec3 digit(vec2 p, int n)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-	vec2 p = 2.0*( fragCoord.xy / iResolution.xy )-1.0;
+	vec2 p = 2.0*( fragCoord.xy / ubuf.ubuf.iResolution.xy )-1.0;
 	
-	p.x *= iResolution.x/iResolution.y; 
+	p.x *= ubuf.ubuf.iResolution.x/ubuf.ubuf.iResolution.y; 
 	vec3 col = vec3(0);
-	
-	
-	
 
-	
-	
 	vec3 segcol = vec3(0.5,0.8,1.0);
-	int n = int(mod(iTime*10.0, 1000.0)); 
+	// modify this to show the hour:mins instead..
+	int n = int(mod(ubuf.ubuf.iTime*10.0, 1000.0)); 
 
 	col += segcol*digit(p-vec2(-0.75,0.0), n/100);
 	col += segcol*digit(p-vec2(+0.0,0.0),  int(mod(float(n/10), 10.0)));
@@ -83,3 +133,15 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 }
 
 
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
+}
+
+void main() {
+    vec4 color = vec4(0.0);
+    mainImage(color, fragCoord);
+    fragColor = color;
+}
