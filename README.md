@@ -17,10 +17,11 @@ Shader Wallpaper is a Wallpaper Plugin that allows you to run shaders as your wa
 - `kpackagetool6 -t Plasma/Wallpaper --upgrade kde-shader-wallpaper/package`
 
 ### Uninstall
-You can uninstall it via KDE's desktop settings otherwise, you can uninstall it like this: `kpackagetool6 -t Plasma/Wallpaper --remove online.knowmad.shaderwallpaper`
+You can uninstall it via KDE's desktop settings otherwise, you can uninstall it like this: 
+- `kpackagetool6 -t Plasma/Wallpaper --remove online.knowmad.shaderwallpaper`
 
 ## Dev Guide
-Read the README_DEV.md if you want to make custom shaders
+Read the [Developer's Guide](README_DEV.md) if you want to make custom shaders
 
 ## Repo:
 I'll probably maintain it on Github principally for issues/PR but I'll try my best to maintain both, if anything contact me on twitter [@y4my4my4m](https://twitter.com/@y4my4my4m).
@@ -30,9 +31,8 @@ I'll probably maintain it on Github principally for issues/PR but I'll try my be
 - Opencode: https://www.opencode.net/y4my4my4m/kde-shader-wallpaper
 
 ### Roadmap:
-- [ ] Version 3.x - Save imported shaders, customization, better buffers/channel, shadertoy import
-- [ ] Version 3.0 - Plasma6 Edition!
-- [ ] ~Version 2.x  - Save/Load edits, better customization, better buffers/channel~
+- [ ] Version 3.x - Save imported shaders, customization, better buffers/channel, shadertoy import, play/stop, fullscreen detection
+- [x] Version 3.0 - Plasma6 Edition!
 - [x] Version 2.0.1a - Breaking bug fix regarding the pause/fullscreen feature(current version) **(current version)**
 - [x] Version 2.0a - Customize shaders via GUI, directly load shaders from shadertoy.com or file
 - [x] Version 1.3  - 70 new shaders + autolisting
