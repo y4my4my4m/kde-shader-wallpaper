@@ -322,17 +322,13 @@ Kirigami.FormLayout {
             wallpaper.configuration.warningResources_dismissed = true;
         }
     }
-    
-    Kirigami.InlineMessage {
-        Layout.preferredWidth: Kirigami.Units.gridUnit * 20
-        text: qsTr("Submit your shaders on <a href=\"https://github.com/y4my4my4m/kde-shader-wallpaper\">Github</a> or open an issue for support/features!")
-        onLinkActivated: Qt.openUrlExternally(link)
-        visible: true
-    }
 
     RowLayout{
-        spacing: 20
+        spacing:  Kirigami.Units.gridUnit * 10
         Button {
+            Layout.preferredWidth: Kirigami.Units.gridUnit * 5
+            Layout.preferredHeight: Kirigami.Units.gridUnit * 3
+            
             id: emergencyHelpButton
             icon.name: "help-about-symbolic"
             text: i18nd("@button:toggle_emergency_help", "Help!")
@@ -343,19 +339,36 @@ Kirigami.FormLayout {
 
         Button {
             id: kofiButton
-            text: i18nd("@button:kofi", "Kofi")
-            contentItem: AnimatedImage {
-                source: "Resources/kofi.gif"
-                sourceSize.width: 24
-                sourceSize.height: 24
-                fillMode: Image.Pad
-                horizontalAlignment: Image.AlignLeft
-                transform: Translate { x: 4 }
+            Layout.preferredWidth: Kirigami.Units.gridUnit * 5
+            Layout.preferredHeight: Kirigami.Units.gridUnit * 3
+            
+            contentItem: RowLayout {
+                AnimatedImage {
+                    source: "Resources/kofi.gif"
+                    sourceSize.width: 36
+                    sourceSize.height: 36
+                    fillMode: Image.Pad
+                    horizontalAlignment: Image.AlignLeft
+                    transform: Translate { x: 8 }
+                }
+                Text {
+                    text: i18nd("@button:kofi", "Kofi")      
+                    horizontalAlignment: Text.AlignHCenter      
+                    transform: Translate { x: -8 }            
+                }
             }
             onClicked: {
                 Qt.openUrlExternally("https://ko-fi.com/I2I525V5R")
             }
         }
+    }
+
+    
+    Kirigami.InlineMessage {
+        Layout.preferredWidth: Kirigami.Units.gridUnit * 20
+        text: qsTr("Submit your shaders on <a href=\"https://github.com/y4my4my4m/kde-shader-wallpaper\">Github</a> or open an issue for support/features!")
+        onLinkActivated: Qt.openUrlExternally(link)
+        visible: true
     }
 
     FileDialog {
