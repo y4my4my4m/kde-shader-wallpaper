@@ -56,15 +56,15 @@ WallpaperItem {
         property var            iDate;
         // property var            iChannel0: bufferAOutput; //only Image or ShaderEffectSource
 
-        property var            iChannel0: ich1;
-        property var            iChannel1: ich1;
-        property var            iChannel2: ich2;
-        property var            iChannel3: ich3;
+        property var            iChannel0: wallpaper.configuration.iChannel0_flag ? ich0 : "";
+        property var            iChannel1: wallpaper.configuration.iChannel1_flag ? ich1 : "";
+        property var            iChannel2: wallpaper.configuration.iChannel2_flag ? ich2 : "";
+        property var            iChannel3: wallpaper.configuration.iChannel3_flag ? ich3 : "";
         
         property var            iChannelResolution: [
-            calcResolution(iChannel0), 
-            calcResolution(iChannel1), 
-            calcResolution(iChannel2), 
+            calcResolution(iChannel0),
+            calcResolution(iChannel1),
+            calcResolution(iChannel2),
             calcResolution(iChannel3)
         ]
         readonly property vector3d defaultResolution: Qt.vector3d(shader.width, shader.height, shader.width / shader.height)

@@ -134,8 +134,7 @@ Kirigami.FormLayout {
             checked: wallpaper.configuration.iChannel0_flag
             onCheckedChanged: {
                 wallpaper.configuration.iChannel0_flag = checked
-                if (!checked) wallpaper.configuration.iChannel0 = ""
-                else wallpaper.configuration.iChannel0 = iChannel0Field.text;
+                wallpaper.configuration.iChannel0 = iChannel0Field.text;
             }
         }
         TextField {
@@ -176,8 +175,7 @@ Kirigami.FormLayout {
             checked: wallpaper.configuration.iChannel1_flag
             onCheckedChanged: {
                 wallpaper.configuration.iChannel1_flag = checked
-                if (!checked) wallpaper.configuration.iChannel1 = ""
-                else wallpaper.configuration.iChannel1 = iChannel1Field.text;
+                wallpaper.configuration.iChannel1 = iChannel1Field.text;
             }
         }
         TextField {
@@ -218,8 +216,7 @@ Kirigami.FormLayout {
             checked: wallpaper.configuration.iChannel2_flag
             onCheckedChanged: {
                 wallpaper.configuration.iChannel2_flag = checked
-                if (!checked) wallpaper.configuration.iChannel2 = ""
-                else wallpaper.configuration.iChannel2 = iChannel2Field.text;
+                wallpaper.configuration.iChannel2 = iChannel2Field.text;
             }
         }
         TextField {
@@ -260,8 +257,7 @@ Kirigami.FormLayout {
             checked: wallpaper.configuration.iChannel3_flag
             onCheckedChanged: {
                 wallpaper.configuration.iChannel3_flag = checked
-                if (!checked) wallpaper.configuration.iChannel3 = ""
-                else wallpaper.configuration.iChannel3 = iChannel3Field.text;
+                wallpaper.configuration.iChannel3 = iChannel3Field.text;
             }
         }
         TextField {
