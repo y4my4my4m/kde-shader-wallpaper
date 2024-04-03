@@ -8,7 +8,7 @@ directory_path = 'package/contents/ui/Shaders6Originals/convert'
 variables_to_update = [
     'iTime', 'iTimeDelta', 'iFrameRate', 'iSampleRate', 
     'iFrame', 'iDate', 'iMouse', 'iResolution', 
-    r'iChannelTime\[4\]', r'iChannelResolution\[4\]'
+    r'iChannelTime', r'iChannelResolution'
 ]
 
 # Header and footer to append
