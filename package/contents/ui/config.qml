@@ -111,8 +111,9 @@ Kirigami.FormLayout {
         CheckBox {
             id: iChannel0_flag
             width: 35
-            checked: false
+            checked: wallpaper.configuration.iChannel0_flag
             onCheckedChanged: {
+                wallpaper.configuration.iChannel0_flag = checked
                 if (!checked) wallpaper.configuration.iChannel0 = ""
                 else wallpaper.configuration.iChannel0 = iChannel0Field.text;
             }
@@ -121,20 +122,30 @@ Kirigami.FormLayout {
             id: iChannel0Field
             placeholderText: "path to iChannel0"
             text: wallpaper.configuration.iChannel0
+            visible: iChannel0_flag.checked
             onEditingFinished: {
                 wallpaper.configuration.iChannel0 =  iChannel0Field.text;
+                ich0_thumbnail.source = wallpaper.configuration.iChannel0
             }
         }
 
+        Image {
+            id: ich0_thumbnail
+            source: wallpaper.configuration.iChannel0
+            fillMode: Image.PreserveAspectFit
+            visible: iChannel0_flag.checked && iChannel0Field.text !== ""
+            Layout.preferredWidth: 60
+            Layout.preferredHeight: 60
+        }
         Button {
             id: ich0FileButton
             icon.name: "x-shape-image-symbolic.svg"
             text: i18nd("@button:open_ich_dialog", "Select Image")
+            visible: iChannel0_flag.checked
             onClicked: {
                 fileDialog_ich0.open()
             }
         }
-
     }
     // iChannel1
     RowLayout {
@@ -142,8 +153,9 @@ Kirigami.FormLayout {
         CheckBox {
             id: iChannel1_flag
             width: 35
-            checked: false
+            checked: wallpaper.configuration.iChannel1_flag
             onCheckedChanged: {
+                wallpaper.configuration.iChannel1_flag = checked
                 if (!checked) wallpaper.configuration.iChannel1 = ""
                 else wallpaper.configuration.iChannel1 = iChannel1Field.text;
             }
@@ -152,16 +164,26 @@ Kirigami.FormLayout {
             id: iChannel1Field
             placeholderText: "path to iChannel1"
             text: wallpaper.configuration.iChannel1
+            visible: iChannel1_flag.checked
             onEditingFinished: {
-                if(iChannel1Field.text !== "") iChannel1_flag.checked
-                wallpaper.configuration.iChannel1 = iChannel1Field.text;
+                wallpaper.configuration.iChannel1 =  iChannel1Field.text;
+                ich0_thumbnail.source = wallpaper.configuration.iChannel1
             }
         }
 
+        Image {
+            id: ich1_thumbnail
+            source: wallpaper.configuration.iChannel1
+            fillMode: Image.PreserveAspectFit
+            visible: iChannel1_flag.checked && iChannel1Field.text !== ""
+            Layout.preferredWidth: 60
+            Layout.preferredHeight: 60
+        }
         Button {
             id: ich1FileButton
             icon.name: "x-shape-image-symbolic.svg"
             text: i18nd("@button:open_ich_dialog", "Select Image")
+            visible: iChannel1_flag.checked
             onClicked: {
                 fileDialog_ich1.open()
             }
@@ -173,8 +195,9 @@ Kirigami.FormLayout {
         CheckBox {
             id: iChannel2_flag
             width: 35
-            checked: false
+            checked: wallpaper.configuration.iChannel2_flag
             onCheckedChanged: {
+                wallpaper.configuration.iChannel2_flag = checked
                 if (!checked) wallpaper.configuration.iChannel2 = ""
                 else wallpaper.configuration.iChannel2 = iChannel2Field.text;
             }
@@ -183,15 +206,26 @@ Kirigami.FormLayout {
             id: iChannel2Field
             placeholderText: "path to iChannel2"
             text: wallpaper.configuration.iChannel2
+            visible: iChannel2_flag.checked
             onEditingFinished: {
-                wallpaper.configuration.iChannel2 = iChannel2Field.text;
+                wallpaper.configuration.iChannel2 =  iChannel2Field.text;
+                ich0_thumbnail.source = wallpaper.configuration.iChannel2
             }
         }
 
+        Image {
+            id: ich2_thumbnail
+            source: wallpaper.configuration.iChannel2
+            fillMode: Image.PreserveAspectFit
+            visible: iChannel2_flag.checked && iChannel2Field.text !== ""
+            Layout.preferredWidth: 60
+            Layout.preferredHeight: 60
+        }
         Button {
             id: ich2FileButton
             icon.name: "x-shape-image-symbolic.svg"
             text: i18nd("@button:open_ich_dialog", "Select Image")
+            visible: iChannel2_flag.checked
             onClicked: {
                 fileDialog_ich2.open()
             }
@@ -203,8 +237,9 @@ Kirigami.FormLayout {
         CheckBox {
             id: iChannel3_flag
             width: 35
-            checked: false
+            checked: wallpaper.configuration.iChannel3_flag
             onCheckedChanged: {
+                wallpaper.configuration.iChannel3_flag = checked
                 if (!checked) wallpaper.configuration.iChannel3 = ""
                 else wallpaper.configuration.iChannel3 = iChannel3Field.text;
             }
@@ -213,15 +248,26 @@ Kirigami.FormLayout {
             id: iChannel3Field
             placeholderText: "path to iChannel3"
             text: wallpaper.configuration.iChannel3
+            visible: iChannel3_flag.checked
             onEditingFinished: {
-                wallpaper.configuration.iChannel3 = iChannel3Field.text;
+                wallpaper.configuration.iChannel3 =  iChannel3Field.text;
+                ich0_thumbnail.source = wallpaper.configuration.iChannel3
             }
         }
 
+        Image {
+            id: ich3_thumbnail
+            source: wallpaper.configuration.iChannel3
+            fillMode: Image.PreserveAspectFit
+            visible: iChannel3_flag.checked && iChannel3Field.text !== ""
+            Layout.preferredWidth: 60
+            Layout.preferredHeight: 60
+        }
         Button {
             id: ich3FileButton
             icon.name: "x-shape-image-symbolic.svg"
             text: i18nd("@button:open_ich_dialog", "Select Image")
+            visible: iChannel3_flag.checked
             onClicked: {
                 fileDialog_ich3.open()
             }
@@ -285,7 +331,7 @@ Kirigami.FormLayout {
         title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
         onAccepted: {
-            iChannel0Field.text = selectedFile
+            wallpaper.configuration.iChannel0 = selectedFile
         }
     }
 
@@ -298,7 +344,7 @@ Kirigami.FormLayout {
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
         
         onAccepted: {
-            iChannel1Field.text = fileDialog_ich1.fileUrls[0]
+            wallpaper.configuration.iChannel1 = selectedFile
         }
     }
 
@@ -310,7 +356,7 @@ Kirigami.FormLayout {
         title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
         onAccepted: {
-            iChannel2Field.text = fileDialog_ich2.fileUrls[0]
+            wallpaper.configuration.iChannel2 = selectedFile
         }
     }
     FileDialog {
@@ -321,7 +367,7 @@ Kirigami.FormLayout {
         title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
         onAccepted: {
-            iChannel3Field.text = fileDialog_ich3.fileUrls[0]
+            wallpaper.configuration.iChannel3 = selectedFile
         }
     }
 }

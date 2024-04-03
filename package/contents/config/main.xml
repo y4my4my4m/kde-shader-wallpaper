@@ -39,7 +39,7 @@
     </entry>
     <entry name="iChannel0_flag" type="Bool">
       <label>iChannel0 on/off flag</label>
-      <default>false</default>
+      <default>true</default>
     </entry>
     <entry name="iChannel1" type="String">
       <label>iChannel1's path</label>
@@ -47,7 +47,7 @@
     </entry>
     <entry name="iChannel1_flag" type="Bool">
       <label>iChannel1 on/off flag</label>
-      <default>false</default>
+      <default>true</default>
     </entry>
     <entry name="iChannel2" type="String">
       <label>iChannel2's path</label>
@@ -55,7 +55,7 @@
     </entry>
     <entry name="iChannel2_flag" type="Bool">
       <label>iChannel0 on/off flag</label>
-      <default>false</default>
+      <default>true</default>
     </entry>
     <entry name="iChannel3" type="String">
       <label>iChannel3's path</label>
