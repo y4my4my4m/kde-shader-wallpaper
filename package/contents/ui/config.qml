@@ -65,20 +65,49 @@ Kirigami.FormLayout {
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Shader speed:");
         ColumnLayout {
             Slider {
-                Layout.minimumWidth: width
-                Layout.maximumWidth: width 
-                width: 435
+                Layout.preferredWidth: Kirigami.Units.gridUnit * 16
                 from: -10.0
                 to: 10.0
                 id: speedSlider
                 stepSize: 0.01
                 value: wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0
-                onValueChanged: wallpaper.configuration.shaderSpeed = value
+                onValueChanged: {
+                    shaderSpeedField.text = String(value.toFixed(2));
+                    wallpaper.configuration.shaderSpeed = shaderSpeedField.text;
+                }
             }
         }
         ColumnLayout {
-            Label {
-                text: i18n("%1", wallpaper.configuration.shaderSpeed)
+            TextField {
+                id: shaderSpeedField
+                text: wallpaper.configuration.shaderSpeed ? String(wallpaper.configuration.shaderSpeed.toFixed(2)) : "1.00"
+                inputMethodHints: Qt.NumberInput
+                Layout.preferredWidth: Kirigami.Units.gridUnit * 3
+                onTextEdited: {
+                    let inputValue = parseFloat(text);
+                    if (isNaN(inputValue) || inputValue < speedSlider.from) {
+                        inputValue = speedSlider.from;
+                    } else if (inputValue > speedSlider.to) {
+                        inputValue = speedSlider.to;
+                    }
+                    text = inputValue.toFixed(2);
+                    speedSlider.value = inputValue;
+                    wallpaper.configuration.shaderSpeed = inputValue;
+                }
+                Keys.onPressed: {
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        shaderSpeedField.focus = false; // Unfocus the TextField
+                        event.accepted = true; // Prevent further propagation of the key event
+                    }
+                }
+                background: Rectangle {
+                    color: shaderSpeedField.activeFocus ? "white" : "transparent"
+                    border.color: shaderSpeedField.activeFocus ? "#3DAEE9" : "transparent"
+                    border.width: 1
+                    radius: 2
+                    anchors.fill: shaderSpeedField
+                    anchors.margins: -2
+                }
             }
         }
     }
@@ -293,10 +322,9 @@ Kirigami.FormLayout {
             wallpaper.configuration.warningResources_dismissed = true;
         }
     }
-
     
     Kirigami.InlineMessage {
-        Layout.fillWidth: true
+        Layout.preferredWidth: Kirigami.Units.gridUnit * 20
         text: qsTr("Submit your shaders on <a href=\"https://github.com/y4my4my4m/kde-shader-wallpaper\">Github</a> or open an issue for support/features!")
         onLinkActivated: Qt.openUrlExternally(link)
         visible: true
