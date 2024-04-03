@@ -25,38 +25,12 @@ Kirigami.FormLayout {
     // property alias cfg_fadeToNext:       checkFadeToNext.checked
     // property alias cfg_fadeToRandom:     checkFadeToRandom.checked
     property int curIndex: 0;
-
     RowLayout {
-        Label {
-            Layout.minimumWidth: width
-            Layout.maximumWidth: width
-            width: formAlignment - units.largeSpacing /2
-            horizontalAlignment: Text.AlignRight
-            text: "Select a shader file:"
-        }
-        Button {
-            id: imageButton
-            icon.name: "folder-shaders-symbolic"
-            text: i18nd("@button:toggle_select_shader", "Select File")
-            onClicked: {
-                fileDialog.open()
-            }
-        }
-    }
-
-    RowLayout {
-        Label {
-            Layout.minimumWidth: width
-            Layout.maximumWidth: width
-            width: formAlignment - units.largeSpacing /2
-            horizontalAlignment: Text.AlignRight
-            text: "Selected Shader:"
-        }
-
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Select shader:");
         ComboBox {
             id: selectedShader
             Layout.minimumWidth: width
-            Layout.maximumWidth: width
+            Layout.maximumWidth: width 
             width: 435
             model: FolderListModel {
                 id: folderListModel
@@ -79,20 +53,28 @@ Kirigami.FormLayout {
                 wallpaper.configuration.selectedShaderPath = Qt.resolvedUrl("./Shaders6/"+model.get(currentIndex, "fileName"));
             }
         }
+        Button {
+            id: shaderFileButton
+            icon.name: "folder-shaders-symbolic"
+            text: i18nd("@button:toggle_select_shader", "Select File")
+            onClicked: {
+                fileDialog.open()
+            }
+        }
+    }
+    // use Item instead to remove the line
+    Kirigami.Separator {
+        Kirigami.FormData.isSection: true
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Configuration:");
     }
 
-
     RowLayout {
-        Label {
-            Layout.minimumWidth: width
-            Layout.maximumWidth: width
-            width: formAlignment - units.largeSpacing /2
-            horizontalAlignment: Text.AlignRight
-            text: "Shader speed:"
-        }
-
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Shader speed:");
         ColumnLayout {
             Slider {
+                Layout.minimumWidth: width
+                Layout.maximumWidth: width 
+                width: 435
                 from: -10.0
                 to: 10.0
                 id: speedSlider
@@ -103,18 +85,13 @@ Kirigami.FormLayout {
         }
         ColumnLayout {
             Label {
-                text: i18n("Speed: %1", wallpaper.configuration.shaderSpeed)
+                text: i18n("%1", wallpaper.configuration.shaderSpeed)
             }
         }
     }
+
     RowLayout {
-        Label {
-            Layout.minimumWidth: width
-            Layout.maximumWidth: width
-            width: formAlignment - units.largeSpacing /2
-            horizontalAlignment: Text.AlignRight
-            text: "Mouse allowed:"
-        }
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Mouse allowed:");
         Button {
             icon.name: checked? "followmouse-symbolic" : "hidemouse-symbolic"
             text: i18nd("@button:toggle_use_mouse", checked? "Enabled" : "Disabled")
@@ -125,19 +102,39 @@ Kirigami.FormLayout {
             }
         }
     }
+    
+
+    Kirigami.Separator {
+        Kirigami.FormData.isSection: true
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Info:");
+    }
+    Kirigami.InlineMessage {
+        id: infoPlasma6Preview
+        Layout.fillWidth: true
+        type: Kirigami.MessageType.Positive
+        text: qsTr("This is an early preview!\nOfficial release will have more many more features :)")
+        visible: true
+    }
 
     Kirigami.InlineMessage {
         id: warningResources
         Layout.fillWidth: true
         type: Kirigami.MessageType.Warning
-        text: qsTr("Some shaders might consume more power than others!")
+        text: qsTr("Some shaders might consume more power than others, beware!")
         visible: true
     }
 
-    Label {
-        text: qsTr("This is super early preview!\n Plasma6's Shader-Wallpaper is on it's way! :)")
-        opacity: 1
-        wrapMode: Text.Wrap
+    Kirigami.InlineMessage {
+        id: emergencyHelp
+        Layout.fillWidth: true
+        type: Kirigami.MessageType.Information
+        text: qsTr("In case of emergency, delete folder in\n`~/.local/share/plasma/wallpaper/online.knowmad.shaderwallpaper`,\nthen run: \"pkill plasmashell && plasmashell &\" to relaunch it.\n\nUse with caution.")
+        visible: true
+    }
+    Kirigami.InlineMessage {
+        Layout.fillWidth: true
+        text: qsTr("Submit your shaders on <a href=\"https://github.com/y4my4my4m/kde-shader-wallpaper\">Github</a> or open an issue for support/features!")
+        visible: true
     }
 
     FileDialog {
