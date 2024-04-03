@@ -167,7 +167,7 @@ Kirigami.FormLayout {
             visible: iChannel1_flag.checked
             onEditingFinished: {
                 wallpaper.configuration.iChannel1 =  iChannel1Field.text;
-                ich0_thumbnail.source = wallpaper.configuration.iChannel1
+                ich1_thumbnail.source = wallpaper.configuration.iChannel1
             }
         }
 
@@ -209,7 +209,7 @@ Kirigami.FormLayout {
             visible: iChannel2_flag.checked
             onEditingFinished: {
                 wallpaper.configuration.iChannel2 =  iChannel2Field.text;
-                ich0_thumbnail.source = wallpaper.configuration.iChannel2
+                ich2_thumbnail.source = wallpaper.configuration.iChannel2
             }
         }
 
@@ -251,7 +251,7 @@ Kirigami.FormLayout {
             visible: iChannel3_flag.checked
             onEditingFinished: {
                 wallpaper.configuration.iChannel3 =  iChannel3Field.text;
-                ich0_thumbnail.source = wallpaper.configuration.iChannel3
+                ich3_thumbnail.source = wallpaper.configuration.iChannel3
             }
         }
 
