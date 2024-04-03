@@ -31,7 +31,7 @@ for root, dirs, files in os.walk(source_directory):
             try:
                 subprocess.run(cmd, check=True)
                 # If the command was successful, delete the source file
-                if (DELETE_AFTER_COMPILATION)
+                if (DELETE_AFTER_COMPILATION):
                     os.remove(source_file_path)
                 print(f"Successfully converted and deleted: {file}")
             except subprocess.CalledProcessError:
