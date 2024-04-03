@@ -1,8 +1,10 @@
 # Plasma6 - Shader Wallpaper plugin
 Shader Wallpaper is a Wallpaper Plugin that allows you to run shaders as your wallpaper.
 
-## Plasma6 edition!
+## New features!
 ![plasma6](https://github.com/y4my4my4m/kde-shader-wallpaper/assets/8145020/6e2e6807-2be5-44c3-9d35-1c560e37cf74)
+
+<video src="https://github.com/y4my4my4m/kde-shader-wallpaper/assets/8145020/144bf23c-ccc0-4f58-a753-8ee882750dfa"></video>
 
 ## Installation:
 
@@ -25,6 +27,7 @@ I'll probably maintain it on Github principally for issues/PR but I'll try my be
 - Opencode: https://www.opencode.net/y4my4my4m/kde-shader-wallpaper
 
 ### Roadmap:
+- [ ] Version 3.x - Save imported shaders, customization, better buffers/channel, shadertoy import
 - [ ] Version 3.0 - Plasma6 Edition!
 - [ ] ~Version 2.x  - Save/Load edits, better customization, better buffers/channel~
 - [x] Version 2.0.1a - Breaking bug fix regarding the pause/fullscreen feature(current version) **(current version)**
@@ -35,8 +38,8 @@ I'll probably maintain it on Github principally for issues/PR but I'll try my be
 - [x] Version 1.0  - Simply load shaders
 
 ### Notes:
-- GUI Customization is highly experimental, bugs will occur.
-- Shadertoy.com imports doesn't work on all shaders, that is because iChannels/Buffers are not fully implemented yet
+- GUI based shader customization will be back in future version
+- Shadertoy.com imports do not work anymore as Plasma6 requires shader compilation
 - Performance may vary depending of your specs, but it's actually not all that resource intensive, depends on the shader too.
 - If you modify the shader files and want to see the changes, the KDE Wallpaper QtQuick App itself needs to be restart, I recommend simply to `pkill plasmashell` and restart it.
 
