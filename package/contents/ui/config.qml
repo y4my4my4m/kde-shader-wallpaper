@@ -305,6 +305,7 @@ Kirigami.FormLayout {
     Kirigami.InlineMessage {
         Layout.fillWidth: true
         text: qsTr("Submit your shaders on <a href=\"https://github.com/y4my4my4m/kde-shader-wallpaper\">Github</a> or open an issue for support/features!")
+        onLinkActivated: Qt.openUrlExternally(link)
         visible: true
     }
 
