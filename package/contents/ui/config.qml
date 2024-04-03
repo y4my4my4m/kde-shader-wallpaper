@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls 2.3
 import org.kde.kquickcontrols as KQuickControls
 import QtQuick.Dialogs
 import QtQuick.Layouts
@@ -134,8 +134,8 @@ Kirigami.FormLayout {
             source: wallpaper.configuration.iChannel0
             fillMode: Image.PreserveAspectFit
             visible: iChannel0_flag.checked && iChannel0Field.text !== ""
-            Layout.preferredWidth: 60
-            Layout.preferredHeight: 60
+            Layout.preferredWidth: 36
+            Layout.preferredHeight: 36
         }
         Button {
             id: ich0FileButton
@@ -176,8 +176,8 @@ Kirigami.FormLayout {
             source: wallpaper.configuration.iChannel1
             fillMode: Image.PreserveAspectFit
             visible: iChannel1_flag.checked && iChannel1Field.text !== ""
-            Layout.preferredWidth: 60
-            Layout.preferredHeight: 60
+            Layout.preferredWidth: 36
+            Layout.preferredHeight: 36
         }
         Button {
             id: ich1FileButton
@@ -218,8 +218,8 @@ Kirigami.FormLayout {
             source: wallpaper.configuration.iChannel2
             fillMode: Image.PreserveAspectFit
             visible: iChannel2_flag.checked && iChannel2Field.text !== ""
-            Layout.preferredWidth: 60
-            Layout.preferredHeight: 60
+            Layout.preferredWidth: 36
+            Layout.preferredHeight: 36
         }
         Button {
             id: ich2FileButton
@@ -260,8 +260,8 @@ Kirigami.FormLayout {
             source: wallpaper.configuration.iChannel3
             fillMode: Image.PreserveAspectFit
             visible: iChannel3_flag.checked && iChannel3Field.text !== ""
-            Layout.preferredWidth: 60
-            Layout.preferredHeight: 60
+            Layout.preferredWidth: 36
+            Layout.preferredHeight: 36
         }
         Button {
             id: ich3FileButton
@@ -279,23 +279,16 @@ Kirigami.FormLayout {
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Info:");
     }
 
-
-    Button {
-        id: emergencyHelpButton
-        icon.name: "help-about-symbolic"
-        text: i18nd("@button:toggle_emergency_help", "Help!")
-        visible: !emergencyHelp.visible
-        onClicked: {
-           wallpaper.configuration.emergencyHelp_dismissed = false
-        }
-    }
-
     Kirigami.InlineMessage {
         id: infoPlasma6Preview
         Layout.fillWidth: true
         type: Kirigami.MessageType.Positive
         text: qsTr("This is an early preview!\nOfficial release will have more many more features :)")
-        visible: true
+        showCloseButton: true
+        visible: !wallpaper.configuration.infoPlasma6Preview_dismissed
+        onVisibleChanged: {
+            wallpaper.configuration.infoPlasma6Preview_dismissed = true;
+        }
     }
 
     Kirigami.InlineMessage {
@@ -303,27 +296,45 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         type: Kirigami.MessageType.Warning
         text: qsTr("Some shaders might consume more power than others, beware!")
-        visible: true
-    }
-
-    Kirigami.InlineMessage {
-        id: emergencyHelp
-        Layout.fillWidth: true
-        type: Kirigami.MessageType.Information
-        text: qsTr("In case of emergency, delete folder in\n`~/.local/share/plasma/wallpaper/online.knowmad.shaderwallpaper`,\nthen run: \"pkill plasmashell && plasmashell &\" to relaunch it.\n\nUse with caution.")
-        visible: !wallpaper.configuration.emergencyHelp_dismissed
         showCloseButton: true
+        visible: !wallpaper.configuration.warningResources_dismissed
         onVisibleChanged: {
-            wallpaper.configuration.emergencyHelp_dismissed = true;
+            wallpaper.configuration.warningResources_dismissed = true;
         }
     }
+
+    
     Kirigami.InlineMessage {
         Layout.fillWidth: true
         text: qsTr("Submit your shaders on <a href=\"https://github.com/y4my4my4m/kde-shader-wallpaper\">Github</a> or open an issue for support/features!")
         onLinkActivated: Qt.openUrlExternally(link)
         visible: true
     }
-// help-donate-usd.svg
+
+
+    Button {
+        id: emergencyHelpButton
+        icon.name: "help-about-symbolic"
+        text: i18nd("@button:toggle_emergency_help", "Help!")
+        onClicked: {
+           emergencyHelp.open()
+        }
+    }
+
+    Button {
+        id: donateButton
+        icon.name: "ko-fi"
+        icon.source: "Resources/donate.png"
+        icon.cache: false
+        // icon.color: "transparent"
+        icon.height: 32
+        icon.width: 32
+        text: i18nd("@button:donate", "Donate :)")
+        onClicked: {
+            Qt.openUrlExternally("https://ko-fi.com/I2I525V5R")
+        }
+    }
+
     FileDialog {
         id: fileDialog
         fileMode : FileDialog.OpenFile
@@ -385,6 +396,15 @@ Kirigami.FormLayout {
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
         onAccepted: {
             wallpaper.configuration.iChannel3 = selectedFile
+        }
+    }
+    Kirigami.OverlaySheet {
+        id: emergencyHelp
+        parent: applicationWindow().overlay
+        Label {
+            Layout.preferredWidth: Kirigami.Units.gridUnit * 25
+            wrapMode: Text.WordWrap
+            text: qsTr("In case of emergency:\nDelete the folder in\n`~/.local/share/plasma/wallpaper/online.knowmad.shaderwallpaper`\nthen run: \"pkill plasmashell && plasmashell &\" to restart plasmashell.\n\nUse with caution.")
         }
     }
 }
