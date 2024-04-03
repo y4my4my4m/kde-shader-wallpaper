@@ -57,7 +57,7 @@ Kirigami.FormLayout {
 
         Button {
             id: shaderFileButton
-            icon.name: "folder-shaders-symbolic"
+            icon.name: "folder-symbolic"
             text: i18nd("@button:toggle_select_shader", "Select File")
             onClicked: {
                 fileDialog.open()
@@ -279,6 +279,17 @@ Kirigami.FormLayout {
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Info:");
     }
 
+
+    Button {
+        id: emergencyHelpButton
+        icon.name: "help-about-symbolic"
+        text: i18nd("@button:toggle_emergency_help", "Help!")
+        visible: !emergencyHelp.visible
+        onClicked: {
+           wallpaper.configuration.emergencyHelp_dismissed = false
+        }
+    }
+
     Kirigami.InlineMessage {
         id: infoPlasma6Preview
         Layout.fillWidth: true
@@ -300,7 +311,11 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         type: Kirigami.MessageType.Information
         text: qsTr("In case of emergency, delete folder in\n`~/.local/share/plasma/wallpaper/online.knowmad.shaderwallpaper`,\nthen run: \"pkill plasmashell && plasmashell &\" to relaunch it.\n\nUse with caution.")
-        visible: true
+        visible: !wallpaper.configuration.emergencyHelp_dismissed
+        showCloseButton: true
+        onVisibleChanged: {
+            wallpaper.configuration.emergencyHelp_dismissed = true;
+        }
     }
     Kirigami.InlineMessage {
         Layout.fillWidth: true
@@ -308,7 +323,7 @@ Kirigami.FormLayout {
         onLinkActivated: Qt.openUrlExternally(link)
         visible: true
     }
-
+// help-donate-usd.svg
     FileDialog {
         id: fileDialog
         fileMode : FileDialog.OpenFile

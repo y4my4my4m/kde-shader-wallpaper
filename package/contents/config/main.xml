@@ -77,6 +77,18 @@
       <label>fade to random shader in folder</label>
       <default>false</default>
     </entry>
+    <entry name="infoPlasma6Preview_dismissed" type="Bool">
+      <label>Hide the infoPlasma6Preview message</label>
+      <default>false</default>
+    </entry>
+    <entry name="warningResources_dismissed" type="Bool">
+      <label>Hide the warningResources message</label>
+      <default>false</default>
+    </entry>
+    <entry name="emergencyHelp_dismissed" type="Bool">
+      <label>Hide the emergencyHelp message</label>
+      <default>false</default>
+    </entry>
   </group>
 
 </kcfg>
