@@ -9,6 +9,7 @@ import org.kde.kquickcontrols 2.0 as KQuickControls
 import org.kde.plasma.core as PlasmaCore
 import org.kde.kirigami as Kirigami
 import QtCore
+import Qt.labs.folderlistmodel 2.15
 
 Kirigami.FormLayout {
     id: root
@@ -23,64 +24,107 @@ Kirigami.FormLayout {
     // property alias cfg_iChannel3_flag:   iChannel3_flag.checked
     // property alias cfg_fadeToNext:       checkFadeToNext.checked
     // property alias cfg_fadeToRandom:     checkFadeToRandom.checked
-    // property int curIndex: 0;
+    property int curIndex: 0;
 
     RowLayout {
+        Label {
+            Layout.minimumWidth: width
+            Layout.maximumWidth: width
+            width: formAlignment - units.largeSpacing /2
+            horizontalAlignment: Text.AlignRight
+            text: "Select a shader file:"
+        }
         Button {
             id: imageButton
             icon.name: "folder-shaders-symbolic"
-            text: i18nd("@button:toggle_show_shaders", "Select shader")
+            text: i18nd("@button:toggle_select_shader", "Select File")
             onClicked: {
                 fileDialog.open()
             }
         }
-        Button {
-            icon.name: "visibility-symbolic"
-            text: i18nd("@button:toggle_show_shaders", shadersList.visible ? "Hide shaders list" : "Show shaders list")
-            checkable: true
-            checked: shadersList.visible
-            onClicked: {
-                shadersList.visible = !shadersList.visible
-            }
-        }
     }
 
     RowLayout {
-
         Label {
-            text: i18n("Speed: %1\n(default is 1.0)", wallpaper.configuration.shaderSpeed)
+            Layout.minimumWidth: width
+            Layout.maximumWidth: width
+            width: formAlignment - units.largeSpacing /2
+            horizontalAlignment: Text.AlignRight
+            text: "Selected Shader:"
         }
-        Slider {
-            from: -10.0
-            to: 10.0
-            id: speedSlider
-            stepSize: 0.01
-            value: wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0
-            onValueChanged: wallpaper.configuration.shaderSpeed = value
-        }
-    }
 
-    ColumnLayout {
-        id: shadersList
-        visible: true
-        Repeater {
-            RowLayout {
-                Button{
-                    icon.name: "edit-delete-remove"
-                    onClicked: {
-                    }
+        ComboBox {
+            id: selectedShader
+            Layout.minimumWidth: width
+            Layout.maximumWidth: width
+            width: 435
+            model: FolderListModel {
+                id: folderListModel
+                showDirs: false
+                nameFilters: ["*.frag.qsb"]
+                folder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders6/`
+            }
+            delegate: Component {
+                id: folderListDelegate
+                ItemDelegate {
+                    text: fileBaseName.replace("_"," ")
                 }
-                Label {
-                    text: index.toString() +" "
-                    wrapMode: Text.Wrap
-                    Layout.maximumWidth: 300
-                    font: Kirigami.Theme.smallFont
-                }
+            }
+
+            textRole: "fileBaseName"
+            displayText: currentText.replace("_"," ")
+
+            onCurrentTextChanged: {
+                currentIndex: curIndex;
+                wallpaper.configuration.selectedShaderPath = Qt.resolvedUrl("./Shaders6/"+model.get(currentIndex, "fileName"));
             }
         }
     }
 
 
+    RowLayout {
+        Label {
+            Layout.minimumWidth: width
+            Layout.maximumWidth: width
+            width: formAlignment - units.largeSpacing /2
+            horizontalAlignment: Text.AlignRight
+            text: "Shader speed:"
+        }
+
+        ColumnLayout {
+            Slider {
+                from: -10.0
+                to: 10.0
+                id: speedSlider
+                stepSize: 0.01
+                value: wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0
+                onValueChanged: wallpaper.configuration.shaderSpeed = value
+            }
+        }
+        ColumnLayout {
+            Label {
+                text: i18n("Speed: %1", wallpaper.configuration.shaderSpeed)
+            }
+        }
+    }
+    RowLayout {
+        Label {
+            Layout.minimumWidth: width
+            Layout.maximumWidth: width
+            width: formAlignment - units.largeSpacing /2
+            horizontalAlignment: Text.AlignRight
+            text: "Mouse allowed:"
+        }
+        Button {
+            icon.name: checked? "followmouse-symbolic" : "hidemouse-symbolic"
+            text: i18nd("@button:toggle_use_mouse", checked? "Enabled" : "Disabled")
+            checkable: true
+            checked: wallpaper.configuration.mouseAllowed
+            onClicked: {
+                wallpaper.configuration.mouseAllowed = !wallpaper.configuration.mouseAllowed
+            }
+        }
+    }
 
     Kirigami.InlineMessage {
         id: warningResources

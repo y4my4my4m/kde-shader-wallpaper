@@ -13,6 +13,10 @@
       <label>selectedShaderContent</label>
       <default></default>
     </entry>
+    <entry name="mouseAllowed" type="bool">
+      <label>Allow use of mouse in shader</label>
+      <default>true</default>
+    </entry>
     <entry name="running" type="bool">
       <label>Shader is running.</label>
       <default>true</default>

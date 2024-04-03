@@ -173,11 +173,12 @@ WallpaperItem {
             anchors.fill: parent
             hoverEnabled: true
             onPositionChanged: {
-                // shader.iMouse = Qt.vector4d(mouseX, mouseY, 0, 0)
+                if (!wallpaper.configuration.mouseAllowed) return;
                 shader.iMouse.x = mouseX
                 shader.iMouse.y = mouseY
             }
             onClicked: {
+                if (!wallpaper.configuration.mouseAllowed) return;
                 shader.iMouse.z = mouseX
                 shader.iMouse.w = mouseY
             }
