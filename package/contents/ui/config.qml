@@ -38,18 +38,17 @@ Kirigami.FormLayout {
             delegate: Component {
                 id: folderListDelegate
                 ItemDelegate {
-                    text: fileBaseName.replace("_"," ")
+                    text: fileBaseName.replace("_"," ").charAt(0).toUpperCase() + fileBaseName.replace("_"," ").slice(1)
                 }
             }
 
             textRole: "fileBaseName"
             currentIndex: wallpaper.configuration.selectedShaderIndex
-            displayText: currentIndex === -1 ? "Custom Shader" : currentText.replace("_"," ")
+            displayText: currentIndex === -1 ? "Custom Shader" : currentText.replace("_"," ").charAt(0).toUpperCase() + currentText.replace("_"," ").slice(1)
 
             onCurrentTextChanged: {
                 wallpaper.configuration.selectedShaderIndex = currentIndex;
                 if (wallpaper.configuration.selectedShaderIndex === -1) {
-                    currentIndex === -1 ? "Custom Shader" : currentText.replace("_"," ");
                     return
                 };
                 wallpaper.configuration.selectedShaderPath = Qt.resolvedUrl("./Shaders6/"+model.get(currentIndex, "fileName"));
