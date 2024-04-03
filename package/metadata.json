@@ -10,7 +10,7 @@
         "Id": "online.knowmad.shaderwallpaper",
         "License": "GPLv3+",
         "Name": "Shader",
-        "Version": "1.0",
+        "Version": "3.0",
         "Description": "Allows you to use Shaders as your wallpaper"
     },
     "X-KDE-ParentApp": "org.kde.plasmashell"
