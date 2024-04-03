@@ -312,7 +312,8 @@ Kirigami.FormLayout {
         id: fileDialog
         fileMode : FileDialog.OpenFile
         title: i18nd("@dialog_title:choose_shader", "Choose a shader")
-        nameFilters: [ "Shader files (*.frag, *.frag.qsb)", "All files (*)" ]
+        // will accept and auto convert .frag in the near future
+        nameFilters: [ "Shader files (*.frag.qsb)", "All files (*)" ]
         visible: false
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders6/`
         onAccepted: {
@@ -326,7 +327,7 @@ Kirigami.FormLayout {
     FileDialog {
         id: fileDialog_ich0
         fileMode : FileDialog.OpenFile
-        nameFilters: [ "Image files (*.png, *.jpg)", "All files (*)" ]
+        nameFilters: [ "Image files (*.png *.jpg *.gif *.webp *.apng *.svg *.tiff)", "All files (*)" ]
         visible: false
         title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
@@ -338,7 +339,7 @@ Kirigami.FormLayout {
     FileDialog {
         id: fileDialog_ich1
         fileMode : FileDialog.OpenFile
-        nameFilters: [ "Image files (*.png, *.jpg)", "All files (*)" ]
+        nameFilters: [ "Image files (*.png *.jpg *.gif *.webp *.apng *.svg *.tiff)", "All files (*)" ]
         visible: false
         title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
@@ -351,7 +352,7 @@ Kirigami.FormLayout {
     FileDialog {
         id: fileDialog_ich2
         fileMode : FileDialog.OpenFile
-        nameFilters: [ "Image files (*.png, *.jpg)", "All files (*)" ]
+        nameFilters: [ "Image files (*.png *.jpg *.gif *.webp *.apng *.svg *.tiff)", "All files (*)" ]
         visible: false
         title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
@@ -362,7 +363,7 @@ Kirigami.FormLayout {
     FileDialog {
         id: fileDialog_ich3
         fileMode : FileDialog.OpenFile
-        nameFilters: [ "Image files (*.png, *.jpg)", "All files (*)" ]
+        nameFilters: [ "Image files (*.png *.jpg *.gif *.webp *.apng *.svg *.tiff)", "All files (*)" ]
         visible: false
         title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
