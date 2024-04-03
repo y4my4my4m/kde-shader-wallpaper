@@ -89,6 +89,10 @@
       <label>Hide the emergencyHelp message</label>
       <default>false</default>
     </entry>
+    <entry name="infoiChannelSettings_dismissed" type="Bool">
+      <label>Hide the infoiChannelSettings message</label>
+      <default>false</default>
+    </entry>
   </group>
 
 </kcfg>

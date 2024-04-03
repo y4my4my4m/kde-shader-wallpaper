@@ -125,6 +125,17 @@ Kirigami.FormLayout {
         }
     }
 
+    Kirigami.InlineMessage {
+        id: infoiChannelSettings
+        Layout.fillWidth: true
+        type: Kirigami.MessageType.Info
+        text: qsTr("Different shaders use different iChannels!\nPlay with the settings below!")
+        showCloseButton: true
+        visible: !wallpaper.configuration.infoiChannelSettings_dismissed
+        onVisibleChanged: {
+            wallpaper.configuration.infoiChannelSettings_dismissed = true;
+        }
+    }
     // iChannel0
     RowLayout {
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "iChannel0:");
