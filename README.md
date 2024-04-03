@@ -1,7 +1,10 @@
+# FOR PLASMA6, CHECKOUT THE PLASMA6 BRANCH
+
 # KDE / Plasma - Shader Wallpaper plugin
 
 
 ## Shader Wallpaper is a KDE/Plasma Wallpaper Plugin that allows you to run shaders as your wallpaper.
+
 
 ### Installation:
 #### Install through KDE
