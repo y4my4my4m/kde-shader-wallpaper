@@ -43,11 +43,15 @@ Kirigami.FormLayout {
             }
 
             textRole: "fileBaseName"
-            displayText: currentText.replace("_"," ")
             currentIndex: wallpaper.configuration.selectedShaderIndex
+            displayText: currentIndex === -1 ? "Custom Shader" : currentText.replace("_"," ")
 
             onCurrentTextChanged: {
                 wallpaper.configuration.selectedShaderIndex = currentIndex;
+                if (wallpaper.configuration.selectedShaderIndex === -1) {
+                    currentIndex === -1 ? "Custom Shader" : currentText.replace("_"," ");
+                    return
+                };
                 wallpaper.configuration.selectedShaderPath = Qt.resolvedUrl("./Shaders6/"+model.get(currentIndex, "fileName"));
             }
         }
@@ -144,7 +148,8 @@ Kirigami.FormLayout {
         visible: false
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders6/`
         onAccepted: {
-            wallpaper.configuration.selectedShaderPath = selectedFile; 
+            wallpaper.configuration.selectedShaderIndex = -1;
+            wallpaper.configuration.selectedShaderPath = selectedFile;
         }
     }
 }
