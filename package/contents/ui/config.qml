@@ -1,13 +1,9 @@
 import QtQuick
-import QtQuick.Controls 2.3
-import org.kde.kquickcontrols as KQuickControls
+import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
-import QtMultimedia
 import org.kde.kirigami as Kirigami
-import org.kde.kquickcontrols 2.0 as KQuickControls
 import org.kde.plasma.core as PlasmaCore
-import org.kde.kirigami as Kirigami
 import QtCore
 import Qt.labs.folderlistmodel 2.15
 
@@ -15,20 +11,14 @@ Kirigami.FormLayout {
     id: root
     twinFormLayouts: parentLayout // required by parent
     property alias formLayout: root // required by parent
-    // property alias cfg_checkedSmartPlay: checkedSmartPlay.checked
-    // property alias cfg_iChannel0_flag:   iChannel0_flag.checked
-    // property alias cfg_iChannel1_flag:   iChannel1_flag.checked
-    // property alias cfg_iChannel2_flag:   iChannel2_flag.checked
-    // property alias cfg_iChannel3_flag:   iChannel3_flag.checked
-    // property alias cfg_fadeToNext:       checkFadeToNext.checked
-    // property alias cfg_fadeToRandom:     checkFadeToRandom.checked
+    
     RowLayout {
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Select shader:");
         ComboBox {
             id: selectedShader
             Layout.minimumWidth: width
             Layout.maximumWidth: width 
-            width: 435
+            width: 240
             model: FolderListModel {
                 id: folderListModel
                 showDirs: false
@@ -38,6 +28,7 @@ Kirigami.FormLayout {
             delegate: Component {
                 id: folderListDelegate
                 ItemDelegate {
+                    width: parent.width
                     text: fileBaseName.replace("_"," ").charAt(0).toUpperCase() + fileBaseName.replace("_"," ").slice(1)
                 }
             }
@@ -311,27 +302,31 @@ Kirigami.FormLayout {
         visible: true
     }
 
-
-    Button {
-        id: emergencyHelpButton
-        icon.name: "help-about-symbolic"
-        text: i18nd("@button:toggle_emergency_help", "Help!")
-        onClicked: {
-           emergencyHelp.open()
+    RowLayout{
+        spacing: 20
+        Button {
+            id: emergencyHelpButton
+            icon.name: "help-about-symbolic"
+            text: i18nd("@button:toggle_emergency_help", "Help!")
+            onClicked: {
+            emergencyHelp.open()
+            }
         }
-    }
 
-    Button {
-        id: donateButton
-        icon.name: "ko-fi"
-        icon.source: "Resources/donate.png"
-        icon.cache: false
-        // icon.color: "transparent"
-        icon.height: 32
-        icon.width: 32
-        text: i18nd("@button:donate", "Donate :)")
-        onClicked: {
-            Qt.openUrlExternally("https://ko-fi.com/I2I525V5R")
+        Button {
+            id: kofiButton
+            text: i18nd("@button:kofi", "Kofi")
+            contentItem: AnimatedImage {
+                source: "Resources/kofi.gif"
+                sourceSize.width: 24
+                sourceSize.height: 24
+                fillMode: Image.Pad
+                horizontalAlignment: Image.AlignLeft
+                transform: Translate { x: 4 }
+            }
+            onClicked: {
+                Qt.openUrlExternally("https://ko-fi.com/I2I525V5R")
+            }
         }
     }
 
