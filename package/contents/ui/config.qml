@@ -104,12 +104,135 @@ Kirigami.FormLayout {
             }
         }
     }
-    
+
+    // iChannel0
+    RowLayout {
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "iChannel0:");
+        CheckBox {
+            id: iChannel0_flag
+            width: 35
+            checked: false
+            onCheckedChanged: {
+                if (!checked) wallpaper.configuration.iChannel0 = ""
+                else wallpaper.configuration.iChannel0 = iChannel0Field.text;
+            }
+        }
+        TextField {
+            id: iChannel0Field
+            placeholderText: "path to iChannel0"
+            text: wallpaper.configuration.iChannel0
+            onEditingFinished: {
+                wallpaper.configuration.iChannel0 =  iChannel0Field.text;
+            }
+        }
+
+        Button {
+            id: ich0FileButton
+            icon.name: "x-shape-image-symbolic.svg"
+            text: i18nd("@button:open_ich_dialog", "Select Image")
+            onClicked: {
+                fileDialog_ich0.open()
+            }
+        }
+
+    }
+    // iChannel1
+    RowLayout {
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "iChannel1:");
+        CheckBox {
+            id: iChannel1_flag
+            width: 35
+            checked: false
+            onCheckedChanged: {
+                if (!checked) wallpaper.configuration.iChannel1 = ""
+                else wallpaper.configuration.iChannel1 = iChannel1Field.text;
+            }
+        }
+        TextField {
+            id: iChannel1Field
+            placeholderText: "path to iChannel1"
+            text: wallpaper.configuration.iChannel1
+            onEditingFinished: {
+                if(iChannel1Field.text !== "") iChannel1_flag.checked
+                wallpaper.configuration.iChannel1 = iChannel1Field.text;
+            }
+        }
+
+        Button {
+            id: ich1FileButton
+            icon.name: "x-shape-image-symbolic.svg"
+            text: i18nd("@button:open_ich_dialog", "Select Image")
+            onClicked: {
+                fileDialog_ich1.open()
+            }
+        }
+    }
+    // iChannel2
+    RowLayout {
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "iChannel2:");
+        CheckBox {
+            id: iChannel2_flag
+            width: 35
+            checked: false
+            onCheckedChanged: {
+                if (!checked) wallpaper.configuration.iChannel2 = ""
+                else wallpaper.configuration.iChannel2 = iChannel2Field.text;
+            }
+        }
+        TextField {
+            id: iChannel2Field
+            placeholderText: "path to iChannel2"
+            text: wallpaper.configuration.iChannel2
+            onEditingFinished: {
+                wallpaper.configuration.iChannel2 = iChannel2Field.text;
+            }
+        }
+
+        Button {
+            id: ich2FileButton
+            icon.name: "x-shape-image-symbolic.svg"
+            text: i18nd("@button:open_ich_dialog", "Select Image")
+            onClicked: {
+                fileDialog_ich2.open()
+            }
+        }
+    }
+    // iChannel3
+    RowLayout {
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "iChannel3:");
+        CheckBox {
+            id: iChannel3_flag
+            width: 35
+            checked: false
+            onCheckedChanged: {
+                if (!checked) wallpaper.configuration.iChannel3 = ""
+                else wallpaper.configuration.iChannel3 = iChannel3Field.text;
+            }
+        }
+        TextField {
+            id: iChannel3Field
+            placeholderText: "path to iChannel3"
+            text: wallpaper.configuration.iChannel3
+            onEditingFinished: {
+                wallpaper.configuration.iChannel3 = iChannel3Field.text;
+            }
+        }
+
+        Button {
+            id: ich3FileButton
+            icon.name: "x-shape-image-symbolic.svg"
+            text: i18nd("@button:open_ich_dialog", "Select Image")
+            onClicked: {
+                fileDialog_ich3.open()
+            }
+        }
+    }
 
     Kirigami.Separator {
         Kirigami.FormData.isSection: true
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Info:");
     }
+
     Kirigami.InlineMessage {
         id: infoPlasma6Preview
         Layout.fillWidth: true
@@ -142,13 +265,63 @@ Kirigami.FormLayout {
     FileDialog {
         id: fileDialog
         fileMode : FileDialog.OpenFile
-        title: i18nd("@dialog_title:pick_shader", "Pick a shader")
+        title: i18nd("@dialog_title:choose_shader", "Choose a shader")
         nameFilters: [ "Shader files (*.frag, *.frag.qsb)", "All files (*)" ]
         visible: false
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders6/`
         onAccepted: {
             wallpaper.configuration.selectedShaderIndex = -1;
             wallpaper.configuration.selectedShaderPath = selectedFile;
+        }
+    }
+
+
+    // TODO: re-use the same file dialog...
+    FileDialog {
+        id: fileDialog_ich0
+        fileMode : FileDialog.OpenFile
+        nameFilters: [ "Image files (*.png, *.jpg)", "All files (*)" ]
+        visible: false
+        title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
+        currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
+        onAccepted: {
+            iChannel0Field.text = selectedFile
+        }
+    }
+
+    FileDialog {
+        id: fileDialog_ich1
+        fileMode : FileDialog.OpenFile
+        nameFilters: [ "Image files (*.png, *.jpg)", "All files (*)" ]
+        visible: false
+        title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
+        currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
+        
+        onAccepted: {
+            iChannel1Field.text = fileDialog_ich1.fileUrls[0]
+        }
+    }
+
+    FileDialog {
+        id: fileDialog_ich2
+        fileMode : FileDialog.OpenFile
+        nameFilters: [ "Image files (*.png, *.jpg)", "All files (*)" ]
+        visible: false
+        title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
+        currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
+        onAccepted: {
+            iChannel2Field.text = fileDialog_ich2.fileUrls[0]
+        }
+    }
+    FileDialog {
+        id: fileDialog_ich3
+        fileMode : FileDialog.OpenFile
+        nameFilters: [ "Image files (*.png, *.jpg)", "All files (*)" ]
+        visible: false
+        title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
+        currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
+        onAccepted: {
+            iChannel3Field.text = fileDialog_ich3.fileUrls[0]
         }
     }
 }
