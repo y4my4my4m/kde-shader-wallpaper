@@ -45,6 +45,11 @@ import Qt5Compat.GraphicalEffects
 WallpaperItem {
     id: main
 
+    WindowModel {
+        id: windowModel
+        screenGeometry: main.parent.screenGeometry
+    }
+
     // Main
     ShaderEffect {
         anchors.fill: parent
@@ -189,7 +194,7 @@ WallpaperItem {
 
     Timer {
         id: timer1
-        running: true
+        running: windowModel.runShader
         triggeredOnStart: true
         interval: 16
         repeat: true
