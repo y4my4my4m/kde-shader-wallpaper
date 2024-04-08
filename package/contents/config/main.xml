@@ -19,7 +19,7 @@
     </entry>
     <entry name="mouseAllowed" type="Bool">
       <label>Allow use of mouse in shader</label>
-      <default>true</default>
+      <default>false</default>
     </entry>
     <entry name="mouseSpeedBias" type="Double">
       <label>Change the mouse's bias speed</label>
