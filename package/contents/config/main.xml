@@ -7,7 +7,7 @@
   <group name="General">
     <entry name="selectedShaderPath" type="String">
       <label>SelectedShader</label>
-      <default>Shaders6/ps3menu.frag.qsb</default>
+      <default>Shaders6/Ps3menu.frag.qsb</default>
     </entry>
     <entry name="selectedShaderContent" type="String">
       <label>selectedShaderContent</label>
@@ -19,7 +19,7 @@
     </entry>
     <entry name="mouseAllowed" type="Bool">
       <label>Allow use of mouse in shader</label>
-      <default>true</default>
+      <default>false</default>
     </entry>
     <entry name="mouseSpeedBias" type="Double">
       <label>Change the mouse's bias speed</label>
@@ -96,6 +96,18 @@
     <entry name="infoiChannelSettings_dismissed" type="Bool">
       <label>Hide the infoiChannelSettings message</label>
       <default>false</default>
+    </entry>
+    <entry name="pauseMode" type="Int">
+      <label>Shader pause mode
+        0: when existing a maximized or full-screen windows
+        1: when a visible window is active
+        2: when a window is visible
+        3: never</label>
+      <default>0</default>
+    </entry>
+    <entry name="checkActiveScreen" type="Bool">
+      <label>Whether or not check for windows from all screens instead of just the active one</label>
+      <default>true</default>
     </entry>
   </group>
 

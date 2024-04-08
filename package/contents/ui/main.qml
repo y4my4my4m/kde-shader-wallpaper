@@ -45,6 +45,11 @@ import Qt5Compat.GraphicalEffects
 WallpaperItem {
     id: main
 
+    WindowModel {
+        id: windowModel
+        screenGeometry: main.parent.screenGeometry
+    }
+
     // Main
     ShaderEffect {
         anchors.fill: parent
@@ -168,28 +173,53 @@ WallpaperItem {
         MouseArea {
             id: mouseTrackingArea
             propagateComposedEvents: true
-            preventStealing: true
-            enabled: true
+            preventStealing: false
+            enabled: wallpaper.configuration.mouseAllowed
             anchors.fill: parent
             hoverEnabled: true
-            onPositionChanged: {
-                if (!wallpaper.configuration.mouseAllowed) return;
+            onPositionChanged: (mouse) => {
+                mouse.accepted = false
                 shader.iMouse.x = mouseX * wallpaper.configuration.mouseSpeedBias
                 shader.iMouse.y = -mouseY * wallpaper.configuration.mouseSpeedBias
             }
-            onClicked: {
-                if (!wallpaper.configuration.mouseAllowed) return;
+            onClicked:(mouse) => {
+                mouse.accepted = false
                 shader.iMouse.z = mouseX
                 shader.iMouse.w = mouseY
             }
+            // this still doesnt work... guess a C++ wrapper is all that can be done?
+            onPressed:(mouse) => {
+                mouse.accepted = false
+            }
+            onPressAndHold:(mouse) => {
+                mouse.accepted = false
+            }
+            onDoubleClicked:(mouse) => {
+                mouse.accepted = false
+            }
+            onCanceled:(mouse) => {
+                mouse.accepted = false
+            }
+            onEntered:(mouse) => {
+                mouse.accepted = false
+            }
+            onExited:(mouse) => {
+                mouse.accepted = false
+            }
+            onReleased:(mouse) => {
+                mouse.accepted = false
+            }
+            onWheel: (mouse) => {
+                mouse.accepted = false
+            }
         }`,
-        parent.parent.parent,
+        parent.parent,
         "mouseTrackerArea"
     )
 
     Timer {
         id: timer1
-        running: true
+        running: wallpaper.configuration.running ? windowModel.runShader : false
         triggeredOnStart: true
         interval: 16
         repeat: true
