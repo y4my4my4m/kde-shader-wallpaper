@@ -13,7 +13,7 @@ Kirigami.FormLayout {
     property alias formLayout: root // required by parent
     property alias cfg_pauseMode: pauseModeCombo.currentIndex
     property bool cfg_isPaused: runningCombo.checked
-    
+
     RowLayout {
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Select shader:");
         ComboBox {
@@ -36,15 +36,15 @@ Kirigami.FormLayout {
             }
 
             textRole: "fileBaseName"
-            currentIndex: wallpaper.configuration.selectedShaderIndex
+            currentIndex: cfg_selectedShaderIndex
             displayText: currentIndex === -1 ? "Custom Shader" : currentText.replace("_"," ").charAt(0).toUpperCase() + currentText.replace("_"," ").slice(1)
 
             onCurrentTextChanged: {
-                wallpaper.configuration.selectedShaderIndex = currentIndex;
-                if (wallpaper.configuration.selectedShaderIndex === -1) {
+                cfg_selectedShaderIndex = currentIndex;
+                if (cfg_selectedShaderIndex === -1) {
                     return
                 };
-                wallpaper.configuration.selectedShaderPath = Qt.resolvedUrl("./Shaders6/"+model.get(currentIndex, "fileName"));
+                cfg_selectedShaderPath = Qt.resolvedUrl("./Shaders6/"+model.get(currentIndex, "fileName"));
             }
         }
 
@@ -81,10 +81,10 @@ Kirigami.FormLayout {
     CheckBox {
         id: activeScreenOnlyCheckbx
         Kirigami.FormData.label: i18nd("@checkbox:screen_filter", "Filter:")
-        checked: wallpaper.configuration.checkActiveScreen
+        checked: cfg_checkActiveScreen
         text: i18n("Only check for windows in active screen")
         onCheckedChanged: {
-            wallpaper.configuration.checkActiveScreen = checked
+            cfg_checkActiveScreen = checked
         }
     }
     // use Item instead to remove the line
@@ -97,10 +97,10 @@ Kirigami.FormLayout {
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", cfg_isPaused ? "Playing" : "Paused");
         CheckBox {
             id: runningCombo
-            checked: wallpaper.configuration.running
+            checked: cfg_running
             text: i18n("Play/Pause the shader")
             onCheckedChanged: {
-                wallpaper.configuration.running = checked
+                cfg_running = checked
             }
         }
     }
@@ -114,17 +114,17 @@ Kirigami.FormLayout {
                 to: 10.0
                 id: speedSlider
                 stepSize: 0.01
-                value: wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0
+                value: cfg_shaderSpeed ? cfg_shaderSpeed : 1.0
                 onValueChanged: {
                     shaderSpeedField.text = String(value.toFixed(2));
-                    wallpaper.configuration.shaderSpeed = shaderSpeedField.text;
+                    cfg_shaderSpeed = shaderSpeedField.text;
                 }
             }
         }
         ColumnLayout {
             TextField {
                 id: shaderSpeedField
-                text: wallpaper.configuration.shaderSpeed ? String(wallpaper.configuration.shaderSpeed.toFixed(2)) : "1.00"
+                text: cfg_shaderSpeed ? String(cfg_shaderSpeed.toFixed(2)) : "1.00"
                 inputMethodHints: Qt.NumberInput
                 Layout.preferredWidth: Kirigami.Units.gridUnit * 3
                 onEditingFinished: {
@@ -136,7 +136,7 @@ Kirigami.FormLayout {
                     }
                     text = inputValue.toFixed(2);
                     speedSlider.value = inputValue;
-                    wallpaper.configuration.shaderSpeed = inputValue;
+                    cfg_shaderSpeed = inputValue;
                 }
                 Keys.onPressed: {
                     if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
@@ -162,9 +162,9 @@ Kirigami.FormLayout {
             icon.name: checked? "followmouse-symbolic" : "hidemouse-symbolic"
             text: i18nd("@button:toggle_use_mouse", checked? "Enabled" : "Disabled")
             checkable: true
-            checked: wallpaper.configuration.mouseAllowed
+            checked: cfg_mouseAllowed
             onClicked: {
-                wallpaper.configuration.mouseAllowed = !wallpaper.configuration.mouseAllowed
+                cfg_mouseAllowed = !cfg_mouseAllowed
             }
             ToolTip.visible: hovered
             ToolTip.text: qsTr("Enabling this will allow the shader to interact with the cursor but will prevent interaction with desktop elements")
@@ -172,7 +172,7 @@ Kirigami.FormLayout {
     }
 
     RowLayout {
-        visible: wallpaper.configuration.mouseAllowed
+        visible: cfg_mouseAllowed
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Mouse bias:");
         ColumnLayout {
             Slider {
@@ -181,17 +181,17 @@ Kirigami.FormLayout {
                 to: 10.0
                 id: mouseBiasSlider
                 stepSize: 0.01
-                value: wallpaper.configuration.mouseSpeedBias ? wallpaper.configuration.mouseSpeedBias : 1.0
+                value: cfg_mouseSpeedBias ? cfg_mouseSpeedBias : 1.0
                 onValueChanged: {
                     mouseBiasField.text = String(value.toFixed(2));
-                    wallpaper.configuration.mouseSpeedBias = mouseBiasField.text;
+                    cfg_mouseSpeedBias = mouseBiasField.text;
                 }
             }
         }
         ColumnLayout {
             TextField {
                 id: mouseBiasField
-                text: wallpaper.configuration.mouseSpeedBias ? String(wallpaper.configuration.mouseSpeedBias.toFixed(2)) : "1.00"
+                text: cfg_mouseSpeedBias ? String(cfg_mouseSpeedBias.toFixed(2)) : "1.00"
                 inputMethodHints: Qt.NumberInput
                 Layout.preferredWidth: Kirigami.Units.gridUnit * 3
                 onEditingFinished: {
@@ -203,10 +203,10 @@ Kirigami.FormLayout {
                     }
                     text = inputValue.toFixed(2);
                     mouseBiasSlider.value = inputValue;
-                    wallpaper.configuration.mouseSpeedBias = inputValue;
+                    cfg_mouseSpeedBias = inputValue;
                 }
                 Keys.onPressed: {
-                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                    if (event.key === Qt.Key_Return or event.key === Qt.Key_Enter) {
                         mouseBiasField.focus = false; // Unfocus the TextField
                         event.accepted = true; // Prevent further propagation of the key event
                     }
@@ -229,9 +229,9 @@ Kirigami.FormLayout {
         type: Kirigami.MessageType.Info
         text: qsTr("Different shaders use different iChannels!\nPlay with the settings below!")
         showCloseButton: true
-        visible: !wallpaper.configuration.infoiChannelSettings_dismissed
+        visible: !cfg_infoiChannelSettings_dismissed
         onVisibleChanged: {
-            wallpaper.configuration.infoiChannelSettings_dismissed = true;
+            cfg_infoiChannelSettings_dismissed = true;
         }
     }
     // iChannel0
@@ -240,26 +240,26 @@ Kirigami.FormLayout {
         CheckBox {
             id: iChannel0_flag
             width: 35
-            checked: wallpaper.configuration.iChannel0_flag
+            checked: cfg_iChannel0_flag
             onCheckedChanged: {
-                wallpaper.configuration.iChannel0_flag = checked
-                wallpaper.configuration.iChannel0 = iChannel0Field.text;
+                cfg_iChannel0_flag = checked
+                cfg_iChannel0 = iChannel0Field.text;
             }
         }
         TextField {
             id: iChannel0Field
             placeholderText: "path to iChannel0"
-            text: wallpaper.configuration.iChannel0
+            text: cfg_iChannel0
             visible: iChannel0_flag.checked
             onEditingFinished: {
-                wallpaper.configuration.iChannel0 =  iChannel0Field.text;
-                ich0_thumbnail.source = wallpaper.configuration.iChannel0
+                cfg_iChannel0 =  iChannel0Field.text;
+                ich0_thumbnail.source = cfg_iChannel0
             }
         }
 
         Image {
             id: ich0_thumbnail
-            source: wallpaper.configuration.iChannel0
+            source: cfg_iChannel0
             fillMode: Image.PreserveAspectFit
             visible: iChannel0_flag.checked && iChannel0Field.text !== ""
             Layout.preferredWidth: 36
@@ -281,26 +281,26 @@ Kirigami.FormLayout {
         CheckBox {
             id: iChannel1_flag
             width: 35
-            checked: wallpaper.configuration.iChannel1_flag
+            checked: cfg_iChannel1_flag
             onCheckedChanged: {
-                wallpaper.configuration.iChannel1_flag = checked
-                wallpaper.configuration.iChannel1 = iChannel1Field.text;
+                cfg_iChannel1_flag = checked
+                cfg_iChannel1 = iChannel1Field.text;
             }
         }
         TextField {
             id: iChannel1Field
             placeholderText: "path to iChannel1"
-            text: wallpaper.configuration.iChannel1
+            text: cfg_iChannel1
             visible: iChannel1_flag.checked
             onEditingFinished: {
-                wallpaper.configuration.iChannel1 =  iChannel1Field.text;
-                ich1_thumbnail.source = wallpaper.configuration.iChannel1
+                cfg_iChannel1 =  iChannel1Field.text;
+                ich1_thumbnail.source = cfg_iChannel1
             }
         }
 
         Image {
             id: ich1_thumbnail
-            source: wallpaper.configuration.iChannel1
+            source: cfg_iChannel1
             fillMode: Image.PreserveAspectFit
             visible: iChannel1_flag.checked && iChannel1Field.text !== ""
             Layout.preferredWidth: 36
@@ -322,26 +322,26 @@ Kirigami.FormLayout {
         CheckBox {
             id: iChannel2_flag
             width: 35
-            checked: wallpaper.configuration.iChannel2_flag
+            checked: cfg_iChannel2_flag
             onCheckedChanged: {
-                wallpaper.configuration.iChannel2_flag = checked
-                wallpaper.configuration.iChannel2 = iChannel2Field.text;
+                cfg_iChannel2_flag = checked
+                cfg_iChannel2 = iChannel2Field.text;
             }
         }
         TextField {
             id: iChannel2Field
             placeholderText: "path to iChannel2"
-            text: wallpaper.configuration.iChannel2
+            text: cfg_iChannel2
             visible: iChannel2_flag.checked
             onEditingFinished: {
-                wallpaper.configuration.iChannel2 =  iChannel2Field.text;
-                ich2_thumbnail.source = wallpaper.configuration.iChannel2
+                cfg_iChannel2 =  iChannel2Field.text;
+                ich2_thumbnail.source = cfg_iChannel2
             }
         }
 
         Image {
             id: ich2_thumbnail
-            source: wallpaper.configuration.iChannel2
+            source: cfg_iChannel2
             fillMode: Image.PreserveAspectFit
             visible: iChannel2_flag.checked && iChannel2Field.text !== ""
             Layout.preferredWidth: 36
@@ -363,26 +363,26 @@ Kirigami.FormLayout {
         CheckBox {
             id: iChannel3_flag
             width: 35
-            checked: wallpaper.configuration.iChannel3_flag
+            checked: cfg_iChannel3_flag
             onCheckedChanged: {
-                wallpaper.configuration.iChannel3_flag = checked
-                wallpaper.configuration.iChannel3 = iChannel3Field.text;
+                cfg_iChannel3_flag = checked
+                cfg_iChannel3 = iChannel3Field.text;
             }
         }
         TextField {
             id: iChannel3Field
             placeholderText: "path to iChannel3"
-            text: wallpaper.configuration.iChannel3
+            text: cfg_iChannel3
             visible: iChannel3_flag.checked
             onEditingFinished: {
-                wallpaper.configuration.iChannel3 =  iChannel3Field.text;
-                ich3_thumbnail.source = wallpaper.configuration.iChannel3
+                cfg_iChannel3 =  iChannel3Field.text;
+                ich3_thumbnail.source = cfg_iChannel3
             }
         }
 
         Image {
             id: ich3_thumbnail
-            source: wallpaper.configuration.iChannel3
+            source: cfg_iChannel3
             fillMode: Image.PreserveAspectFit
             visible: iChannel3_flag.checked && iChannel3Field.text !== ""
             Layout.preferredWidth: 36
@@ -410,9 +410,9 @@ Kirigami.FormLayout {
         type: Kirigami.MessageType.Positive
         text: qsTr("This is an early preview!\nOfficial release will have more many more features :)")
         showCloseButton: true
-        visible: !wallpaper.configuration.infoPlasma6Preview_dismissed
+        visible: !cfg_infoPlasma6Preview_dismissed
         onVisibleChanged: {
-            wallpaper.configuration.infoPlasma6Preview_dismissed = true;
+            cfg_infoPlasma6Preview_dismissed = true;
         }
     }
 
@@ -422,9 +422,9 @@ Kirigami.FormLayout {
         type: Kirigami.MessageType.Warning
         text: qsTr("Some shaders might consume more power than others, beware!")
         showCloseButton: true
-        visible: !wallpaper.configuration.warningResources_dismissed
+        visible: !cfg_warningResources_dismissed
         onVisibleChanged: {
-            wallpaper.configuration.warningResources_dismissed = true;
+            cfg_warningResources_dismissed = true;
         }
     }
 
@@ -488,8 +488,8 @@ Kirigami.FormLayout {
         visible: false
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders6/`
         onAccepted: {
-            wallpaper.configuration.selectedShaderIndex = -1;
-            wallpaper.configuration.selectedShaderPath = selectedFile;
+            cfg_selectedShaderIndex = -1;
+            cfg_selectedShaderPath = selectedFile;
         }
     }
 
@@ -503,7 +503,7 @@ Kirigami.FormLayout {
         title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
         onAccepted: {
-            wallpaper.configuration.iChannel0 = selectedFile
+            cfg_iChannel0 = selectedFile
         }
     }
 
@@ -516,7 +516,7 @@ Kirigami.FormLayout {
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
         
         onAccepted: {
-            wallpaper.configuration.iChannel1 = selectedFile
+            cfg_iChannel1 = selectedFile
         }
     }
 
@@ -528,7 +528,7 @@ Kirigami.FormLayout {
         title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
         onAccepted: {
-            wallpaper.configuration.iChannel2 = selectedFile
+            cfg_iChannel2 = selectedFile
         }
     }
     FileDialog {
@@ -539,7 +539,7 @@ Kirigami.FormLayout {
         title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
         onAccepted: {
-            wallpaper.configuration.iChannel3 = selectedFile
+            cfg_iChannel3 = selectedFile
         }
     }
     Kirigami.OverlaySheet {
