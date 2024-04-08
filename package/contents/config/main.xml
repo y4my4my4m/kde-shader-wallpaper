@@ -58,7 +58,7 @@
       <default>./Resources/Shadertoy_Organic_2.jpg</default>
     </entry>
     <entry name="iChannel2_flag" type="Bool">
-      <label>iChannel0 on/off flag</label>
+      <label>iChannel2 on/off flag</label>
       <default>true</default>
     </entry>
     <entry name="iChannel3" type="String">
