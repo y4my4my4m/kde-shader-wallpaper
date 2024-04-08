@@ -11,6 +11,7 @@ Kirigami.FormLayout {
     id: root
     twinFormLayouts: parentLayout // required by parent
     property alias formLayout: root // required by parent
+    property alias cfg_pauseMode: pauseModeCombo.currentIndex
     
     RowLayout {
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Select shader:");
@@ -53,6 +54,36 @@ Kirigami.FormLayout {
             onClicked: {
                 fileDialog.open()
             }
+        }
+    }
+    ComboBox {
+        Kirigami.FormData.label: i18nd("@buttonGroup:pause_mode", "Pause:")
+        id: pauseModeCombo
+        model: [
+            {
+                'label': i18nd("@option:pause_mode", "Maximized or full-screen windows")
+            },
+            {
+                'label': i18nd("@option:pause_mode", "Active window is present")
+            },
+            {
+                'label': i18nd("@option:pause_mode", "At least one window is shown")
+            },
+            {
+                'label': i18nd("@option:pause_mode", "Never")
+            }
+        ]
+        textRole: "label"
+        onCurrentIndexChanged: cfg_pauseMode = currentIndex
+        currentIndex: cfg_pauseMode
+    }
+    CheckBox {
+        id: activeScreenOnlyCheckbx
+        Kirigami.FormData.label: i18nd("@checkbox:screen_filter", "Filter:")
+        checked: wallpaper.configuration.checkActiveScreen
+        text: i18n("Only check for windows in active screen")
+        onCheckedChanged: {
+            wallpaper.configuration.checkActiveScreen = checked
         }
     }
     // use Item instead to remove the line
