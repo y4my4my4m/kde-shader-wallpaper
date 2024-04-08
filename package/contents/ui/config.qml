@@ -12,6 +12,7 @@ Kirigami.FormLayout {
     twinFormLayouts: parentLayout // required by parent
     property alias formLayout: root // required by parent
     property alias cfg_pauseMode: pauseModeCombo.currentIndex
+    property bool cfg_isPaused: runningCombo.checked
     
     RowLayout {
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Select shader:");
@@ -92,6 +93,18 @@ Kirigami.FormLayout {
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Configuration:");
     }
 
+    RowLayout{
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", cfg_isPaused ? "Playing" : "Paused");
+        CheckBox {
+            id: runningCombo
+            checked: wallpaper.configuration.running
+            text: i18n("Play/Pause the shader")
+            onCheckedChanged: {
+                wallpaper.configuration.running = checked
+            }
+        }
+    }
+
     RowLayout {
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Shader speed:");
         ColumnLayout {
@@ -153,6 +166,8 @@ Kirigami.FormLayout {
             onClicked: {
                 wallpaper.configuration.mouseAllowed = !wallpaper.configuration.mouseAllowed
             }
+            ToolTip.visible: hovered
+            ToolTip.text: qsTr("Enabling this will allow the shader to interact with the cursor but will prevent interaction with desktop elements")
         }
     }
 

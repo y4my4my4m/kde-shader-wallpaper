@@ -219,7 +219,7 @@ WallpaperItem {
 
     Timer {
         id: timer1
-        running: windowModel.runShader
+        running: wallpaper.configuration.running ? windowModel.runShader : false
         triggeredOnStart: true
         interval: 16
         repeat: true
