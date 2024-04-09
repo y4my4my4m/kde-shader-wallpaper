@@ -138,6 +138,7 @@ Kirigami.FormLayout {
                 value: cfg_shaderSpeed ? cfg_shaderSpeed : 1.0
                 onValueChanged: {
                     shaderSpeedField.text = String(value.toFixed(2));
+                    wallpaper.configuration.shaderSpeed = shaderSpeedField.text;
                     cfg_shaderSpeed = shaderSpeedField.text;
                 }
             }
@@ -157,6 +158,7 @@ Kirigami.FormLayout {
                     }
                     text = inputValue.toFixed(2);
                     speedSlider.value = inputValue;
+                    wallpaper.configuration.shaderSpeed = inputValue;
                     cfg_shaderSpeed = inputValue;
                 }
                 Keys.onPressed: {
@@ -185,7 +187,8 @@ Kirigami.FormLayout {
             checkable: true
             checked: cfg_mouseAllowed
             onClicked: {
-                cfg_mouseAllowed = !cfg_mouseAllowed
+                wallpaper.configuration.mouseAllowed = !cfg_mouseAllowed;
+                cfg_mouseAllowed = !cfg_mouseAllowed;
             }
             ToolTip.visible: hovered
             ToolTip.text: qsTr("Enabling this will allow the shader to interact with the cursor but will prevent interaction with desktop elements")
@@ -205,6 +208,7 @@ Kirigami.FormLayout {
                 value: cfg_mouseSpeedBias ? cfg_mouseSpeedBias : 1.0
                 onValueChanged: {
                     mouseBiasField.text = String(value.toFixed(2));
+                    wallpaper.configuration.mouseBias = mouseBiasField.text;
                     cfg_mouseSpeedBias = mouseBiasField.text;
                 }
             }
@@ -224,6 +228,7 @@ Kirigami.FormLayout {
                     }
                     text = inputValue.toFixed(2);
                     mouseBiasSlider.value = inputValue;
+                    wallpaper.configuration.mouseBias = inputValue;
                     cfg_mouseSpeedBias = inputValue;
                 }
                 Keys.onPressed: {
