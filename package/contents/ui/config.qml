@@ -13,6 +13,25 @@ Kirigami.FormLayout {
     property alias formLayout: root // required by parent
     property alias cfg_pauseMode: pauseModeCombo.currentIndex
     property bool cfg_isPaused: runningCombo.checked
+    property int cfg_selectedShaderIndex: -1
+    property string cfg_iChannel0: wallpaper.configuration.iChannel0
+    property string cfg_iChannel1: wallpaper.configuration.iChannel1
+    property string cfg_iChannel2: wallpaper.configuration.iChannel2
+    property string cfg_iChannel3: wallpaper.configuration.iChannel3
+    property bool cfg_iChannel0_flag: wallpaper.configuration.iChannel0_flag
+    property bool cfg_iChannel1_flag: wallpaper.configuration.iChannel1_flag
+    property bool cfg_iChannel2_flag: wallpaper.configuration.iChannel2_flag
+    property bool cfg_iChannel3_flag: wallpaper.configuration.iChannel3_flag
+    property string cfg_selectedShaderPath: wallpaper.configuration.selectedShaderPath
+    property double cfg_shaderSpeed: wallpaper.configuration.shaderSpeed
+    property double cfg_mouseSpeedBias: wallpaper.configuration.mouseSpeedBias
+    property bool cfg_mouseAllowed: wallpaper.configuration.mouseAllowed
+    property bool cfg_infoPlasma6Preview_dismissed: wallpaper.configuration.infoPlasma6Preview_dismissed
+    property bool cfg_warningResources_dismissed: wallpaper.configuration.warningResources_dismissed
+    property bool cfg_emergencyHelp_dismissed: wallpaper.configuration.emergencyHelp_dismissed
+    property bool cfg_infoiChannelSettings_dismissed: wallpaper.configuration.infoiChannelSettings_dismissed
+    property bool cfg_checkActiveScreen: wallpaper.configuration.checkActiveScreen
+    property bool cfg_running: wallpaper.configuration.running
 
     RowLayout {
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Select shader:");
@@ -44,6 +63,7 @@ Kirigami.FormLayout {
                 if (cfg_selectedShaderIndex === -1) {
                     return
                 };
+                wallpaper.configuration.selectedShaderPath = Qt.resolvedUrl("./Shaders6/"+model.get(currentIndex, "fileName"));
                 cfg_selectedShaderPath = Qt.resolvedUrl("./Shaders6/"+model.get(currentIndex, "fileName"));
             }
         }
@@ -100,6 +120,7 @@ Kirigami.FormLayout {
             checked: cfg_running
             text: i18n("Play/Pause the shader")
             onCheckedChanged: {
+                wallpaper.configuration.running = checked
                 cfg_running = checked
             }
         }
@@ -206,7 +227,7 @@ Kirigami.FormLayout {
                     cfg_mouseSpeedBias = inputValue;
                 }
                 Keys.onPressed: {
-                    if (event.key === Qt.Key_Return or event.key === Qt.Key_Enter) {
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         mouseBiasField.focus = false; // Unfocus the TextField
                         event.accepted = true; // Prevent further propagation of the key event
                     }
