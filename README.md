@@ -31,8 +31,9 @@ I'll probably maintain it on Github principally for issues/PR but I'll try my be
 - Opencode: https://www.opencode.net/y4my4my4m/kde-shader-wallpaper
 
 ### Roadmap:
-- [ ] Version 3.x - Save imported shaders, customization, better buffers/channel, shadertoy import, play/stop, fullscreen detection
-- [x] Version 3.0 - Plasma6 Edition!
+- [ ] Version 3.x.x - Save imported shaders, customization, better buffers/channel, shadertoy import
+- [x] Version 3.0.1 - Play/stop, fullscreen detection, screenlock, various fixes
+- [x] Version 3.0.0 - Plasma6 Edition!
 - [x] Version 2.0.1a - Breaking bug fix regarding the pause/fullscreen feature(current version) **(current version)**
 - [x] Version 2.0a - Customize shaders via GUI, directly load shaders from shadertoy.com or file
 - [x] Version 1.3  - 70 new shaders + autolisting
