@@ -32,15 +32,9 @@ import QtQuick.Controls
 import org.kde.plasma.core
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.plasma.extras as PlasmaExtras
-
 import org.kde.plasma.plasmoid
-import org.kde.plasma.core as PlasmaCore
-
 import org.kde.plasma.plasma5support as P5Support
-import org.kde.plasma.plasmoid
 import Qt5Compat.GraphicalEffects
-
-//import "./Components"
 
 WallpaperItem {
     id: main
@@ -52,124 +46,64 @@ WallpaperItem {
 
     // Main
     ShaderEffect {
-        anchors.fill: parent
         id: shader
-        property vector3d       iResolution: (wallpaper.width, wallpaper.height, 0);
-        property real           iTime: 0
-        property int            iFrame: 10
-        property vector4d       iMouse;
-        property var            iDate;
-        // property var            iChannel0: bufferAOutput; //only Image or ShaderEffectSource
+        anchors.fill: parent
+        property vector3d iResolution: (wallpaper.width, wallpaper.height, 0)
+        property real iTime: 0
+        property int iFrame: 10
+        property vector4d iMouse
+        property var iDate
 
-        property var            iChannel0: wallpaper.configuration.iChannel0_flag ? ich0 : "";
-        property var            iChannel1: wallpaper.configuration.iChannel1_flag ? ich1 : "";
-        property var            iChannel2: wallpaper.configuration.iChannel2_flag ? ich2 : "";
-        property var            iChannel3: wallpaper.configuration.iChannel3_flag ? ich3 : "";
-        
-        property var            iChannelResolution: [
-            calcResolution(iChannel0),
-            calcResolution(iChannel1),
-            calcResolution(iChannel2),
-            calcResolution(iChannel3)
-        ]
+        property var iChannel0: wallpaper.configuration.iChannel0_flag ? ich0 : ""
+        property var iChannel1: wallpaper.configuration.iChannel1_flag ? ich1 : ""
+        property var iChannel2: wallpaper.configuration.iChannel2_flag ? ich2 : ""
+        property var iChannel3: wallpaper.configuration.iChannel3_flag ? ich3 : ""
+
+        property var iChannelResolution: [calcResolution(iChannel0), calcResolution(iChannel1), calcResolution(iChannel2), calcResolution(iChannel3)]
         readonly property vector3d defaultResolution: Qt.vector3d(shader.width, shader.height, shader.width / shader.height)
         function calcResolution(channel) {
             if (channel) {
                 // return Qt.vector3d(channel.width, channel.height, channel.width / channel.height);
 
-                return Qt.vector3d(1920, 1080, 1920 / 1080);
+                return Qt.vector3d(1920, 1080, 1920 / 1080); // Magic numbers?
             } else {
-
                 return Qt.vector3d(1920, 1080, 1920 / 1080);
                 // return defaultResolution;
             }
         }
-        // Qt.vector3d(channel.width, channel.height, channel.width / channel.height);
-        // property var         bufferA: bufferAOutput
-        // property real        iTimeDelta: 100
-        // property real        iFrameRate
-        // property double      shaderSpeed: 1.0
-        // property var         iChannelTime: [0, 1, 2, 3]
-        // property var         iChannelResolution: [calcResolution(iChannel0), calcResolution(iChannel1), calcResolution(iChannel2), calcResolution(iChannel3)]
 
         fragmentShader: Qt.resolvedUrl(wallpaper.configuration.selectedShaderPath)
-        // fragmentShader: "Shaders6/kaleidoscope.frag.qsb"
 
         Image {
             id: ich0
-            // source: wallpaper.configuration.iChannel0_flag ? Qt.resolvedUrl(wallpaper.configuration.iChannel0) : ''
             source: Qt.resolvedUrl(wallpaper.configuration.iChannel0)
-            visible:false
+            visible: false
         }
         Image {
             id: ich1
-            // source: wallpaper.configuration.iChannel1_flag ? Qt.resolvedUrl(wallpaper.configuration.iChannel1) : ''
             source: Qt.resolvedUrl(wallpaper.configuration.iChannel1)
-            visible:false
+            visible: false
         }
         Image {
             id: ich2
-            // source: wallpaper.configuration.iChannel2_flag ? Qt.resolvedUrl(wallpaper.configuration.iChannel2) : ''
             source: Qt.resolvedUrl(wallpaper.configuration.iChannel2)
-            visible:false
+            visible: false
         }
         Image {
             id: ich3
-            // source: wallpaper.configuration.iChannel3_flag ? Qt.resolvedUrl(wallpaper.configuration.iChannel3) : ''
             source: Qt.resolvedUrl(wallpaper.configuration.iChannel3)
             visible: false
         }
-        // ShaderEffectSource {
-        //     id: iChannel0Source
-        //     live: true
-        //     hideSource: true
-        //     sourceItem: Image {}
-        // }
         Component.onCompleted: {
             // initialize properties
             // TODO: call on change if screenresized? or is KDE smart? :thinking:
+            // seems to already be resolution responsive
             iResolution.x = wallpaper.width;
             iResolution.y = wallpaper.height;
-            // for (var property in wallpaper) {
-            //     console.log(property + ": " + wallpaper[property]);
-            // }
         }
     }
 
-    // ShaderEffectSource {
-    //     id: mainOutput
-    //     sourceItem: shader
-    //     width: shader.width
-    //     height: shader.height
-    //     recursive: true
-    //     hideSource: true
-    //     live: true
-    // }
-    // Buffer A
-    // ShaderEffect {
-    //     id: bufferAEffect
-    //     anchors.fill: parent
-    //     property vector3d       iResolution: (wallpaper.width, wallpaper.height, 0);
-    //     property real           iTime: shader.iTime
-    //     property int            iFrame: shader.iFrame
-    //     property vector4d       iMouse: shader.iMouse
-    //     property var            iDate;
-    //     property var            iChannel0: bufferAOutput;
-    //     fragmentShader: "Shaders6/wave_propagation_bufferA.frag.qsb"
-    // }
-    // ShaderEffectSource {
-    //     id: bufferAOutput
-    //     sourceItem: bufferAEffect
-    //     width: bufferAEffect.width
-    //     height: bufferAEffect.height
-    //     recursive: true
-    //     hideSource: true
-    //     live: true
-    // }
-
-
-    Component.onCompleted: Qt.createQmlObject(
-        `import QtQuick
+    Component.onCompleted: Qt.createQmlObject(`import QtQuick
         MouseArea {
             id: mouseTrackingArea
             propagateComposedEvents: true
@@ -212,10 +146,7 @@ WallpaperItem {
             onWheel: (mouse) => {
                 mouse.accepted = false
             }
-        }`,
-        parent.parent,
-        "mouseTrackerArea"
-    )
+        }`, parent.parent, "mouseTrackerArea")
 
     Timer {
         id: timer1
@@ -226,28 +157,17 @@ WallpaperItem {
         onTriggered: {
             var now = new Date();
             var year = now.getFullYear();
-            var month = now.getMonth() +1;
+            var month = now.getMonth() + 1;
             var day = now.getDate();
             var hour = now.getHours();
             var minute = now.getMinutes();
             var second = now.getSeconds();
-            // console.log(iDateTime);
-            var now = new Date();
             var startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
             var secondsSinceMidnight = (now - startOfDay) / 1000;
-            // for (var property in shader.parent.parent.parent.parent) {
 
-            //     console.log(property + ": " + shader.parent.parent.parent.parent[property])
-            // }
-            // console.log(shader.iMouse.w, shader.iMouse.z);
-            // bufferAEffect.iTime = += 0.016 * (wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0);
             shader.iTime += 0.016 * (wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0);
-
-            // bufferAEffect.iFrame += 1;
             shader.iFrame += 1;
-
             shader.iDate = Qt.vector4d(0., 0., 0., secondsSinceMidnight);
-
         }
     }
 }

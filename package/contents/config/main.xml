@@ -109,6 +109,10 @@
       <label>Whether or not check for windows from all screens instead of just the active one</label>
       <default>true</default>
     </entry>
+    <entry name="excludeWindows" type="StringList">
+      <label>A list of app-IDs whose windows to exclude from triggering pauseMode.</label>
+      <default></default>
+    </entry>
   </group>
 
 </kcfg>
