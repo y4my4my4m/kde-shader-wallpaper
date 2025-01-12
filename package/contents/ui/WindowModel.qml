@@ -22,7 +22,6 @@ import QtQuick
 import org.kde.taskmanager 0.1 as TaskManager
 
 Item {
-
     id: wModel
     property var screenGeometry
     property int pauseMode: wallpaper.configuration.pauseMode
@@ -31,40 +30,42 @@ Item {
     property bool visibleExists: false
     property bool activeExists: false
     property var abstractTasksModel: TaskManager.AbstractTasksModel
+    property var appId: abstractTasksModel.AppId
     property var isMaximized: abstractTasksModel.IsMaximized
     property var isActive: abstractTasksModel.IsActive
     property var isWindow: abstractTasksModel.IsWindow
     property var isFullScreen: abstractTasksModel.IsFullScreen
     property var isMinimized: abstractTasksModel.IsMinimized
     property bool activeScreenOnly: wallpaper.configuration.checkActiveScreen
+    property var excludeWindows: wallpaper.configuration.excludeWindows
 
     Connections {
         target: wallpaper.configuration
         function onValueChanged() {
-            updateWindowsinfo()
+            updateWindowsInfo();
         }
     }
 
     onPauseModeChanged: {
-        updateWindowsinfo()
+        updateWindowsInfo();
     }
 
     function updateRun() {
-        let shouldRun = true
-        switch(pauseMode) {
-            case 0:
-                shouldRun = !maximizedExists
-                break
-            case 1:
-                shouldRun = !activeExists
-                break
-            case 2:
-                shouldRun = !visibleExists
-                break
-            case 3:
-                shouldRun = true
+        let shouldRun = true;
+        switch (pauseMode) {
+        case 0:
+            shouldRun = !maximizedExists;
+            break;
+        case 1:
+            shouldRun = !activeExists;
+            break;
+        case 2:
+            shouldRun = !visibleExists;
+            break;
+        case 3:
+            shouldRun = true;
         }
-        runShader = shouldRun
+        runShader = shouldRun;
     }
 
     TaskManager.VirtualDesktopInfo {
@@ -89,34 +90,40 @@ Item {
         filterMinimized: true
 
         onActiveTaskChanged: {
-            updateWindowsinfo()
+            updateWindowsInfo();
         }
         onDataChanged: {
-            updateWindowsinfo()
+            updateWindowsInfo();
         }
         onCountChanged: {
-            updateWindowsinfo()
+            updateWindowsInfo();
         }
     }
 
-    function updateWindowsinfo() {
-        let activeCount = 0
-        let visibleCount = 0
-        let maximizedCount = 0
+    function updateWindowsInfo() {
+        let activeCount = 0;
+        let visibleCount = 0;
+        let maximizedCount = 0;
+
         for (var i = 0; i < tasksModel.count; i++) {
-            const currentTask = tasksModel.index(i, 0)
-            if (currentTask === undefined) continue
+            const currentTask = tasksModel.index(i, 0);
+            if (currentTask === undefined)
+                continue;
+            if (excludeWindows.includes(tasksModel.data(currentTask, appId).replace(/\.desktop$/, "")))
+                continue;
+
             if (tasksModel.data(currentTask, isWindow) && !tasksModel.data(currentTask, isMinimized)) {
-                visibleCount+=1
-                if (tasksModel.data(currentTask, isMaximized) || tasksModel.data(currentTask, isFullScreen)) maximizedCount+=1
-                if (tasksModel.data(currentTask, isActive)) activeCount+=1
+                visibleCount += 1;
+                if (tasksModel.data(currentTask, isMaximized) || tasksModel.data(currentTask, isFullScreen))
+                    maximizedCount += 1;
+                if (tasksModel.data(currentTask, isActive))
+                    activeCount += 1;
             }
         }
 
-        visibleExists = visibleCount > 0
-        maximizedExists = maximizedCount > 0
-        activeExists = activeCount > 0
-        updateRun()
+        visibleExists = visibleCount > 0;
+        maximizedExists = maximizedCount > 0;
+        activeExists = activeCount > 0;
+        updateRun();
     }
 }
-

@@ -31,14 +31,15 @@ Kirigami.FormLayout {
     property bool cfg_emergencyHelp_dismissed: wallpaper.configuration.emergencyHelp_dismissed
     property bool cfg_infoiChannelSettings_dismissed: wallpaper.configuration.infoiChannelSettings_dismissed
     property bool cfg_checkActiveScreen: wallpaper.configuration.checkActiveScreen
+    property var cfg_excludeWindows: wallpaper.configuration.excludeWindows
     property bool cfg_running: wallpaper.configuration.running
 
     RowLayout {
-        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Select shader:");
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Select shader:")
         ComboBox {
             id: selectedShader
             Layout.minimumWidth: width
-            Layout.maximumWidth: width 
+            Layout.maximumWidth: width
             width: 240
             model: FolderListModel {
                 id: folderListModel
@@ -50,21 +51,22 @@ Kirigami.FormLayout {
                 id: folderListDelegate
                 ItemDelegate {
                     width: parent.width
-                    text: fileBaseName.replace("_"," ").charAt(0).toUpperCase() + fileBaseName.replace("_"," ").slice(1)
+                    text: fileBaseName.replace("_", " ").charAt(0).toUpperCase() + fileBaseName.replace("_", " ").slice(1)
                 }
             }
 
             textRole: "fileBaseName"
             currentIndex: cfg_selectedShaderIndex
-            displayText: currentIndex === -1 ? "Custom Shader" : currentText.replace("_"," ").charAt(0).toUpperCase() + currentText.replace("_"," ").slice(1)
+            displayText: currentIndex === -1 ? "Custom Shader" : currentText.replace("_", " ").charAt(0).toUpperCase() + currentText.replace("_", " ").slice(1)
 
             onCurrentTextChanged: {
                 cfg_selectedShaderIndex = currentIndex;
                 if (cfg_selectedShaderIndex === -1) {
-                    return
-                };
-                wallpaper.configuration.selectedShaderPath = Qt.resolvedUrl("./Shaders6/"+model.get(currentIndex, "fileName"));
-                cfg_selectedShaderPath = Qt.resolvedUrl("./Shaders6/"+model.get(currentIndex, "fileName"));
+                    return;
+                }
+
+                wallpaper.configuration.selectedShaderPath = Qt.resolvedUrl("./Shaders6/" + model.get(currentIndex, "fileName"));
+                cfg_selectedShaderPath = Qt.resolvedUrl("./Shaders6/" + model.get(currentIndex, "fileName"));
             }
         }
 
@@ -73,13 +75,13 @@ Kirigami.FormLayout {
             icon.name: "folder-symbolic"
             text: i18nd("@button:toggle_select_shader", "Select File")
             onClicked: {
-                fileDialog.open()
+                fileDialog.open();
             }
         }
     }
     ComboBox {
-        Kirigami.FormData.label: i18nd("@buttonGroup:pause_mode", "Pause:")
         id: pauseModeCombo
+        Kirigami.FormData.label: i18nd("@buttonGroup:pause_mode", "Pause:")
         model: [
             {
                 'label': i18nd("@option:pause_mode", "Maximized or full-screen windows")
@@ -104,36 +106,46 @@ Kirigami.FormLayout {
         checked: cfg_checkActiveScreen
         text: i18n("Only check for windows in active screen")
         onCheckedChanged: {
-            cfg_checkActiveScreen = checked
+            cfg_checkActiveScreen = checked;
         }
+    }
+    TextField {
+        id: excludeWindows
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Exclude windows:")
+        text: cfg_excludeWindows.join(",")
+        onEditingFinished: {
+            cfg_excludeWindows = excludeWindows.text.trim().replace(/\s+/g, "").split(",");
+        }
+        ToolTip.visible: hovered
+        ToolTip.text: qsTr("A comma-separated list of fully-qualified App-IDs to exclude their windows from triggering pause mode.")
     }
     // use Item instead to remove the line
     Kirigami.Separator {
         Kirigami.FormData.isSection: true
-        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Configuration:");
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Configuration:")
     }
 
-    RowLayout{
-        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", cfg_isPaused ? "Playing" : "Paused");
+    RowLayout {
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", cfg_isPaused ? "Playing" : "Paused")
         CheckBox {
             id: runningCombo
             checked: cfg_running
             text: i18n("Play/Pause the shader")
             onCheckedChanged: {
-                wallpaper.configuration.running = checked
-                cfg_running = checked
+                wallpaper.configuration.running = checked;
+                cfg_running = checked;
             }
         }
     }
 
     RowLayout {
-        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Shader speed:");
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Shader speed:")
         ColumnLayout {
             Slider {
+                id: speedSlider
                 Layout.preferredWidth: Kirigami.Units.gridUnit * 16
                 from: -10.0
                 to: 10.0
-                id: speedSlider
                 stepSize: 0.01
                 value: cfg_shaderSpeed ? cfg_shaderSpeed : 1.0
                 onValueChanged: {
@@ -168,10 +180,10 @@ Kirigami.FormLayout {
                     }
                 }
                 background: Rectangle {
-                    color: shaderSpeedField.activeFocus ? "white" : "transparent"
-                    border.color: shaderSpeedField.activeFocus ? "#3DAEE9" : "transparent"
+                    color: shaderSpeedField.activeFocus ? Palette.base : "transparent"
+                    border.color: shaderSpeedField.activeFocus ? Palette.highlight : "transparent"
                     border.width: 1
-                    radius: 2
+                    radius: 4
                     anchors.fill: shaderSpeedField
                     anchors.margins: -2
                 }
@@ -180,10 +192,10 @@ Kirigami.FormLayout {
     }
 
     RowLayout {
-        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Mouse allowed:");
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Mouse allowed:")
         Button {
-            icon.name: checked? "followmouse-symbolic" : "hidemouse-symbolic"
-            text: i18nd("@button:toggle_use_mouse", checked? "Enabled" : "Disabled")
+            icon.name: checked ? "followmouse-symbolic" : "hidemouse-symbolic"
+            text: i18nd("@button:toggle_use_mouse", checked ? "Enabled" : "Disabled")
             checkable: true
             checked: cfg_mouseAllowed
             onClicked: {
@@ -197,13 +209,13 @@ Kirigami.FormLayout {
 
     RowLayout {
         visible: cfg_mouseAllowed
-        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Mouse bias:");
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Mouse bias:")
         ColumnLayout {
             Slider {
+                id: mouseBiasSlider
                 Layout.preferredWidth: Kirigami.Units.gridUnit * 16
                 from: -10.0
                 to: 10.0
-                id: mouseBiasSlider
                 stepSize: 0.01
                 value: cfg_mouseSpeedBias ? cfg_mouseSpeedBias : 1.0
                 onValueChanged: {
@@ -238,10 +250,10 @@ Kirigami.FormLayout {
                     }
                 }
                 background: Rectangle {
-                    color: mouseBiasField.activeFocus ? "white" : "transparent"
-                    border.color: mouseBiasField.activeFocus ? "#3DAEE9" : "transparent"
+                    color: mouseBiasField.activeFocus ? Palette.base : "transparent"
+                    border.color: mouseBiasField.activeFocus ? Palette.highlight : "transparent"
                     border.width: 1
-                    radius: 2
+                    radius: 4
                     anchors.fill: mouseBiasField
                     anchors.margins: -2
                 }
@@ -262,13 +274,13 @@ Kirigami.FormLayout {
     }
     // iChannel0
     RowLayout {
-        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "iChannel0:");
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "iChannel0:")
         CheckBox {
             id: iChannel0_flag
             width: 35
             checked: cfg_iChannel0_flag
             onCheckedChanged: {
-                cfg_iChannel0_flag = checked
+                cfg_iChannel0_flag = checked;
                 cfg_iChannel0 = iChannel0Field.text;
             }
         }
@@ -278,8 +290,8 @@ Kirigami.FormLayout {
             text: cfg_iChannel0
             visible: iChannel0_flag.checked
             onEditingFinished: {
-                cfg_iChannel0 =  iChannel0Field.text;
-                ich0_thumbnail.source = cfg_iChannel0
+                cfg_iChannel0 = iChannel0Field.text;
+                ich0_thumbnail.source = cfg_iChannel0;
             }
         }
 
@@ -297,19 +309,19 @@ Kirigami.FormLayout {
             text: i18nd("@button:open_ich_dialog", "Select Image")
             visible: iChannel0_flag.checked
             onClicked: {
-                fileDialog_ich0.open()
+                fileDialog_ich0.open();
             }
         }
     }
     // iChannel1
     RowLayout {
-        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "iChannel1:");
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "iChannel1:")
         CheckBox {
             id: iChannel1_flag
             width: 35
             checked: cfg_iChannel1_flag
             onCheckedChanged: {
-                cfg_iChannel1_flag = checked
+                cfg_iChannel1_flag = checked;
                 cfg_iChannel1 = iChannel1Field.text;
             }
         }
@@ -319,8 +331,8 @@ Kirigami.FormLayout {
             text: cfg_iChannel1
             visible: iChannel1_flag.checked
             onEditingFinished: {
-                cfg_iChannel1 =  iChannel1Field.text;
-                ich1_thumbnail.source = cfg_iChannel1
+                cfg_iChannel1 = iChannel1Field.text;
+                ich1_thumbnail.source = cfg_iChannel1;
             }
         }
 
@@ -338,19 +350,19 @@ Kirigami.FormLayout {
             text: i18nd("@button:open_ich_dialog", "Select Image")
             visible: iChannel1_flag.checked
             onClicked: {
-                fileDialog_ich1.open()
+                fileDialog_ich1.open();
             }
         }
     }
     // iChannel2
     RowLayout {
-        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "iChannel2:");
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "iChannel2:")
         CheckBox {
             id: iChannel2_flag
             width: 35
             checked: cfg_iChannel2_flag
             onCheckedChanged: {
-                cfg_iChannel2_flag = checked
+                cfg_iChannel2_flag = checked;
                 cfg_iChannel2 = iChannel2Field.text;
             }
         }
@@ -360,8 +372,8 @@ Kirigami.FormLayout {
             text: cfg_iChannel2
             visible: iChannel2_flag.checked
             onEditingFinished: {
-                cfg_iChannel2 =  iChannel2Field.text;
-                ich2_thumbnail.source = cfg_iChannel2
+                cfg_iChannel2 = iChannel2Field.text;
+                ich2_thumbnail.source = cfg_iChannel2;
             }
         }
 
@@ -379,19 +391,19 @@ Kirigami.FormLayout {
             text: i18nd("@button:open_ich_dialog", "Select Image")
             visible: iChannel2_flag.checked
             onClicked: {
-                fileDialog_ich2.open()
+                fileDialog_ich2.open();
             }
         }
     }
     // iChannel3
     RowLayout {
-        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "iChannel3:");
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "iChannel3:")
         CheckBox {
             id: iChannel3_flag
             width: 35
             checked: cfg_iChannel3_flag
             onCheckedChanged: {
-                cfg_iChannel3_flag = checked
+                cfg_iChannel3_flag = checked;
                 cfg_iChannel3 = iChannel3Field.text;
             }
         }
@@ -401,8 +413,8 @@ Kirigami.FormLayout {
             text: cfg_iChannel3
             visible: iChannel3_flag.checked
             onEditingFinished: {
-                cfg_iChannel3 =  iChannel3Field.text;
-                ich3_thumbnail.source = cfg_iChannel3
+                cfg_iChannel3 = iChannel3Field.text;
+                ich3_thumbnail.source = cfg_iChannel3;
             }
         }
 
@@ -420,14 +432,14 @@ Kirigami.FormLayout {
             text: i18nd("@button:open_ich_dialog", "Select Image")
             visible: iChannel3_flag.checked
             onClicked: {
-                fileDialog_ich3.open()
+                fileDialog_ich3.open();
             }
         }
     }
 
     Kirigami.Separator {
         Kirigami.FormData.isSection: true
-        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Info:");
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Info:")
     }
 
     Kirigami.InlineMessage {
@@ -454,17 +466,16 @@ Kirigami.FormLayout {
         }
     }
 
-    RowLayout{
-        spacing:  Kirigami.Units.gridUnit * 10
+    RowLayout {
+        spacing: Kirigami.Units.gridUnit * 10
         Button {
+            id: emergencyHelpButton
             Layout.preferredWidth: Kirigami.Units.gridUnit * 5
             Layout.preferredHeight: Kirigami.Units.gridUnit * 3
-            
-            id: emergencyHelpButton
             icon.name: "help-about-symbolic"
             text: i18nd("@button:toggle_emergency_help", "Help!")
             onClicked: {
-            emergencyHelp.open()
+                emergencyHelp.open();
             }
         }
 
@@ -472,7 +483,7 @@ Kirigami.FormLayout {
             id: kofiButton
             Layout.preferredWidth: Kirigami.Units.gridUnit * 5
             Layout.preferredHeight: Kirigami.Units.gridUnit * 3
-            
+
             contentItem: RowLayout {
                 AnimatedImage {
                     source: "Resources/kofi.gif"
@@ -480,16 +491,20 @@ Kirigami.FormLayout {
                     sourceSize.height: 36
                     fillMode: Image.Pad
                     horizontalAlignment: Image.AlignLeft
-                    transform: Translate { x: 8 }
+                    transform: Translate {
+                        x: 8
+                    }
                 }
                 Text {
-                    text: i18nd("@button:kofi", "Kofi")      
-                    horizontalAlignment: Text.AlignHCenter      
-                    transform: Translate { x: -8 }            
+                    text: i18nd("@button:kofi", "Kofi")
+                    horizontalAlignment: Text.AlignHCenter
+                    transform: Translate {
+                        x: -8
+                    }
                 }
             }
             onClicked: {
-                Qt.openUrlExternally("https://ko-fi.com/I2I525V5R")
+                Qt.openUrlExternally("https://ko-fi.com/I2I525V5R");
             }
         }
     }
@@ -502,15 +517,15 @@ Kirigami.FormLayout {
     }
 
     RowLayout {
-        Layout.bottomMargin: 20 
+        Layout.bottomMargin: 20
     }
 
     FileDialog {
         id: fileDialog
-        fileMode : FileDialog.OpenFile
+        fileMode: FileDialog.OpenFile
         title: i18nd("@dialog_title:choose_shader", "Choose a shader")
         // will accept and auto convert .frag in the near future
-        nameFilters: [ "Shader files (*.frag.qsb)", "All files (*)" ]
+        nameFilters: ["Shader files (*.frag.qsb)", "All files (*)"]
         visible: false
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Shaders6/`
         onAccepted: {
@@ -519,53 +534,52 @@ Kirigami.FormLayout {
         }
     }
 
-
     // TODO: re-use the same file dialog...
     FileDialog {
         id: fileDialog_ich0
-        fileMode : FileDialog.OpenFile
-        nameFilters: [ "Image files (*.png *.jpg *.gif *.webp *.apng *.svg *.tiff)", "All files (*)" ]
+        fileMode: FileDialog.OpenFile
+        nameFilters: ["Image files (*.png *.jpg *.gif *.webp *.apng *.svg *.tiff)", "All files (*)"]
         visible: false
         title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
         onAccepted: {
-            cfg_iChannel0 = selectedFile
+            cfg_iChannel0 = selectedFile;
         }
     }
 
     FileDialog {
         id: fileDialog_ich1
-        fileMode : FileDialog.OpenFile
-        nameFilters: [ "Image files (*.png *.jpg *.gif *.webp *.apng *.svg *.tiff)", "All files (*)" ]
+        fileMode: FileDialog.OpenFile
+        nameFilters: ["Image files (*.png *.jpg *.gif *.webp *.apng *.svg *.tiff)", "All files (*)"]
         visible: false
         title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
-        
+
         onAccepted: {
-            cfg_iChannel1 = selectedFile
+            cfg_iChannel1 = selectedFile;
         }
     }
 
     FileDialog {
         id: fileDialog_ich2
-        fileMode : FileDialog.OpenFile
-        nameFilters: [ "Image files (*.png *.jpg *.gif *.webp *.apng *.svg *.tiff)", "All files (*)" ]
+        fileMode: FileDialog.OpenFile
+        nameFilters: ["Image files (*.png *.jpg *.gif *.webp *.apng *.svg *.tiff)", "All files (*)"]
         visible: false
         title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
         onAccepted: {
-            cfg_iChannel2 = selectedFile
+            cfg_iChannel2 = selectedFile;
         }
     }
     FileDialog {
         id: fileDialog_ich3
-        fileMode : FileDialog.OpenFile
-        nameFilters: [ "Image files (*.png *.jpg *.gif *.webp *.apng *.svg *.tiff)", "All files (*)" ]
+        fileMode: FileDialog.OpenFile
+        nameFilters: ["Image files (*.png *.jpg *.gif *.webp *.apng *.svg *.tiff)", "All files (*)"]
         visible: false
         title: i18nd("@dialog_title:choose_ichannel", "Choose an Image")
         currentFolder: `${StandardPaths.writableLocation(StandardPaths.HomeLocation)}/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/Resources/`
         onAccepted: {
-            cfg_iChannel3 = selectedFile
+            cfg_iChannel3 = selectedFile;
         }
     }
     Kirigami.OverlaySheet {
