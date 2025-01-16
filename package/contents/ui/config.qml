@@ -34,6 +34,10 @@ Kirigami.FormLayout {
     property var cfg_excludeWindows: wallpaper.configuration.excludeWindows
     property bool cfg_running: wallpaper.configuration.running
 
+    Palette {
+        id: palette
+    }
+
     RowLayout {
         Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Select shader:")
         ComboBox {
@@ -180,8 +184,8 @@ Kirigami.FormLayout {
                     }
                 }
                 background: Rectangle {
-                    color: shaderSpeedField.activeFocus ? Palette.base : "transparent"
-                    border.color: shaderSpeedField.activeFocus ? Palette.highlight : "transparent"
+                    color: shaderSpeedField.activeFocus ? palette.base : "transparent"
+                    border.color: shaderSpeedField.activeFocus ? palette.highlight : "transparent"
                     border.width: 1
                     radius: 4
                     anchors.fill: shaderSpeedField
@@ -250,8 +254,8 @@ Kirigami.FormLayout {
                     }
                 }
                 background: Rectangle {
-                    color: mouseBiasField.activeFocus ? Palette.base : "transparent"
-                    border.color: mouseBiasField.activeFocus ? Palette.highlight : "transparent"
+                    color: mouseBiasField.activeFocus ? palette.base : "transparent"
+                    border.color: mouseBiasField.activeFocus ? palette.highlight : "transparent"
                     border.width: 1
                     radius: 4
                     anchors.fill: mouseBiasField
@@ -498,6 +502,7 @@ Kirigami.FormLayout {
                 Text {
                     text: i18nd("@button:kofi", "Kofi")
                     horizontalAlignment: Text.AlignHCenter
+                    color: palette.text
                     transform: Translate {
                         x: -8
                     }
