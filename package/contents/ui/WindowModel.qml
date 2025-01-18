@@ -114,21 +114,20 @@ Item {
         let visibleCount = 0;
         let maximizedCount = 0;
 
-        for (var i = 0; i < tasksModel.count; i++) {
-            if (KWindowSystem.showingDesktop)
-                break;
+        if (!KWindowSystem.showingDesktop) {
+            for (var i = 0; i < tasksModel.count; i++) {
+                const currentTask = tasksModel.index(i, 0);
 
-            const currentTask = tasksModel.index(i, 0);
+                // Long line
+                if (currentTask === undefined || excludeWindows.includes(tasksModel.data(currentTask, appId).replace(/\.desktop$/, "")) || tasksModel.data(currentTask, isHidden) || !tasksModel.data(currentTask, isWindow) || tasksModel.data(currentTask, isMinimized))
+                    continue;
 
-            // Long line
-            if (currentTask === undefined || excludeWindows.includes(tasksModel.data(currentTask, appId).replace(/\.desktop$/, "")) || tasksModel.data(currentTask, isHidden) || !tasksModel.data(currentTask, isWindow) || tasksModel.data(currentTask, isMinimized))
-                continue;
-
-            visibleCount += 1;
-            if (tasksModel.data(currentTask, isMaximized) || tasksModel.data(currentTask, isFullScreen))
-                maximizedCount += 1;
-            if (tasksModel.data(currentTask, isActive))
-                activeCount += 1;
+                visibleCount += 1;
+                if (tasksModel.data(currentTask, isMaximized) || tasksModel.data(currentTask, isFullScreen))
+                    maximizedCount += 1;
+                if (tasksModel.data(currentTask, isActive))
+                    activeCount += 1;
+            }
         }
 
         visibleExists = visibleCount > 0;
