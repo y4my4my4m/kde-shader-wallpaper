@@ -20,6 +20,7 @@
 
 import QtQuick
 import org.kde.taskmanager 0.1 as TaskManager
+import org.kde.kwindowsystem
 
 Item {
     id: wModel
@@ -31,17 +32,25 @@ Item {
     property bool activeExists: false
     property var abstractTasksModel: TaskManager.AbstractTasksModel
     property var appId: abstractTasksModel.AppId
-    property var isMaximized: abstractTasksModel.IsMaximized
-    property var isActive: abstractTasksModel.IsActive
     property var isWindow: abstractTasksModel.IsWindow
-    property var isFullScreen: abstractTasksModel.IsFullScreen
     property var isMinimized: abstractTasksModel.IsMinimized
+    property var isMaximized: abstractTasksModel.IsMaximized
+    property var isFullScreen: abstractTasksModel.IsFullScreen
+    property var isActive: abstractTasksModel.IsActive
+    property var isHidden: abstractTasksModel.IsHidden
     property bool activeScreenOnly: wallpaper.configuration.checkActiveScreen
     property var excludeWindows: wallpaper.configuration.excludeWindows
 
     Connections {
         target: wallpaper.configuration
         function onValueChanged() {
+            updateWindowsInfo();
+        }
+    }
+
+    Connections {
+        target: KWindowSystem
+        function onShowingDesktopChanged() {
             updateWindowsInfo();
         }
     }
@@ -105,14 +114,14 @@ Item {
         let visibleCount = 0;
         let maximizedCount = 0;
 
-        for (var i = 0; i < tasksModel.count; i++) {
-            const currentTask = tasksModel.index(i, 0);
-            if (currentTask === undefined)
-                continue;
-            if (excludeWindows.includes(tasksModel.data(currentTask, appId).replace(/\.desktop$/, "")))
-                continue;
+        if (!KWindowSystem.showingDesktop) {
+            for (var i = 0; i < tasksModel.count; i++) {
+                const currentTask = tasksModel.index(i, 0);
 
-            if (tasksModel.data(currentTask, isWindow) && !tasksModel.data(currentTask, isMinimized)) {
+                // Long line
+                if (currentTask === undefined || excludeWindows.includes(tasksModel.data(currentTask, appId).replace(/\.desktop$/, "")) || tasksModel.data(currentTask, isHidden) || !tasksModel.data(currentTask, isWindow) || tasksModel.data(currentTask, isMinimized))
+                    continue;
+
                 visibleCount += 1;
                 if (tasksModel.data(currentTask, isMaximized) || tasksModel.data(currentTask, isFullScreen))
                     maximizedCount += 1;
