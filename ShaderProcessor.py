@@ -34,9 +34,9 @@ layout(std140, binding = 0) uniform buf {
 } ubuf;
 
 layout(binding = 1) uniform sampler2D iChannel0;
-layout(binding = 1) uniform sampler2D iChannel1;
-layout(binding = 1) uniform sampler2D iChannel2;
-layout(binding = 1) uniform sampler2D iChannel3;
+layout(binding = 2) uniform sampler2D iChannel1;
+layout(binding = 3) uniform sampler2D iChannel2;
+layout(binding = 4) uniform sampler2D iChannel3;
 
 vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
 '''
