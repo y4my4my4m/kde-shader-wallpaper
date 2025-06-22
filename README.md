@@ -1,6 +1,9 @@
 # Plasma6 - Shader Wallpaper plugin
 Shader Wallpaper is a Wallpaper Plugin that allows you to run shaders as your wallpaper.
 
+# FOR PLASMA5, CHECKOUT THE PLASMA5 BRANCH
+
+
 ## New features!
 ![plasma6](https://github.com/y4my4my4m/kde-shader-wallpaper/assets/8145020/6e2e6807-2be5-44c3-9d35-1c560e37cf74)
 
@@ -15,6 +18,7 @@ Shader Wallpaper is a Wallpaper Plugin that allows you to run shaders as your wa
 
 ### Upgrade
 - `kpackagetool6 -t Plasma/Wallpaper --upgrade kde-shader-wallpaper/package`
+
 
 ### Uninstall
 You can uninstall it via KDE's desktop settings otherwise, you can uninstall it like this: 
