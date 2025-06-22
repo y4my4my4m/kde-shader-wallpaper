@@ -1,7 +1,7 @@
 # Plasma6 - Shader Wallpaper plugin
 Shader Wallpaper is a Wallpaper Plugin that allows you to run shaders as your wallpaper.
 
-# FOR PLASMA5, CHECKOUT THE PLASMA5 BRANCH
+### FOR PLASMA5, CHECKOUT THE PLASMA5 BRANCH
 
 
 ## New features!
