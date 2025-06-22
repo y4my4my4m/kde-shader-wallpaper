@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "Plasma/Wallpaper",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "y4my4my4m@protonmail.com",
+                "Name": "@y4my4my4m"
+            }
+        ],
+        "Id": "online.knowmad.shaderwallpaper",
+        "License": "GPLv3+",
+        "Name": "Shader",
+        "Version": "3.0",
+        "Description": "Allows you to use Shaders as your wallpaper"
+    },
+    "X-KDE-ParentApp": "org.kde.plasmashell"
+}

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0/kcfg.xsd" >
+  <kcfgfile name=""/>
+
+  <group name="General">
+    <entry name="selectedShaderPath" type="String">
+      <label>SelectedShader</label>
+      <default>Shaders6/Ps3menu.frag.qsb</default>
+    </entry>
+    <entry name="selectedShaderContent" type="String">
+      <label>selectedShaderContent</label>
+      <default></default>
+    </entry>
+    <entry name="selectedShaderIndex" type="Int">
+      <label>The index of the currently selectedShader</label>
+      <default>0</default>
+    </entry>
+    <entry name="mouseAllowed" type="Bool">
+      <label>Allow use of mouse in shader</label>
+      <default>false</default>
+    </entry>
+    <entry name="mouseSpeedBias" type="Double">
+      <label>Change the mouse's bias speed</label>
+      <default>1.0</default>
+    </entry>
+    <entry name="running" type="Bool">
+      <label>Shader is running.</label>
+      <default>true</default>
+    </entry>
+    <entry name="checkedSmartPlay" type="Bool">
+      <label>Pause the video when existing a maximized or full-screen windows.</label>
+      <default>false</default>
+    </entry>
+    <entry name="shaderSpeed" type="Double">
+      <label>Change the shader speed</label>
+      <default>1.0</default>
+    </entry>
+    <entry name="iChannel0" type="String">
+      <label>iChannel0's path</label>
+      <default>./Resources/wallpaper2.png</default>
+    </entry>
+    <entry name="iChannel0_flag" type="Bool">
+      <label>iChannel0 on/off flag</label>
+      <default>true</default>
+    </entry>
+    <entry name="iChannel1" type="String">
+      <label>iChannel1's path</label>
+      <default>./Resources/wallpaper2.png</default>
+    </entry>
+    <entry name="iChannel1_flag" type="Bool">
+      <label>iChannel1 on/off flag</label>
+      <default>true</default>
+    </entry>
+    <entry name="iChannel2" type="String">
+      <label>iChannel2's path</label>
+      <default>./Resources/Shadertoy_Organic_2.jpg</default>
+    </entry>
+    <entry name="iChannel2_flag" type="Bool">
+      <label>iChannel2 on/off flag</label>
+      <default>true</default>
+    </entry>
+    <entry name="iChannel3" type="String">
+      <label>iChannel3's path</label>
+      <default>./Resources/Shadertoy_Organic_2.jpg</default>
+    </entry>
+    <entry name="iChannel3_flag" type="Bool">
+      <label>iChannel3 on/off flag</label>
+      <default>false</default>
+    </entry>
+    <entry name="iFrameRate" type="Double">
+      <label>iFrameRate</label>
+      <default>-1</default>
+    </entry>
+    <entry name="fadeToNext" type="Bool">
+      <label>fade to next shader in folder</label>
+      <default>false</default>
+    </entry>
+    <entry name="fadeToRandom" type="Bool">
+      <label>fade to random shader in folder</label>
+      <default>false</default>
+    </entry>
+    <entry name="infoPlasma6Preview_dismissed" type="Bool">
+      <label>Hide the infoPlasma6Preview message</label>
+      <default>false</default>
+    </entry>
+    <entry name="warningResources_dismissed" type="Bool">
+      <label>Hide the warningResources message</label>
+      <default>false</default>
+    </entry>
+    <entry name="emergencyHelp_dismissed" type="Bool">
+      <label>Hide the emergencyHelp message</label>
+      <default>false</default>
+    </entry>
+    <entry name="infoiChannelSettings_dismissed" type="Bool">
+      <label>Hide the infoiChannelSettings message</label>
+      <default>false</default>
+    </entry>
+    <entry name="pauseMode" type="Int">
+      <label>Shader pause mode
+        0: when existing a maximized or full-screen windows
+        1: when a visible window is active
+        2: when a window is visible
+        3: never</label>
+      <default>0</default>
+    </entry>
+    <entry name="checkActiveScreen" type="Bool">
+      <label>Whether or not check for windows from all screens instead of just the active one</label>
+      <default>true</default>
+    </entry>
+    <entry name="excludeWindows" type="StringList">
+      <label>A list of app-IDs whose windows to exclude from triggering pauseMode.</label>
+      <default></default>
+    </entry>
+  </group>
+
+</kcfg>
