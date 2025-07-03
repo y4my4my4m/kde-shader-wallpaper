@@ -1,55 +1,103 @@
-# Plasma6 - Shader Wallpaper plugin
-Shader Wallpaper is a Wallpaper Plugin that allows you to run shaders as your wallpaper.
+# Plasma6 Shader Wallpaper Plugin
 
-### FOR PLASMA5, CHECKOUT THE PLASMA5 BRANCH
+**Shader Wallpaper** is a Plasma6 wallpaper plugin that enables dynamic, shader-driven wallpapers for the KDE desktop.
 
+---
 
-## New features!
-![plasma6](https://github.com/y4my4my4m/kde-shader-wallpaper/assets/8145020/6e2e6807-2be5-44c3-9d35-1c560e37cf74)
+> **Note for Plasma5 users:**\
+> Please refer to the [Plasma5 branch](https://github.com/y4my4my4m/kde-shader-wallpaper/tree/plasma5) for compatibility.
 
-<video src="https://github.com/y4my4my4m/kde-shader-wallpaper/assets/8145020/144bf23c-ccc0-4f58-a753-8ee882750dfa"></video>
+---
 
-## Installation:
+## Features
+
+- Run custom shaders as your desktop wallpaper
+- Easy installation, upgrade, and removal
+- Full support for Plasma6
+- Ongoing development with frequent feature updates and bug fixes
+
+### Notes
+
+Here are some OLED friendly shaders:
+```
+Grey_Liquid
+HSV_to_RGB
+RGB_Noise_in_Movement
+Raymarching_Basic
+VDJ.frag
+Wiggle_Worm
+```
+---
+
+## Installation
 
 ### Install from Source
-- clone this repository (https://github.com/y4my4my4m/kde-shader-wallpaper/releases)
-- remove old installation: `rm -rf ~/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/`
-- install from folder: `kpackagetool6 -t Plasma/Wallpaper -i kde-shader-wallpaper/package`
+
+1. **Clone the repository:**
+
+   ```bash
+   git clone https://github.com/y4my4my4m/kde-shader-wallpaper.git
+   ```
+
+2. **Remove any previous installation:**
+
+   ```bash
+   rm -rf ~/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/
+   ```
+
+3. **Install the package:**
+
+   ```bash
+   kpackagetool6 -t Plasma/Wallpaper -i kde-shader-wallpaper/package
+   ```
 
 ### Upgrade
-- `kpackagetool6 -t Plasma/Wallpaper --upgrade kde-shader-wallpaper/package`
 
+```bash
+kpackagetool6 -t Plasma/Wallpaper --upgrade kde-shader-wallpaper/package
+```
 
 ### Uninstall
-You can uninstall it via KDE's desktop settings otherwise, you can uninstall it like this: 
-- `kpackagetool6 -t Plasma/Wallpaper --remove online.knowmad.shaderwallpaper`
 
-## Dev Guide
-Read the [Developer's Guide](README_DEV.md) if you want to make custom shaders
+You may uninstall via KDE Desktop Settings, or run:
 
-## Repo:
-I'll probably maintain it on Github principally for issues/PR but I'll try my best to maintain both, if anything contact me on twitter [@y4my4my4m](https://twitter.com/@y4my4my4m).
+```bash
+kpackagetool6 -t Plasma/Wallpaper --remove online.knowmad.shaderwallpaper
+```
 
-### Links:
-- KDE Store: https://store.kde.org/p/1413010/
-- Opencode: https://www.opencode.net/y4my4my4m/kde-shader-wallpaper
+---
 
-### Roadmap:
-- [ ] Version 3.x.x - Save imported shaders, customization, better buffers/channel, shadertoy import
-- [x] Version 3.0.1 - Play/stop, fullscreen detection, screenlock, various fixes
-- [x] Version 3.0.0 - Plasma6 Edition!
-- [x] Version 2.0.1a - Breaking bug fix regarding the pause/fullscreen feature(current version) **(current version)**
-- [x] Version 2.0a - Customize shaders via GUI, directly load shaders from shadertoy.com or file
-- [x] Version 1.3  - 70 new shaders + autolisting
-- [x] Version 1.2  - iGPU fix
-- [x] Version 1.1  - File Dialog added
-- [x] Version 1.0  - Simply load shaders
+## Developer Guide
 
-### Notes:
-- GUI based shader customization will be back in future version
-- Shadertoy.com imports do not work anymore as Plasma6 requires shader compilation
-- Performance may vary depending of your specs, but it's actually not all that resource intensive, depends on the shader too.
-- If you modify the shader files and want to see the changes, the KDE Wallpaper QtQuick App itself needs to be restart, I recommend simply to `pkill plasmashell` and restart it.
+To create custom shaders or contribute, please read the [Developer’s Guide](README_DEV.md).
+
+---
+
+## Repository & Support
+
+- **GitHub:** [y4my4my4m/kde-shader-wallpaper](https://github.com/y4my4my4m/kde-shader-wallpaper)
+- **KDE Store:** [Plasma6 version](https://store.kde.org/p/2143912)
+- **KDE Store:** [Plasma5 version](https://store.kde.org/p/1413010/)
+- **Twitter (X):** [@y4my4my4m](https://twitter.com/y4my4my4m)
+
+For issues, pull requests, or general inquiries, please contact via [GitHub Issues](https://github.com/y4my4my4m/kde-shader-wallpaper/issues) or Twitter.
+
+---
+
+## Roadmap
+
+- [ ] Filtering across all servers’ emoji lists on every keystroke could be expensive in large servers. Consider debouncing the query or indexing the emoji list for faster lookups.
+
+---
+
+## Notes
+
+- GUI-based shader customization will return in future versions.
+- Shadertoy.com imports are currently unsupported in the Plasma6 version due to shader compilation requirements.
+- Performance may vary by hardware and shader complexity, but most shaders are resource-efficient.
+- After editing shader files, restart the KDE Wallpaper QtQuick app (`pkill plasmashell` and restart).
+
+---
 
 ## Videos:
 
@@ -59,6 +107,8 @@ I'll probably maintain it on Github principally for issues/PR but I'll try my be
 
 ### v1.0:
 [![ShaderWallpaperVideoPreviewV1.0](https://cdn-cf-east.streamable.com/image/yeqam9.jpg?Expires=1599641220&Signature=NCZXLhg5owCeCiBx8wg7FIO2oOZ~6y9b-we72JE0icG9Cw649dYPPRqDzuOnXsvOEe0omZhhlckbcdLZg6QKbMm9R6UUkN3g-hs4Y8WAJcWIXrantAsWlg309a2vu-gIkHV06eOYczdC3BBzprRHLh8BuKGRQyIAvxLYyf25mWexhPVrZHvrXsl-PFWN1tH~LLL14vD1oaoysupJxnF26qLVv1nAGB-AzYn7GVAcnJmpOPUbKz~jl2Z6iWy1fgJYu~Dym5Hxphc21-XIOHSqXYjkZFDslyevRJVcfqAsnfOzsm3GwRmBQ8hYB5wO5lpp4DnAUuDjtzY9d5sB025U0Q__&Key-Pair-Id=APKAIEYUVEN4EVB2OKEQ)](https://streamable.com/yeqam9)
+
+---
 
 ### Screenshots:
 
@@ -70,6 +120,7 @@ I'll probably maintain it on Github principally for issues/PR but I'll try my be
 
 [![ShaderWallpaperPreviewImage4](https://images.pling.com/img/00/00/58/32/49/1413010/b5026604b9009c3541e25b98bbaa0450d17a52ceee878f8b44383bb5e3570c3f251d.png)](https://images.pling.com/img/00/00/58/32/49/1413010/b5026604b9009c3541e25b98bbaa0450d17a52ceee878f8b44383bb5e3570c3f251d.png)
 
+---
 
 ## Donations:
 [![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/I2I525V5R)
