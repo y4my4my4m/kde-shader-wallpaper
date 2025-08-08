@@ -1,0 +1,8 @@
+    # IDE & Editor-specific directories
+    .zed/
+
+    # Virtual environment directories
+    .venv/
+
+    # `.frag` conversion directory
+    package/contents/ui/Shaders/ConvertMe/
