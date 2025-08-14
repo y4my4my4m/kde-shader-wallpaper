@@ -84,12 +84,6 @@ For issues, pull requests, or general inquiries, please contact via [GitHub Issu
 
 ---
 
-## Roadmap
-
-- [ ] Filtering across all servers’ emoji lists on every keystroke could be expensive in large servers. Consider debouncing the query or indexing the emoji list for faster lookups.
-
----
-
 ## Notes
 
 - GUI-based shader customization will return in future versions.
