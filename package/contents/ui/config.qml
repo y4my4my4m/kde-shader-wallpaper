@@ -23,6 +23,7 @@ Kirigami.FormLayout {
     property bool cfg_iChannel2_flag: wallpaper.configuration.iChannel2_flag
     property bool cfg_iChannel3_flag: wallpaper.configuration.iChannel3_flag
     property string cfg_selectedShaderPath: wallpaper.configuration.selectedShaderPath
+    property int cfg_iFrameRate: wallpaper.configuration.iFrameRate
     property double cfg_shaderSpeed: wallpaper.configuration.shaderSpeed
     property double cfg_mouseSpeedBias: wallpaper.configuration.mouseSpeedBias
     property bool cfg_mouseAllowed: wallpaper.configuration.mouseAllowed
@@ -138,6 +139,58 @@ Kirigami.FormLayout {
             onCheckedChanged: {
                 wallpaper.configuration.running = checked;
                 cfg_running = checked;
+            }
+        }
+    }
+
+    RowLayout {
+        Kirigami.FormData.label: i18nd("online.knowmad.shaderwallpaper", "Frames Per Second:")
+        ColumnLayout {
+            Slider {
+                id: iFrameRateSlider
+                Layout.preferredWidth: Kirigami.Units.gridUnit * 16
+                from: 0
+                to: 120
+                stepSize: 1
+                value: cfg_iFrameRate >= 0 ? cfg_iFrameRate : 60
+                onValueChanged: {
+                    iFrameRateField.text = String(value);
+                    wallpaper.configuration.iFrameRate = iFrameRateField.text;
+                    cfg_iFrameRate = iFrameRateField.text;
+                }
+            }
+        }
+        ColumnLayout {
+            TextField {
+                id: iFrameRateField
+                text: cfg_iFrameRate >= 0  ? String(cfg_iFrameRate) : "60"
+                inputMethodHints: Qt.NumberInput
+                Layout.preferredWidth: Kirigami.Units.gridUnit * 3
+                onEditingFinished: {
+                    let inputValue = parseInt(text);
+                    // Value should never go below 0, but can go above our max
+                    if (isNaN(inputValue) || inputValue < iFrameRateSlider.from) {
+                        inputValue = iFrameRateSlider.from;
+                    }
+                    text = inputValue;
+                    iFrameRateSlider.value = inputValue;
+                    wallpaper.configuration.iFrameRate = inputValue;
+                    cfg_iFrameRate = inputValue;
+                }
+                Keys.onPressed: {
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        iFrameRateField.focus = false; // Unfocus the TextField
+                        event.accepted = true; // Prevent further propagation of the key event
+                    }
+                }
+                background: Rectangle {
+                    color: iFrameRateField.activeFocus ? palette.base : "transparent"
+                    border.color: iFrameRateField.activeFocus ? palette.highlight : "transparent"
+                    border.width: 1
+                    radius: 4
+                    anchors.fill: iFrameRateField
+                    anchors.margins: -2
+                }
             }
         }
     }

@@ -150,9 +150,9 @@ WallpaperItem {
 
     Timer {
         id: timer1
-        running: wallpaper.configuration.running ? windowModel.runShader : false
+        running: wallpaper.configuration.running && wallpaper.configuration.iFrameRate != 0 && windowModel.runShader
         triggeredOnStart: true
-        interval: 16
+        interval: 1.0 / (wallpaper.configuration.iFrameRate && wallpaper.configuration.iFrameRate > 0 ? wallpaper.configuration.iFrameRate : 60) * 1000.0
         repeat: true
         onTriggered: {
             var now = new Date();
@@ -164,8 +164,8 @@ WallpaperItem {
             var second = now.getSeconds();
             var startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
             var secondsSinceMidnight = (now - startOfDay) / 1000;
-
-            shader.iTime += 0.016 * (wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0);
+            var step = 1.0 / (wallpaper.configuration.iFrameRate ? wallpaper.configuration.iFrameRate : 60.0);
+            shader.iTime += step * (wallpaper.configuration.shaderSpeed ? wallpaper.configuration.shaderSpeed : 1.0);
             shader.iFrame += 1;
             shader.iDate = Qt.vector4d(0., 0., 0., secondsSinceMidnight);
         }
