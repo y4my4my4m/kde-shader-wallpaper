@@ -1,3 +1,7 @@
+### ! ATTENTION !
+Shader Wallpaper is currently undergoing a rewrite in C++ to address numerous issues that cannot be easily fixed in the Python implementation.
+This repo is now in maintenance mode and will not be accepting feature requests.
+
 # Plasma6 Shader Wallpaper Plugin
 
 **Shader Wallpaper** is a Plasma6 wallpaper plugin that enables dynamic, shader-driven wallpapers for the KDE desktop.
