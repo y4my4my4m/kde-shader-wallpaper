@@ -1,3 +1,35 @@
+
+<div align="right">
+  <details>
+    <summary >🌐 Language</summary>
+    <div>
+      <div align="center">
+        <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=en">English</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=zh-CN">简体中文</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=zh-TW">繁體中文</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=ja">日本語</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=ko">한국어</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=hi">हिन्दी</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=th">ไทย</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=fr">Français</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=de">Deutsch</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=es">Español</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=it">Italiano</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=ru">Русский</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=pt">Português</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=nl">Nederlands</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=pl">Polski</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=ar">العربية</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=fa">فارسی</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=tr">Türkçe</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=vi">Tiếng Việt</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=id">Bahasa Indonesia</a>
+        | <a href="https://openaitx.github.io/view.html?user=y4my4my4m&project=kde-shader-wallpaper&lang=as">অসমীয়া</
+      </div>
+    </div>
+  </details>
+</div>
+
 # Plasma6 Shader Wallpaper Plugin
 
 **Shader Wallpaper** is a Plasma6 wallpaper plugin that enables dynamic, shader-driven wallpapers for the KDE desktop.
