@@ -1,20 +1,3 @@
-#version 440
-
-layout(location = 0) in vec2 qt_TexCoord0;
-layout(location = 0) out vec4 fragColor;
-
-layout(std140, binding = 0) uniform buf { 
-    mat4 qt_Matrix;
-    float qt_Opacity;
-    vec4 iMouse;
-    vec3 iResolution;
-    int iFrame;
-} ubuf;
-
-layout(binding = 1) uniform sampler2D iChannel0;
-layout(binding = 2) uniform sampler2D iChannel1;
-layout(binding = 3) uniform sampler2D iChannel2;
-
 
 // ShaderToy GLSL Fragment Shader
 // Adjusted version for Qt 6 compatibility
@@ -23,7 +6,7 @@ layout(binding = 3) uniform sampler2D iChannel2;
 #define RotNum 5
 
 vec2 scuv(vec2 uv) {
-    float zoom = 1.0 - ubuf.iMouse.z / 1000.0;
+    float zoom = 1.0 - iMouse.z / 1000.0;
     return (uv - 0.5) * 1.2 * zoom + 0.5;
 }
 
@@ -59,12 +42,12 @@ vec4 myenv(vec3 pos, vec3 dir, float period)
 {
     return texture(iChannel2, dir.xy)+.15;
 }
-void main() {
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 Res0 = vec2(textureSize(iChannel0, 0));
     vec2 Res1 = vec2(textureSize(iChannel1, 0));
     
-    vec2 pos = qt_TexCoord0 * ubuf.iResolution.xy;
-    vec2 b = cos(float(ubuf.iFrame) * 0.3 - vec2(0, 1.57));
+    vec2 pos = fragCoord;
+    vec2 b = cos(float(iFrame) * 0.3 - vec2(0, 1.57));
     vec2 v = vec2(0);
     float bbMax = 0.5 * Res0.y; bbMax *= bbMax;
     for (int l = 0; l < 20; l++) {
@@ -78,13 +61,13 @@ void main() {
     }
 
     vec4 advectedColor = texture(iChannel0, fract((pos - v * vec2(-1, 1) * 5.0 * sqrt(Res0.x / 600.)) / Res0));
-    advectedColor.zw += (texture(iChannel1, qt_TexCoord0 * ubuf.iResolution.xy / Res1 * 0.35).zw - 0.5) * 0.002;
-    advectedColor.zw += (texture(iChannel1, qt_TexCoord0 * ubuf.iResolution.xy / Res1 * 0.7).zw - 0.5) * 0.001;
+    advectedColor.zw += (texture(iChannel1, fragCoord / Res1 * 0.35).zw - 0.5) * 0.002;
+    advectedColor.zw += (texture(iChannel1, fragCoord / Res1 * 0.7).zw - 0.5) * 0.001;
 
-    vec2 uv = qt_TexCoord0;
-    vec3 n = vec3(-getGrad(uv, 1.4 / ubuf.iResolution.x) * 0.02, 1.);
+    vec2 uv = fragCoord / iResolution.xy;
+    vec3 n = vec3(-getGrad(uv, 1.4 / iResolution.x) * 0.02, 1.);
     n = normalize(n);
-    vec2 sc = (qt_TexCoord0 * ubuf.iResolution.xy - Res0 * 0.5) / Res0.x;
+    vec2 sc = (fragCoord - Res0 * 0.5) / Res0.x;
     vec3 dir = normalize(vec3(sc, -1.));
     vec3 R = reflect(dir, n);
     // vec3 refl = texture(iChannel2, R.xzy);

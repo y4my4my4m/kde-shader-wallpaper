@@ -24,13 +24,21 @@ vec3 bend(vec3 v)
 }
 
 // fractal brownian motion (layers of multi scale noise)
+// Original Shadertoy version sampled a 3D noise texture via
+// `texture(iChannel0, p/falloff)` with a vec3 coord. Our engine binds
+// iChannel0 as a sampler2D, so we project the 3D point to 2D by
+// rotating successive octaves with the z component — gives a similar
+// "drifting" feel without needing a sampler3D.
 vec3 fbm(vec3 p)
 {
     vec3 result = vec3(0);
     float falloff = 0.5;
     for (float index = 0.; index < 3.; ++index)
     {
-        result += bend(texture(iChannel0, p/falloff).xyz) * falloff;
+        vec2 q = p.xy / falloff;
+        // shear by p.z so each octave sweeps over time / depth
+        q += vec2(cos(p.z / falloff), sin(p.z / falloff)) * 0.5;
+        result += bend(texture(iChannel0, q).xyz) * falloff;
         falloff /= 2.;
     }
     return result;

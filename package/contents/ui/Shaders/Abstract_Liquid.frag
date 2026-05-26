@@ -1,45 +1,6 @@
 // URL: shadertoy.com/view/ctd3z4
 // By: SentientCymatic
 
-#version 450
-
-layout(location = 0) in vec2 qt_TexCoord0;
-layout(location = 0) out vec4 fragColor;
-
-layout(std140, binding = 0) uniform buf {
-    mat4 qt_Matrix;
-    float qt_Opacity;
-    float iTime;
-    float iTimeDelta;
-    float iFrameRate;
-    float iSampleRate;
-    int iFrame;
-    vec4 iDate;
-    vec4 iMouse;
-    vec3 iResolution;
-    float iChannelTime[4];
-    vec3 iChannelResolution[4];
-} ubuf;
-
-layout(binding = 1) uniform sampler2D iChannel0;
-layout(binding = 1) uniform sampler2D iChannel1;
-layout(binding = 1) uniform sampler2D iChannel2;
-layout(binding = 1) uniform sampler2D iChannel3;
-
-vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
-
-// either rename them in the frag or add this (probably costs some performance)
-
-int iFrame = ubuf.iFrame;
-float iTime = ubuf.iTime;
-float iTimeDelta = ubuf.iTimeDelta;
-vec3 iResolution = ubuf.iResolution;
-vec4 iMouse = ubuf.iMouse;
-
-// these must be modified as you cant do that with arrays afaik:
-float iChannelTime[4];
-vec3 iChannelResolution[4];
-
 // original shader starts here
 
 vec2 hash2( float n ){return fract(sin(vec2(n,n+1.0))*vec2(432.14159,528.14159));}
@@ -136,7 +97,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
 // original shader ends here
 
 // add this at the end
-void main() {
+void mainImage() {
     vec4 color = vec4(0.0);
     mainImage(color, fragCoord);
     fragColor = color;

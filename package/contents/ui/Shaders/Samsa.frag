@@ -33,33 +33,6 @@ AA 0 = no AA
 AA 1 = with AA
 (GPU intense - Any better solution welcome :)  <3  )      */
 
-#version 450
-
-layout(location = 0) in vec2 qt_TexCoord0;
-layout(location = 0) out vec4 fragColor;
-
-layout(std140, binding = 0) uniform buf { 
-    mat4 qt_Matrix;
-    float qt_Opacity;
-    float iTime;
-    float iTimeDelta;
-    float iFrameRate;
-    float iSampleRate;
-    int iFrame;
-    vec4 iDate;
-    vec4 iMouse;
-    vec3 iResolution;
-    float iChannelTime[4];
-    vec3 iChannelResolution[4];
-} ubuf;
-
-layout(binding = 1) uniform sampler2D iChannel0;
-layout(binding = 1) uniform sampler2D iChannel1;
-layout(binding = 1) uniform sampler2D iChannel2;
-layout(binding = 1) uniform sampler2D iChannel3;
-
-vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
-
     
 #define MAX_STEPS 100
 #define MAX_DIST 20.
@@ -68,6 +41,11 @@ vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.x
 mat2 Rot(float a) {
     float s=sin(a), c=cos(a);
     return mat2(c, -s, s, c);}
+
+vec2 dirToUv(vec3 d) {
+    d = normalize(d);
+    return d.xy * 0.5 + 0.5;
+}
 
 //===================================================================//
 // below by https://iquilezles.org/
@@ -117,8 +95,8 @@ vec3 CamTransform(float t){
 
 float SDF(vec3 p){
     
-float t = ubuf.iTime*.2;
-      t += sin(ubuf.iTime*.5)*.3;
+float t = iTime*.2;
+      t += sin(iTime*.5)*.3;
         
     // TORUS
     float tor = 1e9;
@@ -170,7 +148,7 @@ float t = ubuf.iTime*.2;
     d += clamp(0.,2.,p.y+1.7) * pow( (sin(t+p.x*p.z*p.y*.5)*.5+.5),8.) *( (asin(sin(p.x*b)) + asin(sin(p.y*b)) +asin(sin(p.z*b)))*0.01);
     
     // CAMERA BOUNDING SPHERE
-    d = Smax(d,-Sphere(p-CamTransform(ubuf.iTime),.3),.5)*.9; // Sphere Subtraction
+    d = Smax(d,-Sphere(p-CamTransform(iTime),.3),.5)*.9; // Sphere Subtraction
     
     return d;
 }
@@ -189,7 +167,7 @@ float March(vec3 ro, vec3 rd, float side){
 vec3 CalcNormal (vec3 p){
     // inspired by tdhooper and klems - a way to prevent the compiler from inlining map() 4 times
     vec3 n = vec3(0.0);
-    for( int i=min(ubuf.iFrame,0); i<4; i++ ){
+    for( int i=min(iFrame,0); i<4; i++ ){
         vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
         n += e*SDF(p+.001*e);
     }
@@ -212,10 +190,10 @@ float AO (in vec3 pos, in vec3 n){
 
 vec4 Color ( in vec2 fragCoord )
 {
-    float t = ubuf.iTime*.1;
+    float t = iTime*.1;
     
-    vec2 uv = (2.*fragCoord-ubuf.iResolution.xy)/ubuf.iResolution.y;
-    vec3 ro = CamTransform(ubuf.iTime),
+    vec2 uv = (2.*fragCoord-iResolution.xy)/iResolution.y;
+    vec3 ro = CamTransform(iTime),
          rd = CastRay(uv, ro, vec3(0), 2.),
          col = vec3(1);       
     
@@ -231,7 +209,7 @@ vec4 Color ( in vec2 fragCoord )
         
 // :::: Refraction from https://www.shadertoy.com/view/sllGDN :::: //
 
-        vec3 refOutside = texture(iChannel0, r).rgb;
+        vec3 refOutside = texture(iChannel0, dirToUv(r)).rgb;
         vec3 rdIn = refract(rd, n, 1./IOR);
         
         vec3 pEnter = p - n*SURF_DIST*4.;
@@ -247,17 +225,17 @@ vec4 Color ( in vec2 fragCoord )
         // red
         rdOut = refract(rdIn, nExit, IOR-abb);
         if(dot(rdOut, rdOut)==0.) rdOut = reflect(rdIn, nExit);
-        reflTex.r = texture(iChannel0, rdOut).r;
+        reflTex.r = texture(iChannel0, dirToUv(rdOut)).r;
         
         // green
         rdOut = refract(rdIn, nExit, IOR);
         if(dot(rdOut, rdOut)==0.) rdOut = reflect(rdIn, nExit);
-        reflTex.g = texture(iChannel0, rdOut).g;
+        reflTex.g = texture(iChannel0, dirToUv(rdOut)).g;
         
         // blue
         rdOut = refract(rdIn, nExit, IOR+abb);
         if(dot(rdOut, rdOut)==0.) rdOut = reflect(rdIn, nExit);
-        reflTex.b = texture(iChannel0, rdOut).b;
+        reflTex.b = texture(iChannel0, dirToUv(rdOut)).b;
         
         /*
         // density of the medium
@@ -273,7 +251,7 @@ vec4 Color ( in vec2 fragCoord )
         col = mix(reflTex, refOutside, fresnel);
     }
     
-    col = mix( col, vec3(texture(iChannel0,rd).rgb)*.9, 1.-exp(-pow(.08*d,6.)));//fog
+    col = mix( col, vec3(texture(iChannel0, dirToUv(rd)).rgb)*.9, 1.-exp(-pow(.08*d,6.)));//fog
     col = pow(col, vec3(.4545)); //gamma correction
 	return vec4(col, 1);
 }
@@ -294,8 +272,3 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
 }
 
-void main() {
-    vec4 color = vec4(0.0);
-    mainImage(color, fragCoord);
-    fragColor = color;
-}

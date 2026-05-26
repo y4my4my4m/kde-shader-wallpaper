@@ -5,12 +5,36 @@
 // thanks to Fabrice Neyret for code reviews
 // licensed under hippie love conspiracy
 
+// ---------------------------------------------------------------
+// Helper functions normally provided by Leon Denise's "Common"
+// buffer on Shadertoy. This shader was originally imported without
+// its Common pass, so we inline a self-contained copy here.
+//   repeat   : domain repetition centred on 0
+//   hash13   : 1-out / 3-in hash by David Hoskins  https://www.shadertoy.com/view/4djSRW
+//   rot      : 2D rotation matrix
+//   smoothing: 0..1 blend coefficient between two SDFs (a < b => 1)
+//   smin     : polynomial smooth-min (Inigo Quilez)
+// ---------------------------------------------------------------
+vec3 repeat(vec3 p, float c) { return mod(p + 0.5 * c, c) - 0.5 * c; }
+vec2 repeat(vec2 p, float c) { return mod(p + 0.5 * c, c) - 0.5 * c; }
+float repeat(float p, float c) { return mod(p + 0.5 * c, c) - 0.5 * c; }
 
-// taste of noise 7 by leon denise 2021/10/14
-// result of experimentation with organic patterns
-// using code from Inigo Quilez, David Hoskins and NuSan
-// thanks to Fabrice Neyret for code reviews
-// licensed under hippie love conspiracy
+float hash13(vec3 p3) {
+    p3 = fract(p3 * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+mat2 rot(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+
+float smoothing(float a, float b, float k) {
+    return clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+}
+
+float smin(float a, float b, float k) {
+    float h = smoothing(a, b, k);
+    return mix(b, a, h) - k * h * (1.0 - h);
+}
 
 // global variable
 float material;

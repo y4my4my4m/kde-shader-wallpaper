@@ -1,120 +1,190 @@
-# Plasma6 Shader Wallpaper Plugin
+# Shader Wallpaper for KDE Plasma 6
 
-**Shader Wallpaper** is a Plasma6 wallpaper plugin that enables dynamic, shader-driven wallpapers for the KDE desktop.
+<p align="center">
+  <img src="https://github.com/y4my4my4m/kde-shader-wallpaper/assets/8145020/6e2e6807-2be5-44c3-9d35-1c560e37cf74" alt="Shader Wallpaper" width="600">
+</p>
+
+<p align="center">
+  <strong>Run beautiful GLSL shaders as your desktop wallpaper</strong>
+</p>
+
+<p align="center">
+  <a href="https://store.kde.org/p/1413010/">
+    <img src="https://img.shields.io/badge/KDE%20Store-Install-blue?style=for-the-badge&logo=kde" alt="KDE Store">
+  </a>
+  <a href="https://ko-fi.com/I2I525V5R">
+    <img src="https://img.shields.io/badge/Ko--fi-Support-ff5e5b?style=for-the-badge&logo=ko-fi" alt="Ko-fi">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-GPL%20v3-green?style=for-the-badge" alt="License">
+  </a>
+</p>
 
 ---
 
-> **Note for Plasma5 users:**\
-> Please refer to the [Plasma5 branch](https://github.com/y4my4my4m/kde-shader-wallpaper/tree/plasma5) for compatibility.
+## ✨ Features
 
----
+- **200+ Built-in Shaders** - Curated collection of beautiful effects
+- **Shadertoy Import** - Import shaders directly from shadertoy.com
+- **Multi-Pass Rendering** - Full buffer support (A, B, C, D) for complex effects
+- **Audio Reactive** - Shaders that respond to system audio via PipeWire
+- **Mouse Interaction** - Full iMouse support on X11 and Wayland
+- **Window Tracking** - Shaders can react to window positions
+- **Performance Monitoring** - Real-time FPS and power consumption estimates
+- **Preset System** - Save and share your configurations
 
-## Features
+## 📦 Installation
 
-- Run custom shaders as your desktop wallpaper
-- Easy installation, upgrade, and removal
-- Full support for Plasma6
-- Ongoing development with frequent feature updates and bug fixes
+This plugin requires compilation because it uses C++ for OpenGL rendering, audio capture, and cursor tracking.
 
-### Notes
+### From Source (All Distros)
 
-Here are some OLED friendly shaders:
+**One-liner install:**
+```bash
+git clone https://github.com/y4my4my4m/kde-shader-wallpaper.git && cd kde-shader-wallpaper && ./scripts/build.sh
 ```
-Grey_Liquid
-HSV_to_RGB
-RGB_Noise_in_Movement
-Raymarching_Basic
-VDJ.frag
-Wiggle_Worm
+
+**Step by step:**
+```bash
+# 1. Install dependencies (see below)
+# 2. Clone and build
+git clone https://github.com/y4my4my4m/kde-shader-wallpaper.git
+cd kde-shader-wallpaper
+./scripts/build.sh install
+
+# 3. Restart plasmashell
+pkill plasmashell && plasmashell &
 ```
----
 
-## Installation
+### Dependencies
 
-### Install from Source
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/y4my4my4m/kde-shader-wallpaper.git
-   ```
-
-2. **Remove any previous installation:**
-
-   ```bash
-   rm -rf ~/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/
-   ```
-
-3. **Install the package:**
-
-   ```bash
-   kpackagetool6 -t Plasma/Wallpaper -i kde-shader-wallpaper/package
-   ```
-
-### Upgrade
+<details>
+<summary><strong>Arch Linux / Manjaro</strong></summary>
 
 ```bash
-kpackagetool6 -t Plasma/Wallpaper --upgrade kde-shader-wallpaper/package
+sudo pacman -S cmake extra-cmake-modules qt6-base qt6-declarative \
+    libplasma kf6-kconfig kf6-ki18n kf6-kpackage pipewire libpipewire xcb-util
 ```
+</details>
+
+<details>
+<summary><strong>Ubuntu / Debian (24.04+)</strong></summary>
+
+```bash
+sudo apt install cmake extra-cmake-modules build-essential \
+    qt6-base-dev qt6-declarative-dev libplasma-dev \
+    libkf6config-dev libkf6i18n-dev libkf6package-dev \
+    libpipewire-0.3-dev libxcb1-dev
+```
+</details>
+
+<details>
+<summary><strong>Fedora 40+</strong></summary>
+
+```bash
+sudo dnf install cmake extra-cmake-modules gcc-c++ \
+    qt6-qtbase-devel qt6-qtdeclarative-devel libplasma-devel \
+    kf6-kconfig-devel kf6-ki18n-devel kf6-kpackage-devel \
+    pipewire-devel libxcb-devel
+```
+</details>
+
+<details>
+<summary><strong>openSUSE Tumbleweed</strong></summary>
+
+```bash
+sudo zypper install cmake extra-cmake-modules gcc-c++ \
+    qt6-base-devel qt6-declarative-devel libplasma-devel \
+    kf6-kconfig-devel kf6-ki18n-devel kf6-kpackage-devel \
+    pipewire-devel libxcb-devel
+```
+</details>
 
 ### Uninstall
 
-You may uninstall via KDE Desktop Settings, or run:
-
 ```bash
-kpackagetool6 -t Plasma/Wallpaper --remove online.knowmad.shaderwallpaper
+./scripts/build.sh uninstall
+# Or manually:
+rm -rf ~/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/
+pkill plasmashell && plasmashell &
 ```
 
----
+## 🎮 Usage
 
-## Developer Guide
+1. Right-click your desktop → **Configure Desktop and Wallpaper**
+2. Select **Shader Wallpaper** as the wallpaper type
+3. Click **Browse Gallery** to select a shader
+4. Adjust settings like speed, FPS target, and input options
 
-To create custom shaders or contribute, please read the [Developer’s Guide](README_DEV.md).
+## 🔧 Troubleshooting
 
----
+<details>
+<summary><strong>Shader causes black screen or crashes</strong></summary>
 
-## Repository & Support
+Delete the configuration and restart:
+```bash
+rm -rf ~/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/
+pkill plasmashell && plasmashell &
+```
+</details>
 
-- **GitHub:** [y4my4my4m/kde-shader-wallpaper](https://github.com/y4my4my4m/kde-shader-wallpaper)
-- **KDE Store:** [Plasma6 version](https://store.kde.org/p/2143912)
-- **KDE Store:** [Plasma5 version](https://store.kde.org/p/1413010/)
-- **Twitter (X):** [@y4my4my4m](https://twitter.com/y4my4my4m)
+<details>
+<summary><strong>High CPU/GPU usage</strong></summary>
 
-For issues, pull requests, or general inquiries, please contact via [GitHub Issues](https://github.com/y4my4my4m/kde-shader-wallpaper/issues) or Twitter.
+- Lower the target FPS (30 is often sufficient)
+- Enable "Pause when maximized window" in settings
+- Choose lighter shaders (check the performance tier indicator)
+</details>
 
----
+<details>
+<summary><strong>Audio reactive features not working</strong></summary>
 
-## Notes
+Ensure PipeWire is running and the shader supports audio (`iChannel` must be bound to audio input).
+</details>
 
-- GUI-based shader customization will return in future versions.
-- Shadertoy.com imports are currently unsupported in the Plasma6 version due to shader compilation requirements.
-- Performance may vary by hardware and shader complexity, but most shaders are resource-efficient.
-- After editing shader files, restart the KDE Wallpaper QtQuick app (`pkill plasmashell` and restart).
+## 📖 Documentation
 
----
+- **[Developer Guide](docs/DEVELOPMENT.md)** - Creating and importing custom shaders
+- **[Architecture](docs/ARCHITECTURE.md)** - Project structure and technical details
+- **[Contributing](CONTRIBUTING.md)** - How to contribute to the project
 
-## Videos:
+## 🤝 Contributing
 
-### v1.2 using iGPU (and kvantum) in VirtualBox:
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) before submitting a PR.
 
-[![ShaderWallpaperVideoPreviewV1.2](https://cdn-cf-east.streamable.com/image/1g7muc_first.jpg?Expires=1599641820&Signature=kBzPch9XeiD3AieRh4sXd84JdQIknV2KK1m~w7KtXcO-5LH~JCeG8Wngq2p45Z521BWfd2jxpaujTV3618h91u4EnBSzMDRskpxPuSQ4x9uihB0gQ7u4OZjfLt3g-dXLa69Vh6V8~NCDuqo6v3G24vlQND-GArKa~lDPQvnNj2qt-cOIuFLyO0cBwJG4MTu-9C2zOe2wjR2s-cj8IAi4PweeMpJqeKZepDpe9grl8Wry8s3ahP9hZfUyCBs53LnWsEbfe2Ze01j6Bo07gXXb5rAQXYvfI7WxIDX2S7L5f33OxxJNxa4v1Jeg-aAsrW9Ij-86b9qtfsjN1IE6wUOzpQ__&Key-Pair-Id=APKAIEYUVEN4EVB2OKEQ)](https://streamable.com/1g7muc)
+### Quick Start for Contributors
 
-### v1.0:
-[![ShaderWallpaperVideoPreviewV1.0](https://cdn-cf-east.streamable.com/image/yeqam9.jpg?Expires=1599641220&Signature=NCZXLhg5owCeCiBx8wg7FIO2oOZ~6y9b-we72JE0icG9Cw649dYPPRqDzuOnXsvOEe0omZhhlckbcdLZg6QKbMm9R6UUkN3g-hs4Y8WAJcWIXrantAsWlg309a2vu-gIkHV06eOYczdC3BBzprRHLh8BuKGRQyIAvxLYyf25mWexhPVrZHvrXsl-PFWN1tH~LLL14vD1oaoysupJxnF26qLVv1nAGB-AzYn7GVAcnJmpOPUbKz~jl2Z6iWy1fgJYu~Dym5Hxphc21-XIOHSqXYjkZFDslyevRJVcfqAsnfOzsm3GwRmBQ8hYB5wO5lpp4DnAUuDjtzY9d5sB025U0Q__&Key-Pair-Id=APKAIEYUVEN4EVB2OKEQ)](https://streamable.com/yeqam9)
+```bash
+# Fork on GitHub, then clone your fork
+git clone git@github.com:y4my4my4m/kde-shader-wallpaper.git
+cd kde-shader-wallpaper
 
----
+# Build and install
+./scripts/build.sh install
 
-### Screenshots:
+# Test changes - restart plasmashell
+pkill plasmashell && plasmashell &
+```
 
-[![ShaderWallpaperPreviewImage](https://images.pling.com/img/00/00/58/32/49/1413010/ef67e0df43137d0d42b81afe700e83aa9cf2c911ab4619aa6ba072894a404c658546.png)](https://images.pling.com/img/00/00/58/32/49/1413010/ef67e0df43137d0d42b81afe700e83aa9cf2c911ab4619aa6ba072894a404c658546.png)
+## 📸 Screenshots
 
-[![ShaderWallpaperPreviewImage2](https://images.pling.com/img/00/00/58/32/49/1413010/95ec8cf5ca97eac0504faa68b297355964a9c6d4e1e1e161609997356b9a6d75fe6d.png)](https://images.pling.com/img/00/00/58/32/49/1413010/95ec8cf5ca97eac0504faa68b297355964a9c6d4e1e1e161609997356b9a6d75fe6d.png)
+<p align="center">
+  <img src="https://images.pling.com/img/00/00/58/32/49/1413010/ef67e0df43137d0d42b81afe700e83aa9cf2c911ab4619aa6ba072894a404c658546.png" width="400">
+  <img src="https://images.pling.com/img/00/00/58/32/49/1413010/95ec8cf5ca97eac0504faa68b297355964a9c6d4e1e1e161609997356b9a6d75fe6d.png" width="400">
+</p>
 
-[![ShaderWallpaperPreviewImage3](https://images.pling.com/img/00/00/58/32/49/1413010/67b57155b2a2a2cd63f6d5545af2f6da3f5298c081c5ab05a72f6c17aa56aee79afd.png)](https://images.pling.com/img/00/00/58/32/49/1413010/67b57155b2a2a2cd63f6d5545af2f6da3f5298c081c5ab05a72f6c17aa56aee79afd.png)
+## 📜 License
 
-[![ShaderWallpaperPreviewImage4](https://images.pling.com/img/00/00/58/32/49/1413010/b5026604b9009c3541e25b98bbaa0450d17a52ceee878f8b44383bb5e3570c3f251d.png)](https://images.pling.com/img/00/00/58/32/49/1413010/b5026604b9009c3541e25b98bbaa0450d17a52ceee878f8b44383bb5e3570c3f251d.png)
+This project is licensed under the GPL-3.0-or-later license. See [LICENSE](LICENSE) for details.
 
----
+## 💖 Support
 
-## Donations:
+If you find this project useful, consider supporting its development:
+
 [![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/I2I525V5R)
+
+---
+
+<p align="center">
+  Made with ❤️ by <a href="https://twitter.com/y4my4my4m">@y4my4my4m</a>
+</p>

@@ -1,34 +1,6 @@
 // From https://www.shadertoy.com/view/lflGRS
 // Credits to amagitakayosi
 
-#version 450
-
-layout(location = 0) in vec2 qt_TexCoord0;
-layout(location = 0) out vec4 fragColor;
-
-layout(std140, binding = 0) uniform buf { 
-    mat4 qt_Matrix;
-    float qt_Opacity;
-    float iTime;
-    float iTimeDelta;
-    float iFrameRate;
-    float iSampleRate;
-    int iFrame;
-    vec4 iDate;
-    vec4 iMouse;
-    vec3 iResolution;
-    float iChannelTime[4];
-    vec3 iChannelResolution[4];
-} ubuf;
-
-layout(binding = 1) uniform sampler2D iChannel0;
-layout(binding = 1) uniform sampler2D iChannel1;
-layout(binding = 1) uniform sampler2D iChannel2;
-layout(binding = 1) uniform sampler2D iChannel3;
-
-vec2 fragCoord = vec2(qt_TexCoord0.x, 1.0 - qt_TexCoord0.y) * ubuf.iResolution.xy;
-
-
 // global vars
 float light = 999.;
 float dark = 1.;
@@ -97,15 +69,20 @@ float hash(vec2 p) {
     return fract(sin(dot(p, vec2(49., 489.))) * 39284.);
 }
 
-float char(vec2 uv, float i, vec2 offset) {
+vec2 dirToUv(vec3 d) {
+    d = normalize(d);
+    return d.xy * 0.5 + 0.5;
+}
+
+float charact(vec2 uv, float i, vec2 offset) {
     uv += offset;
     uv = (uv - .5) * 2. + .5;
     uv = clamp(uv, 0., 1.);
     
     float x = mod(i, 16.);
     float y = 15. - floor(i / 16.);    
-    vec4 char = texture(iChannel0, (uv + vec2(x, y)) / 16.);
-    return 1. - char.a;
+    vec4 charact = texture(iChannel0, (uv + vec2(x, y)) / 16.);
+    return 1. - charact.a;
 }
 
 float text(vec2 p, bool isEdge) {
@@ -115,14 +92,14 @@ float text(vec2 p, bool isEdge) {
     uv.x = max(min(uv.x, .34), min(uv.x, step(.675, uv.x) * uv.x));
         
     float c = 0.;
-    c = max(c, char(uv, 82., vec2(0.7, 0)));
-    c = max(c, char(uv, 69., vec2(0.51, 0)));
-    c = max(c, char(uv, 65., vec2(0.34, 0)));
-    c = max(c, char(uv, 67., vec2(0.19, 0)));
-    c = max(c, char(uv * .97, 84., vec2(-.18, 0.016))); // Adjust "T"
-    c = max(c, char(uv, 73., vec2(-.35, 0)));
-    c = max(c, char(uv, 79., vec2(-.5, 0)));
-    c = max(c, char(uv, 78., vec2(-.7, 0)));
+    c = max(c, charact(uv, 82., vec2(0.7, 0)));
+    c = max(c, charact(uv, 69., vec2(0.51, 0)));
+    c = max(c, charact(uv, 65., vec2(0.34, 0)));
+    c = max(c, charact(uv, 67., vec2(0.19, 0)));
+    c = max(c, charact(uv * .97, 84., vec2(-.18, 0.016))); // Adjust "T"
+    c = max(c, charact(uv, 73., vec2(-.35, 0)));
+    c = max(c, charact(uv, 79., vec2(-.5, 0)));
+    c = max(c, charact(uv, 78., vec2(-.7, 0)));
 
     return isEdge
         ? smoothstep(.01, 0., abs(c - .5))
@@ -159,9 +136,9 @@ vec3 raymarch(in vec2 p, vec3 ro, vec3 rd) {
 
     // Cheap AO with dither
     float ao = pow(iter, .8);
-    ao *= (0.8 + 0.2 * hash(p + ubuf.iTime));
+    ao *= (0.8 + 0.2 * hash(p + iTime));
 
-    vec3 n = normalize(getNormal(rp) + vec3(0, 0, hash(p * 0.2 + ubuf.iTime) * 0.03));
+    vec3 n = normalize(getNormal(rp) + vec3(0, 0, hash(p * 0.2 + iTime) * 0.03));
     if (hit.y == 1.) {                                   
         // diffuse
         float dif = clamp(dot(n, ld), 0., 1.) * .2;
@@ -173,7 +150,7 @@ vec3 raymarch(in vec2 p, vec3 ro, vec3 rd) {
         col += pow(clamp(dot(n,hv),0.,1.), 88.0) * 0.2;
         
         // reflection
-        col *= mix(vec3(1), texture(iChannel1, n).rgb * 3., .07); 
+        col *= mix(vec3(1), texture(iChannel1, dirToUv(n)).rgb * 3., .07); 
         
         col += pow(.2 / light, 0.8) * vec3(1., .3, 0); // glow
         col -= 0.01 * ao;
@@ -189,7 +166,7 @@ vec3 raymarch(in vec2 p, vec3 ro, vec3 rd) {
         col += pow(clamp(dot(n,hv),0.,1.),99.0) * 0.9; 
 
         // reflection
-        col *= mix(vec3(1), texture(iChannel1, n).rgb * 2., .9);        
+        col *= mix(vec3(1), texture(iChannel1, dirToUv(n)).rgb * 2., .9);        
 
         // glow
         fre = pow(1. - clamp(dot(-rd, n), 0., 1.), 8.);
@@ -226,11 +203,11 @@ float spin(float x, float div, float slope) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 uv = fragCoord/ubuf.iResolution.xy;
+    vec2 uv = fragCoord / iResolution.xy;
     vec2 p = uv * 2. - 1.;
-    p.x *= ubuf.iResolution.x / ubuf.iResolution.y;
+    p.x *= iResolution.x / iResolution.y;
 
-    time = ubuf.iTime;
+    time = iTime;
     
     // motion blur
     float motion = exp(mod((time - PHASE_1), PHASE_12)* -2.);
@@ -273,8 +250,3 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 }
 
 
-void main() {
-    vec4 color = vec4(0.0);
-    mainImage(color, fragCoord);
-    fragColor = color;
-}

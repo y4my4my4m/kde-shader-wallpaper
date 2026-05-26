@@ -1,186 +1,190 @@
 // URL: https://www.shadertoy.com/view/wdBGWD
 // By lsdlive
-
-/*
-
-@lsdlive
-CC-BY-NC-SA
-
-This is my part for "Mist" by Ohno, a 4 kilobytes demo released at the Cookie 2018.
-
-pouet: http://www.pouet.net/prod.php?which=79350
-youtube: https://www.youtube.com/watch?v=UUtU3WVB144
-
-Code/Graphics: Flopine
-Code/Graphics: Lsdlive
-Music: Triace from Desire
-
-Part1 from Flopine here: https://www.shadertoy.com/view/tdBGWD
-
-Information about my process for making this demo here:
-https://twitter.com/lsdlive/status/1090627411379716096
-
-*/
+//
+// "Mist" by Ohno (Cookie 2018) — Lsdlive's 4 KiB demo part.
+// Original sources: pouet.net/prod.php?which=79350
+//                   youtube.com/watch?v=UUtU3WVB144
+//
+// Notes on this port:
+//   The original assigns to non-trivial swizzles and feeds them to
+//   inout helpers (e.g. `p.xy *= r2d(t);`, `amod2(p.xz, …)`). With
+//   the engine's GLSL 330 wrapper, several NVIDIA driver versions
+//   crash the linker with the internal error
+//       C9999: Can't convert to expr: vec3:@p…[ivec2:@TMP]
+//   while trying to lower those compound-swizzle ops into IR. We
+//   route every swizzle mutation through small helpers that take and
+//   return a vec3, so the swizzle is never an LHS or an out-param.
 
 float time = 0.;
 
 float random(vec2 uv) {
-	return fract(sin(dot(uv, vec2(12.2544, 35.1571))) * 5418.548416);
+    return fract(sin(dot(uv, vec2(12.2544, 35.1571))) * 5418.548416);
 }
 
 mat2 r2d(float a) {
-	float c = cos(a), s = sin(a);
-	// Explained here why you still get an anti-clockwise rotation with this matrix:
-	// https://www.shadertoy.com/view/wdB3DW
-	return mat2(c, s, -s, c);
+    float c = cos(a), s = sin(a);
+    // Original anti-clockwise convention preserved.
+    return mat2(c, s, -s, c);
 }
 
 vec3 re(vec3 p, float d) {
-	return mod(p - d * .5, d) - d * .5;
+    return mod(p - d * .5, d) - d * .5;
 }
 
 void amod2(inout vec2 p, float d) {
-	// should be atan(p.y, p.x) but I had this function for a while
-	// and putting parameters like this add a PI/6 rotation.
-	float a = re(vec3(atan(p.x, p.y)), d).x; 
-	p = vec2(cos(a), sin(a)) * length(p);
+    float a = mod(atan(p.y, p.x) + d * .5, d) - d * .5;
+    p = vec2(cos(a), sin(a)) * length(p);
 }
 
 void mo(inout vec2 p, vec2 d) {
-	p = abs(p) - d;
-	if (p.y > p.x)p = p.yx;
+    p = abs(p) - d;
+    if (p.y > p.x) p = p.yx;
 }
+
+// -- vec3 helpers ----------------------------------------------------
+// Each takes a vec3 by value, mutates a vec2 _local_ contiguous
+// copy, and returns the rebuilt vec3. This keeps the bad NV
+// optimizer paths (compound swizzle assigns, non-contiguous out
+// params) out of the main body entirely.
+vec3 rotXY(vec3 p, float a) {
+    float c = cos(a), s = sin(a);
+    return vec3(p.x * c + p.y * s, -p.x * s + p.y * c, p.z);
+}
+
+vec3 amodXY(vec3 p, float d) {
+    vec2 q = p.xy;
+    amod2(q, d);
+    return vec3(q, p.z);
+}
+
+vec3 moXY(vec3 p, vec2 d) {
+    vec2 q = p.xy;
+    mo(q, d);
+    return vec3(q, p.z);
+}
+
+vec3 amodXZ(vec3 p, float d) {
+    vec2 q = vec2(p.x, p.z);
+    amod2(q, d);
+    return vec3(q.x, p.y, q.y);
+}
+
+vec3 moXZ(vec3 p, vec2 d) {
+    vec2 q = vec2(p.x, p.z);
+    mo(q, d);
+    return vec3(q.x, p.y, q.y);
+}
+// --------------------------------------------------------------------
 
 vec3 get_cam(vec3 ro, vec3 ta, vec2 uv) {
-	vec3 fwd = normalize(ta - ro);
-	vec3 right = normalize(cross(fwd, vec3(0, 1, 0)));
-
-	//vec3 right = normalize(vec3(-fwd.z, 0, fwd.x));
-	return normalize(fwd + right * uv.x + cross(right, fwd) * uv.y);
+    vec3 fwd = normalize(ta - ro);
+    vec3 right = normalize(cross(fwd, vec3(0, 1, 0)));
+    return normalize(fwd + right * uv.x + cross(right, fwd) * uv.y);
 }
 
-// signed cube
-// http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
+// signed cube — iq, https://iquilezles.org/articles/distfunctions/
 float cube(vec3 p, vec3 b) {
-	b = abs(p) - b;
-	return min(max(b.x, max(b.y, b.z)), 0.) + length(max(b, 0.));
+    b = abs(p) - b;
+    return min(max(b.x, max(b.y, b.z)), 0.) + length(max(b, 0.));
 }
 
-// iq's signed cross sc() - http://iquilezles.org/www/articles/menger/menger.htm
+// iq's signed cross sc() — https://iquilezles.org/articles/menger/
 float sc(vec3 p, float d) {
-	p = abs(p);
-	p = max(p, p.yzx);
-	return min(p.x, min(p.y, p.z)) - d;
+    p = abs(p);
+    p = max(p, p.yzx);
+    return min(p.x, min(p.y, p.z)) - d;
 }
 
 
 ////////////////////////// SHADER LSDLIVE //////////////////////////
 
 float prim(vec3 p) {
+    p = rotXY(p, 3.14 * .5 + p.z * .1);
+    p = amodXY(p, 6.28 / 3.);
+    p.x = abs(p.x) - 9.;
 
-	p.xy *= r2d(3.14 * .5 + p.z * .1); // .1
+    p = rotXY(p, p.z * .2);
 
-	amod2(p.xy, 6.28 / 3.); // 3.
-	p.x = abs(p.x) - 9.; // 9.
+    p = amodXY(p, 6.28 / mix(
+        mix(10., 5., smoothstep(59.5, 61.5, time)),
+        3.,
+        smoothstep(77.5, 77.75, time)));
+    p = moXY(p, vec2(2.));
 
-	p.xy *= r2d(p.z * .2); // .2
-
-	amod2(p.xy, 6.28 /
-		mix(
-			mix(10., 5., smoothstep(59.5, 61.5, time)), // T4
-			3.,
-			smoothstep(77.5, 77.75, time)) // T8
-	); // 3.
-	mo(p.xy, vec2(2.)); // 2.
-
-	p.x = abs(p.x) - .6; // .6
-	return length(p.xy) - .2;//- smoothstep(80., 87., time)*(.5+.5*sin(time)); // .2
+    p.x = abs(p.x) - .6;
+    return length(p.xy) - .2;
 }
 
 float g = 0.; // glow
+
 float de(vec3 p) {
 
-	if (time > 109.2) {
-		mo(p.xy, vec2(.2));
-		p.x -= 10.;
-	}
+    if (time > 109.2) {
+        p = moXY(p, vec2(.2));
+        p.x -= 10.;
+    }
 
-	if (time > 101.4) {
-		p.xy *= r2d(time*.2);
-	}
+    if (time > 101.4) {
+        p = rotXY(p, time * .2);
+    }
 
-	if (time > 106.5) {
-		mo(p.xy, vec2(5. + sin(time)*3.*cos(time*.5), 0.));
-	}
+    if (time > 106.5) {
+        p = moXY(p, vec2(5. + sin(time) * 3. * cos(time * .5), 0.));
+    }
 
-	if (time > 104.) {
-		amod2(p.xy, 6.28 / 3.);
-		p.x += 5.;
-	}
+    if (time > 104.) {
+        p = amodXY(p, 6.28 / 3.);
+        p.x += 5.;
+    }
 
-	if (time > 101.4) {
-		mo(p.xy, vec2(2. + sin(time)*3.*cos(time*.5), 0.));
-	}
+    if (time > 101.4) {
+        p = moXY(p, vec2(2. + sin(time) * 3. * cos(time * .5), 0.));
+    }
 
-	p.xy *= r2d(time * .05); // .05
+    p = rotXY(p, time * .05);
+    p = rotXY(p, p.z * mix(.05, .002, step(89.5, time)));
 
-	p.xy *= r2d(p.z *
-		mix(.05, .002, step(89.5, time)) // P2 - T11
-	); // .05 & .002
+    p.x += sin(time) * smoothstep(77., 82., time);
 
-	p.x += sin(time) * smoothstep(77., 82., time);
+    p = amodXY(p, 6.28 / mix(
+        mix(1., 2., smoothstep(63.5, 68.5, time)),
+        5.,
+        smoothstep(72., 73.5, time)));
+    p.x -= 21.;
 
-	amod2(p.xy, 6.28 /
-		mix(
-			mix(1., 2., smoothstep(63.5, 68.5, time)), // T6
-			5.,
-			smoothstep(72., 73.5, time)) // T7
-	); // 5.
-	p.x -= 21.; // 21.
+    vec3 q = p;
 
-	vec3 q = p;
+    p = rotXY(p, p.z * .1);
 
-	p.xy *= r2d(p.z * .1); // .1
+    p = amodXY(p, 6.28 / 3.);
+    p.x = abs(p.x) - mix(20., 5., smoothstep(49.5, 55., time));
 
-	amod2(p.xy, 6.28 / 3.); // 3.
-	p.x = abs(p.x) -
-		mix(20., 5., smoothstep(49.5, 55., time)) // T2
-		; // 5.
+    p = rotXY(p, p.z * mix(1., .2, smoothstep(77.5, 77.75, time)));
 
-	p.xy *= r2d(p.z *
-		mix(1., .2, smoothstep(77.5, 77.75, time)) // T8b
-	); // .2
+    // Scalar form of `re()` for p.z; avoids the .zzz swizzle round-
+    // trip through a vec3 helper that NV's optimizer crashed on.
+    p.z = mod(p.z + 1.5, 3.) - 1.5;
 
-	p.z = re(p.zzz, 3.).x; // 3.
+    p.x = abs(p.x);
+    p = amodXY(p, 6.28 / mix(6., 3., smoothstep(77.75, 78.5, time)));
 
-	p.x = abs(p.x);
-	amod2(p.xy, 6.28 /
-		mix(6., 3., smoothstep(77.75, 78.5, time)) // T10
-	); // 3.
-	float sc1 = sc(p,
-		mix(8., 1., smoothstep(45.5, 51., time)) // T1
-	); // 1.
+    float sc1 = sc(p, mix(8., 1., smoothstep(45.5, 51., time)));
 
-	amod2(p.xz, 6.28 /
-		mix(3., 8., smoothstep(61.5, 65.5, time)) // T5
-	); // 8.
-	mo(p.xz, vec2(.1)); // .1
+    p = amodXZ(p, 6.28 / mix(3., 8., smoothstep(61.5, 65.5, time)));
+    p = moXZ(p, vec2(.1));
 
-	p.x = abs(p.x) - 1.;// 1.
+    p.x = abs(p.x) - 1.;
 
-	float d = cube(p, vec3(.2, 10, 1)); // fractal primitive: cube substracted by a signed cross
-	d = max(d, -sc1) -
-		mix(.01, 2., smoothstep(56., 58.5, time)) // T3
-		; // 2.
+    float d = cube(p, vec3(.2, 10., 1.));
+    d = max(d, -sc1) - mix(.01, 2., smoothstep(56., 58.5, time));
 
+    g += .006 / (.01 + d * d);
 
-	g += .006 / (.01 + d * d); // first layer of glow
+    d = min(d, prim(q));
 
-	d = min(d, prim(q)); // add twisted cylinders
+    g += .004 / (.013 + d * d);
 
-	g += .004 / (.013 + d * d); // second layer of glow (after the union of two geometries)
-
-	return d;
+    return d;
 }
 
 
@@ -188,90 +192,83 @@ float de(vec3 p) {
 
 
 vec3 raymarch_lsdlive(vec3 ro, vec3 rd, vec2 uv) {
-	vec3 p;
-	float t = 0., ri;
+    vec3 p = vec3(0.0);
+    float t = 0.;
+    float ri = 0.;
 
-	float dither = random(uv);
+    float dither = random(uv);
 
-	for (float i = 0.; i < 1.; i += .02) {// 50 iterations to keep it "fast"
-		ri = i;
-		p = ro + rd * t;
-		float d = de(p);
-		d *= 1. + dither * .05; // avoid banding & add a nice "artistic" little noise to the rendering (leon gave us this trick)
-		d = max(abs(d), .002); // phantom mode trick from aiekick https://www.shadertoy.com/view/MtScWW
-		t += d * .5;
-	}
+    // Fixed integer loop (50 iterations) — keeps the compiler from
+    // unrolling a float-stepped loop and producing a giant inlined
+    // mess that historically tripped NV's linker.
+    for (int j = 0; j < 50; ++j) {
+        ri = float(j) * .02;
+        p = ro + rd * t;
+        float d = de(p);
+        d *= 1. + dither * .05; // anti-banding noise (leon)
+        d = max(abs(d), .002);  // phantom mode (aiekick)
+        t += d * .5;
+    }
 
-	// Shading: uv, iteration & glow:
-	vec3 c = mix(vec3(.9, .8, .6), vec3(.1, .1, .2), length(uv) + ri);
-	c.r += sin(p.z * .1) * .2;
-	c += g * .035; // glow trick from balkhan https://www.shadertoy.com/view/4t2yW1
-
-	return c;
+    vec3 c = mix(vec3(.9, .8, .6), vec3(.1, .1, .2), length(uv) + ri);
+    c.r += sin(p.z * .1) * .2;
+    c += g * .035; // glow (balkhan)
+    return c;
 }
 
-// borrowed from (mmerchante) : https://www.shadertoy.com/view/MltcWs
+// borrowed from (mmerchante) — https://www.shadertoy.com/view/MltcWs
+// All seeds turned into floats — the original mixed `int` and `mod()`
+// on time which forced extra integer conversions that NV's optimizer
+// did not love when combined with the rest of this shader.
 void glitch(inout vec2 uv, float start_time_stamp, float end_time_stamp)
 {
-	int offset = int(floor(time)*2.) + int((uv.x + uv.y) * 8.0);
-	float res = mix(10., 100.0, random(vec2(offset)));
+    float offset = floor(time) * 2.0 + (uv.x + uv.y) * 8.0;
+    float res = mix(10., 100.0, random(vec2(offset, offset + 17.0)));
 
-	// glitch pixellate
-	if (time > start_time_stamp && time <= end_time_stamp) uv = floor(uv * res) / res;
+    if (time > start_time_stamp && time <= end_time_stamp) uv = floor(uv * res) / res;
 
-	int seedX = int(gl_FragCoord.x + time) / 32;
-	int seedY = int(gl_FragCoord.y + time) / 32;
-	int seed = mod(time, 2.) > 1. ? seedX : seedY;
+    float seedX = floor((gl_FragCoord.x + time) / 32.0);
+    float seedY = floor((gl_FragCoord.y + time) / 32.0);
+    float seed  = mix(seedY, seedX, step(1.0, mod(time, 2.0)));
+    float r     = random(vec2(seed, seed + 13.37));
 
-
-	// glitch splitter
-	uv.x += (random(vec2(seed)) * 2.0 - 1.0)
-		* step(random(vec2(seed)), pow(sin(time * 4.), 7.0))
-		* random(vec2(seed))
-		* step(start_time_stamp, time)
-		* (1. - step(end_time_stamp, time));
+    uv.x += (r * 2.0 - 1.0)
+        * step(r, pow(abs(sin(time * 4.0)), 7.0))
+        * r
+        * step(start_time_stamp, time)
+        * (1.0 - step(end_time_stamp, time));
 }
 
 ////////////////////////// MAIN FUNCTION //////////////////////////
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-	vec2 q = fragCoord.xy / iResolution.xy;
+    vec2 q  = fragCoord.xy / iResolution.xy;
     vec2 uv = (q - .5) * iResolution.xx / iResolution.yx;
 
-	/* just code for the shadertoy port */
-	time = mod(iTime, 43. + 10.4);
-	time = time + 45.;
-	if (time > 88. && time <= 98.6) // 98.
-		time += 10.6;
+    time = mod(iTime, 43. + 10.4);
+    time = time + 45.;
+    if (time > 88. && time <= 98.6)
+        time += 10.6;
 
+    glitch(uv, 0., 2.);
+    glitch(uv, 98., 99.);
+    glitch(uv, 100.5, 101.5);
+    glitch(uv, 103., 104.);
+    glitch(uv, 105.5, 106.5);
 
-	// added glitch
-	glitch(uv, 0., 2.);
+    vec3 lsd_ro     = vec3(0, 0, -4. + time * 8.);
+    vec3 lsd_target = vec3(0., 0., time * 8.);
+    vec3 lsd_cam    = get_cam(lsd_ro, lsd_target, uv);
 
-	glitch(uv, 98., 99.);
-	// lsdlive 2nd part
-	glitch(uv, 100.5, 101.5);
-	glitch(uv, 103., 104.);
-	glitch(uv, 105.5, 106.5);
+    vec3 col = vec3(0.);
 
-	vec3 lsd_ro = vec3(0, 0, -4. + time * 8.);
-	vec3 lsd_target = vec3(0., 0., time * 8.);
-	vec3 lsd_cam = get_cam(lsd_ro, lsd_target, uv);
+    if (time > 45. && time <= 88.)
+        col = raymarch_lsdlive(lsd_ro, lsd_cam, uv);
 
-	vec3 col = vec3(0.);
+    if (time > 98.6 && time <= 109.)
+        col = raymarch_lsdlive(lsd_ro, lsd_cam, uv);
 
-	if (time > 45. && time <= 88.) // 43 seconds
-		col = raymarch_lsdlive(lsd_ro, lsd_cam, uv);
+    col *= 0.5 + 0.5 * pow(16.0 * q.x * q.y * (1.0 - q.x) * (1.0 - q.y), 0.25);
 
-	if (time > 98.6 && time <= 109.) // 10.4 seconds
-		col = raymarch_lsdlive(lsd_ro, lsd_cam, uv);
-
-
-	// vignetting (iq)
-	col *= 0.5 + 0.5*pow(16.0*q.x*q.y*(1.0 - q.x)*(1.0 - q.y), 0.25);
-
-	// fading out - end of the demo
-	//col *= 1. - smoothstep(120., 125., time);
-
-	fragColor = vec4(col, 1.);
+    fragColor = vec4(col, 1.);
 }

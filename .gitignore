@@ -1,8 +1,85 @@
-    # IDE & Editor-specific directories
-    .zed/
+# Build directories
+build/
+build-dev/
+cmake-build-*/
+.build/
 
-    # Virtual environment directories
-    .venv/
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.cproject
+.settings/
+*.kate-swp
+.directory
 
-    # `.frag` conversion directory
-    package/contents/ui/Shaders/ConvertMe/
+# Compiled files
+*.o
+*.so
+*.a
+*.dylib
+*.dll
+*.exe
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Qt generated files
+*_autogen/
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+*.qm
+*.moc
+
+# Shader compiled files (keep .qsb in package for distribution)
+# *.qsb  # These are needed for the package
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.Python
+env/
+venv/
+.env
+.venv
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Package manager
+node_modules/
+package-lock.json
+yarn.lock
+
+# Plasma testing
+plasmoidviewer-*
+
+# Development notes (keep your own local notes private)
+TODO.local.md
+NOTES.local.md
+*.local.md
+
+
+!package/contents/ui/shaderwallpaper/PluginStatus.qml
+package/contents/ui/shaderwallpaper/

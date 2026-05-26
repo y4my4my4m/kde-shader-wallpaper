@@ -1,0 +1,12 @@
+module online.knowmad.shaderwallpaper
+linktarget shaderwallpaperplugin
+plugin shaderwallpaperplugin
+classname online_knowmad_shaderwallpaperPlugin
+typeinfo shaderwallpaperplugin.qmltypes
+PluginStatus 1.0 PluginStatus.qml
+GalleryView 1.0 ../GalleryView.qml
+ShaderCard 1.0 ../ShaderCard.qml
+ImportDialog 1.0 ../ImportDialog.qml
+PresetPanel 1.0 ../PresetPanel.qml
+WindowModel 1.0 ../WindowModel.qml
+

@@ -3,15 +3,17 @@
     "KPlugin": {
         "Authors": [
             {
-                "Email": "y4my4my4m@protonmail.com",
+                "Email": "y4my4m@protonmail.com",
                 "Name": "@y4my4my4m"
             }
         ],
         "Id": "online.knowmad.shaderwallpaper",
         "License": "GPLv3+",
-        "Name": "Shader",
-        "Version": "3.0",
-        "Description": "Allows you to use Shaders as your wallpaper"
+        "Name": "Shader Wallpaper",
+        "Version": "4.0.0",
+        "Description": "Run GLSL shaders as your wallpaper with multi-pass rendering, audio reactivity, and Shadertoy import",
+        "Website": "https://github.com/y4my4my4m/kde-shader-wallpaper"
     },
-    "X-KDE-ParentApp": "org.kde.plasmashell"
+    "X-KDE-ParentApp": "org.kde.plasmashell",
+    "X-Plasma-API-Minimum-Version": "6.0"
 }

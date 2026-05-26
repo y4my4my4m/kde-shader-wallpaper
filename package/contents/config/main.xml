@@ -1,117 +1,343 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0/kcfg.xsd" >
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
   <kcfgfile name=""/>
 
   <group name="General">
+    <!-- Shader Selection -->
     <entry name="selectedShaderPath" type="String">
-      <label>SelectedShader</label>
+      <label>Path to the selected shader</label>
       <default>Shaders6/Ps3menu.frag.qsb</default>
     </entry>
-    <entry name="selectedShaderContent" type="String">
-      <label>selectedShaderContent</label>
+    <entry name="selectedShaderCode" type="String">
+      <label>Custom shader code (for pasted/imported shaders)</label>
       <default></default>
     </entry>
     <entry name="selectedShaderIndex" type="Int">
-      <label>The index of the currently selectedShader</label>
+      <label>Index of the currently selected shader</label>
       <default>0</default>
     </entry>
-    <entry name="mouseAllowed" type="Bool">
-      <label>Allow use of mouse in shader</label>
-      <default>false</default>
-    </entry>
-    <entry name="mouseSpeedBias" type="Double">
-      <label>Change the mouse's bias speed</label>
-      <default>1.0</default>
-    </entry>
+
+    <!-- Playback Control -->
     <entry name="running" type="Bool">
-      <label>Shader is running.</label>
+      <label>Whether the shader is currently running</label>
       <default>true</default>
-    </entry>
-    <entry name="checkedSmartPlay" type="Bool">
-      <label>Pause the video when existing a maximized or full-screen windows.</label>
-      <default>false</default>
     </entry>
     <entry name="shaderSpeed" type="Double">
-      <label>Change the shader speed</label>
+      <label>Shader time multiplier</label>
       <default>1.0</default>
     </entry>
-    <entry name="iChannel0" type="String">
-      <label>iChannel0's path</label>
-      <default>./Resources/wallpaper2.png</default>
+    <entry name="targetFps" type="Int">
+      <label>Target frames per second</label>
+      <default>60</default>
     </entry>
-    <entry name="iChannel0_flag" type="Bool">
-      <label>iChannel0 on/off flag</label>
-      <default>true</default>
-    </entry>
-    <entry name="iChannel1" type="String">
-      <label>iChannel1's path</label>
-      <default>./Resources/wallpaper2.png</default>
-    </entry>
-    <entry name="iChannel1_flag" type="Bool">
-      <label>iChannel1 on/off flag</label>
-      <default>true</default>
-    </entry>
-    <entry name="iChannel2" type="String">
-      <label>iChannel2's path</label>
-      <default>./Resources/Shadertoy_Organic_2.jpg</default>
-    </entry>
-    <entry name="iChannel2_flag" type="Bool">
-      <label>iChannel2 on/off flag</label>
-      <default>true</default>
-    </entry>
-    <entry name="iChannel3" type="String">
-      <label>iChannel3's path</label>
-      <default>./Resources/Shadertoy_Organic_2.jpg</default>
-    </entry>
-    <entry name="iChannel3_flag" type="Bool">
-      <label>iChannel3 on/off flag</label>
-      <default>false</default>
-    </entry>
-    <entry name="iFrameRate" type="Double">
-      <label>iFrameRate</label>
-      <default>-1</default>
-    </entry>
-    <entry name="fadeToNext" type="Bool">
-      <label>fade to next shader in folder</label>
-      <default>false</default>
-    </entry>
-    <entry name="fadeToRandom" type="Bool">
-      <label>fade to random shader in folder</label>
-      <default>false</default>
-    </entry>
-    <entry name="infoPlasma6Preview_dismissed" type="Bool">
-      <label>Hide the infoPlasma6Preview message</label>
-      <default>false</default>
-    </entry>
-    <entry name="warningResources_dismissed" type="Bool">
-      <label>Hide the warningResources message</label>
-      <default>false</default>
-    </entry>
-    <entry name="emergencyHelp_dismissed" type="Bool">
-      <label>Hide the emergencyHelp message</label>
-      <default>false</default>
-    </entry>
-    <entry name="infoiChannelSettings_dismissed" type="Bool">
-      <label>Hide the infoiChannelSettings message</label>
-      <default>false</default>
+    <entry name="resolutionScale" type="Double">
+      <label>Internal render resolution as a fraction of native (0.25 .. 2.0). Lower values trade fidelity for FPS; useful on integrated GPUs and 4K screens.</label>
+      <default>1.0</default>
     </entry>
     <entry name="pauseMode" type="Int">
-      <label>Shader pause mode
-        0: when existing a maximized or full-screen windows
-        1: when a visible window is active
-        2: when a window is visible
-        3: never</label>
+      <label>When to pause the shader:
+        0: when maximized or fullscreen window exists
+        1: when an active window is present
+        2: when any window is visible
+        3: never pause</label>
       <default>0</default>
     </entry>
     <entry name="checkActiveScreen" type="Bool">
-      <label>Whether or not check for windows from all screens instead of just the active one</label>
+      <label>Only check for windows on the active screen</label>
       <default>true</default>
     </entry>
     <entry name="excludeWindows" type="StringList">
-      <label>A list of app-IDs whose windows to exclude from triggering pauseMode.</label>
+      <label>App IDs whose windows to exclude from pause detection</label>
       <default></default>
+    </entry>
+
+    <!-- Mouse Settings -->
+    <entry name="mouseEnabled" type="Bool">
+      <label>Enable mouse interaction with shader</label>
+      <default>false</default>
+    </entry>
+    <entry name="mouseBias" type="Double">
+      <label>Mouse sensitivity multiplier</label>
+      <default>1.0</default>
+    </entry>
+
+    <!-- Audio Settings -->
+    <entry name="audioEnabled" type="Bool">
+      <label>Enable audio reactivity</label>
+      <default>false</default>
+    </entry>
+    <entry name="audioChannel" type="Int">
+      <label>Which iChannel to use for audio (0-3)</label>
+      <default>0</default>
+    </entry>
+    <entry name="audioSensitivity" type="Double">
+      <label>Audio sensitivity multiplier (affects FFT magnitude scaling)</label>
+      <default>40.0</default>
+    </entry>
+    
+    <!-- Window Tracking -->
+    <entry name="windowsEnabled" type="Bool">
+      <label>Enable window tracking for window-reactive effects</label>
+      <default>false</default>
+    </entry>
+
+    <!-- Channel 0 -->
+    <entry name="iChannel0" type="String">
+      <label>Path to iChannel0 texture</label>
+      <default>./Resources/wallpaper2.png</default>
+    </entry>
+    <entry name="iChannel0Enabled" type="Bool">
+      <label>Enable iChannel0</label>
+      <default>true</default>
+    </entry>
+
+    <!-- Channel 1 -->
+    <entry name="iChannel1" type="String">
+      <label>Path to iChannel1 texture</label>
+      <default>./Resources/wallpaper2.png</default>
+    </entry>
+    <entry name="iChannel1Enabled" type="Bool">
+      <label>Enable iChannel1</label>
+      <default>true</default>
+    </entry>
+
+    <!-- Channel 2 -->
+    <entry name="iChannel2" type="String">
+      <label>Path to iChannel2 texture</label>
+      <default>./Resources/Shadertoy_Organic_2.jpg</default>
+    </entry>
+    <entry name="iChannel2Enabled" type="Bool">
+      <label>Enable iChannel2</label>
+      <default>true</default>
+    </entry>
+
+    <!-- Channel 3 -->
+    <entry name="iChannel3" type="String">
+      <label>Path to iChannel3 texture</label>
+      <default>./Resources/Shadertoy_Organic_2.jpg</default>
+    </entry>
+    <entry name="iChannel3Enabled" type="Bool">
+      <label>Enable iChannel3</label>
+      <default>false</default>
+    </entry>
+
+    <!-- Buffer Settings -->
+    <entry name="useBufferA" type="Bool">
+      <label>Enable BufferA pass</label>
+      <default>false</default>
+    </entry>
+    <entry name="useBufferB" type="Bool">
+      <label>Enable BufferB pass</label>
+      <default>false</default>
+    </entry>
+    <entry name="useBufferC" type="Bool">
+      <label>Enable BufferC pass</label>
+      <default>false</default>
+    </entry>
+    <entry name="useBufferD" type="Bool">
+      <label>Enable BufferD pass</label>
+      <default>false</default>
+    </entry>
+
+    <entry name="commonCode" type="String">
+      <label>Common shader code (shared across all passes)</label>
+      <default></default>
+    </entry>
+    <entry name="bufferACode" type="String">
+      <label>BufferA shader code</label>
+      <default></default>
+    </entry>
+    <entry name="bufferBCode" type="String">
+      <label>BufferB shader code</label>
+      <default></default>
+    </entry>
+    <entry name="bufferCCode" type="String">
+      <label>BufferC shader code</label>
+      <default></default>
+    </entry>
+    <entry name="bufferDCode" type="String">
+      <label>BufferD shader code</label>
+      <default></default>
+    </entry>
+    
+    <!-- Per-buffer channel mapping: -1=None, 0-3=Texture0-3, 10-13=BufferA-D, 20=Audio -->
+    <!-- Image pass channels -->
+    <entry name="imageChannel0" type="Int">
+      <label>Image pass iChannel0 input source</label>
+      <default>0</default>
+    </entry>
+    <entry name="imageChannel1" type="Int">
+      <label>Image pass iChannel1 input source</label>
+      <default>1</default>
+    </entry>
+    <entry name="imageChannel2" type="Int">
+      <label>Image pass iChannel2 input source</label>
+      <default>2</default>
+    </entry>
+    <entry name="imageChannel3" type="Int">
+      <label>Image pass iChannel3 input source</label>
+      <default>3</default>
+    </entry>
+    
+    <!-- Buffer A channels -->
+    <entry name="bufferAChannel0" type="Int">
+      <label>BufferA iChannel0 input source</label>
+      <default>-1</default>
+    </entry>
+    <entry name="bufferAChannel1" type="Int">
+      <label>BufferA iChannel1 input source</label>
+      <default>-1</default>
+    </entry>
+    <entry name="bufferAChannel2" type="Int">
+      <label>BufferA iChannel2 input source</label>
+      <default>-1</default>
+    </entry>
+    <entry name="bufferAChannel3" type="Int">
+      <label>BufferA iChannel3 input source</label>
+      <default>-1</default>
+    </entry>
+    
+    <!-- Buffer B channels -->
+    <entry name="bufferBChannel0" type="Int">
+      <label>BufferB iChannel0 input source</label>
+      <default>-1</default>
+    </entry>
+    <entry name="bufferBChannel1" type="Int">
+      <label>BufferB iChannel1 input source</label>
+      <default>-1</default>
+    </entry>
+    <entry name="bufferBChannel2" type="Int">
+      <label>BufferB iChannel2 input source</label>
+      <default>-1</default>
+    </entry>
+    <entry name="bufferBChannel3" type="Int">
+      <label>BufferB iChannel3 input source</label>
+      <default>-1</default>
+    </entry>
+    
+    <!-- Buffer C channels -->
+    <entry name="bufferCChannel0" type="Int">
+      <label>BufferC iChannel0 input source</label>
+      <default>-1</default>
+    </entry>
+    <entry name="bufferCChannel1" type="Int">
+      <label>BufferC iChannel1 input source</label>
+      <default>-1</default>
+    </entry>
+    <entry name="bufferCChannel2" type="Int">
+      <label>BufferC iChannel2 input source</label>
+      <default>-1</default>
+    </entry>
+    <entry name="bufferCChannel3" type="Int">
+      <label>BufferC iChannel3 input source</label>
+      <default>-1</default>
+    </entry>
+    
+    <!-- Buffer D channels -->
+    <entry name="bufferDChannel0" type="Int">
+      <label>BufferD iChannel0 input source</label>
+      <default>-1</default>
+    </entry>
+    <entry name="bufferDChannel1" type="Int">
+      <label>BufferD iChannel1 input source</label>
+      <default>-1</default>
+    </entry>
+    <entry name="bufferDChannel2" type="Int">
+      <label>BufferD iChannel2 input source</label>
+      <default>-1</default>
+    </entry>
+    <entry name="bufferDChannel3" type="Int">
+      <label>BufferD iChannel3 input source</label>
+      <default>-1</default>
+    </entry>
+
+    <!-- Debug -->
+    <entry name="showFps" type="Bool">
+      <label>Show FPS counter</label>
+      <default>false</default>
+    </entry>
+    
+    <!-- Performance Monitoring -->
+    <entry name="showPerformance" type="Bool">
+      <label>Show performance monitoring widget</label>
+      <default>false</default>
+    </entry>
+    <entry name="showPerformanceGraph" type="Bool">
+      <label>Show frame time graph in performance widget</label>
+      <default>true</default>
+    </entry>
+    <entry name="performanceExpanded" type="Bool">
+      <label>Performance widget expanded by default</label>
+      <default>true</default>
+    </entry>
+    <entry name="gpuTdp" type="Int">
+      <label>GPU TDP in watts for power estimation</label>
+      <default>75</default>
+    </entry>
+
+    <!-- Playlist / shuffle -->
+    <entry name="playlistEnabled" type="Bool">
+      <label>Auto-cycle through a list of shaders on a timer.</label>
+      <default>false</default>
+    </entry>
+    <entry name="playlistShaders" type="StringList">
+      <label>List of shader paths in the playlist (in order).</label>
+      <default></default>
+    </entry>
+    <entry name="playlistIntervalMinutes" type="Int">
+      <label>How many minutes between automatic shader changes.</label>
+      <default>10</default>
+    </entry>
+    <entry name="playlistShuffle" type="Bool">
+      <label>Pick the next shader at random instead of in order.</label>
+      <default>false</default>
+    </entry>
+
+    <!-- Hot-reload (developer mode) -->
+    <entry name="watchSourceFile" type="Bool">
+      <label>Watch the active .frag file on disk and reload when it changes.</label>
+      <default>false</default>
+    </entry>
+
+    <!-- Experimental engine features -->
+    <entry name="experimentalScreenUniforms" type="Bool">
+      <label>Expose iScreenIndex / iScreenOffset / iScreenCount so a single shader can span multiple monitors.</label>
+      <default>false</default>
+    </entry>
+    <entry name="experimentalDesktopUniform" type="Bool">
+      <label>Expose iVirtualDesktop / iVirtualDesktopCount so the shader knows which virtual desktop it's on.</label>
+      <default>false</default>
+    </entry>
+    <entry name="experimentalParallax" type="Bool">
+      <label>Animate a horizontal pan on virtual-desktop switches (parallax effect).</label>
+      <default>false</default>
+    </entry>
+    <entry name="experimentalParallaxStrength" type="Double">
+      <label>How far the wallpaper pans (1.0 = one full screen width per desktop).</label>
+      <default>0.25</default>
+    </entry>
+
+    <!-- Shader Tweaks (experimental) -->
+    <entry name="enableShaderTweaks" type="Bool">
+      <label>Parse the active shader for top-level floats, vec3 colours and #define literals,
+      and expose them as live-editable controls in the configure dialog.</label>
+      <default>false</default>
+    </entry>
+
+    <!-- UI State (dismissable messages) -->
+    <entry name="infoPlasma6Preview_dismissed" type="Bool">
+      <label>Hide the welcome message</label>
+      <default>false</default>
+    </entry>
+    <entry name="warningResources_dismissed" type="Bool">
+      <label>Hide the resource warning message</label>
+      <default>false</default>
+    </entry>
+    <entry name="emergencyHelp_dismissed" type="Bool">
+      <label>Hide the emergency help message</label>
+      <default>false</default>
     </entry>
   </group>
 
