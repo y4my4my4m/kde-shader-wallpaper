@@ -109,6 +109,70 @@ rm -rf ~/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/
 pkill plasmashell && plasmashell &
 ```
 
+### Login screen (Plasma Login Manager)
+
+Plasma 6.6+ can use [Plasma Login Manager (PLM)](https://wiki.archlinux.org/title/Plasma_Login_Manager) instead of SDDM. Shader Wallpaper works on the **login greeter** (the screen before you sign in).
+
+**Requirements:**
+
+- **System-wide install (`/usr`)** — PLM runs as the `plasmalogin` user before you log in; it cannot read `~/.local`.
+- **Plugin registration drop-in** — PLM’s wallpaper-type dropdown omits third-party plugins ([KDE bug 517325](https://bugs.kde.org/show_bug.cgi?id=517325)). Register once via `conf.d` ([ArchWiki](https://wiki.archlinux.org/title/Plasma_Login_Manager#Custom_wallpaper_plugins)), then use System Settings for everything else.
+
+**Setup:**
+
+```bash
+./scripts/install-plm-greeter.sh
+```
+
+This installs to `/usr` and writes:
+
+```ini
+# /etc/plasmalogin.conf.d/online.knowmad.shaderwallpaper.conf
+[Greeter]
+WallpaperPluginId=online.knowmad.shaderwallpaper
+```
+
+Log out — you should see Shader Wallpaper with plugin defaults. To pick a shader and tune settings:
+
+1. **System Settings** → **Login Screen**
+2. **⋮** → **Configure Appearance…** (not the “Wallpaper type” dropdown)
+3. Choose a shader → **← Back** → **Apply** → log out
+
+> **Do not change “Wallpaper type”** on the main Login Screen page — that dropdown only lists built-in KDE plugins.
+
+**Manual registration** (same as the script’s `--config-only`):
+
+```bash
+sudo tee /etc/plasmalogin.conf.d/online.knowmad.shaderwallpaper.conf <<'EOF'
+[Greeter]
+WallpaperPluginId=online.knowmad.shaderwallpaper
+EOF
+sudo chmod 0644 /etc/plasmalogin.conf.d/online.knowmad.shaderwallpaper.conf
+```
+
+**Troubleshooting:**
+
+If the greeter still shows a static image or logs mention `org.kde.image` / `inaccessible config location "/etc/plasmalogin.conf"`, System Settings may have created a root-only main config file:
+
+```bash
+sudo chmod 0644 /etc/plasmalogin.conf
+cat /etc/plasmalogin.conf.d/online.knowmad.shaderwallpaper.conf
+journalctl _UID=$(id -u plasmalogin) -b | rg -i 'shader|wallpaper|online.knowmad'
+pkill systemsettings   # if System Settings says already registered
+```
+
+Remove greeter registration:
+
+```bash
+sudo ./scripts/install-plm-greeter.sh --uninstall
+```
+
+| Surface | Config | Install |
+|---------|--------|---------|
+| Desktop | `~/.config/plasma-org.kde.plasma.desktop-appletsrc` | `~/.local` or `/usr` |
+| Lock screen | `~/.config/kscreenlockerrc` | `~/.local` or `/usr` |
+| Login (PLM) | `/etc/plasmalogin.conf.d/*.conf` + System Settings | **`/usr` only** |
+
 ## 🎮 Usage
 
 1. Right-click your desktop → **Configure Desktop and Wallpaper**

@@ -15,35 +15,23 @@ Item {
     clip: true  // ShaderEngine overscans during parallax — clip to screen
 
     // ────────────────────────────────────────────────────────────────────────
-    // Lock-screen mode (set by main.qml's Loader.onLoaded).
+    // Host plumbing (set by main.qml Loader.onLoaded).
     //
-    // When true, we treat the user's configured inputs as ceilings rather
-    // than literal values:
-    //   • mouse / audio / window tracking are forced OFF — kscreenlocker_greet
-    //     can't reliably acquire those, and they're nonsensical anyway since
-    //     no user input/audio/windows should be reaching the lock surface.
-    //   • watchSourceFile is forced OFF — saving a .frag while locked is a
-    //     development workflow that doesn't belong here.
-    //   • pauseMode is forced to "never" — the window/active-window heuristics
-    //     trip on lock-screen UI surfaces.
-    //   • targetFps is clamped — animation on a lock screen costs battery for
-    //     a screen the user isn't actually looking at; 30 fps is plenty for
-    //     ambient motion. (Hard clamp, ignores user setting in lock mode.)
-    //   • All experimental engine features are disabled, since they query
-    //     virtual desktops / multi-monitor topology that the lock screen
-    //     doesn't expose.
-    // The user's saved desktop settings are untouched — they come back
-    // verbatim the next time the desktop instance loads.
+    // wallpaperConfig — KConfigPropertyMap from whichever host loaded us.
+    // lockScreenMode / loginScreenMode — restrict inputs on non-desktop
+    // surfaces (kscreenlocker greeter, PLM login greeter).
     // ────────────────────────────────────────────────────────────────────────
+    property var  wallpaperConfig: null
     property bool lockScreenMode: false
-    readonly property int  _lockFpsCap: 30
-    readonly property bool _allowMouse:   !lockScreenMode && (wallpaper.configuration.mouseEnabled || false)
-    readonly property bool _allowAudio:   !lockScreenMode && (wallpaper.configuration.audioEnabled || false)
-    readonly property bool _allowWindows: !lockScreenMode && (wallpaper.configuration.windowsEnabled || false)
-    readonly property bool _allowExperimentalDesktop: !lockScreenMode && (wallpaper.configuration.experimentalDesktopUniform || false)
-    readonly property bool _allowExperimentalParallax: !lockScreenMode && (wallpaper.configuration.experimentalParallax || false)
-    readonly property bool _allowExperimentalScreens:  !lockScreenMode && (wallpaper.configuration.experimentalScreenUniforms || false)
-    readonly property bool _allowWatchSource: !lockScreenMode && (wallpaper.configuration.watchSourceFile || false)
+    property bool loginScreenMode: false
+    readonly property bool restrictedMode: lockScreenMode || loginScreenMode
+    readonly property bool _allowMouse:   !restrictedMode && (wallpaperConfig ? (wallpaperConfig.mouseEnabled || false) : false)
+    readonly property bool _allowAudio:   !restrictedMode && (wallpaperConfig ? (wallpaperConfig.audioEnabled || false) : false)
+    readonly property bool _allowWindows: !restrictedMode && (wallpaperConfig ? (wallpaperConfig.windowsEnabled || false) : false)
+    readonly property bool _allowExperimentalDesktop: !restrictedMode && (wallpaperConfig ? (wallpaperConfig.experimentalDesktopUniform || false) : false)
+    readonly property bool _allowExperimentalParallax: !restrictedMode && (wallpaperConfig ? (wallpaperConfig.experimentalParallax || false) : false)
+    readonly property bool _allowExperimentalScreens:  !restrictedMode && (wallpaperConfig ? (wallpaperConfig.experimentalScreenUniforms || false) : false)
+    readonly property bool _allowWatchSource: !restrictedMode && (wallpaperConfig ? (wallpaperConfig.watchSourceFile || false) : false)
 
     // Window model for pause detection
     WindowModel {
@@ -58,7 +46,7 @@ Item {
     CursorTracker {
         id: cursorTracker
         enabled: shaderSystem._allowMouse && shaderEngine.running
-        sensitivity: wallpaper.configuration.mouseBias || 1.0
+        sensitivity: wallpaperConfig.mouseBias || 1.0
         screen: shaderSystem.Window.window ? shaderSystem.Window.window.screen : null
         // Same pixel space as fragCoord / iResolution (ShaderEngine FBO).
         referenceWidth: shaderEngine.width
@@ -89,7 +77,7 @@ Item {
     AudioCapture {
         id: audioCapture
         enabled: shaderSystem._allowAudio && shaderEngine.running
-        sensitivity: wallpaper.configuration.audioSensitivity || 40.0
+        sensitivity: wallpaperConfig.audioSensitivity || 40.0
         
         onAudioDataReady: {
             shaderEngine.audioData = audioCapture.getTextureData()
@@ -179,7 +167,8 @@ Item {
         shaderEngine.screenCount = screenInfo.screens.length
     }
     Connections {
-        target: wallpaper.configuration
+        target: wallpaperConfig
+        enabled: wallpaperConfig !== null
         function onExperimentalScreenUniformsChanged() { _pushScreenUniforms() }
     }
 
@@ -194,7 +183,7 @@ Item {
     // overhead.
     // ------------------------------------------------------------------
     property real _parallaxStrength: shaderSystem._allowExperimentalParallax
-                                   ? Math.max(0, Math.min(1, wallpaper.configuration.experimentalParallaxStrength || 0.25))
+                                   ? Math.max(0, Math.min(1, wallpaperConfig.experimentalParallaxStrength || 0.25))
                                    : 0.0
     property real _desktopFraction: {
         var n = Math.max(1, shaderEngine.virtualDesktopCount - 1)
@@ -229,33 +218,27 @@ Item {
         // actually takes effect. The previous always-fall-back behaviour
         // here made tweaks/inline shaders silently revert to the default
         // file on the live wallpaper instance.
-        shaderSource: wallpaper.configuration.selectedShaderPath
-            ? Qt.resolvedUrl(wallpaper.configuration.selectedShaderPath)
-            : ((wallpaper.configuration.selectedShaderCode && wallpaper.configuration.selectedShaderCode.length > 0)
+        shaderSource: wallpaperConfig && wallpaperConfig.selectedShaderPath
+            ? Qt.resolvedUrl(wallpaperConfig.selectedShaderPath)
+            : ((wallpaperConfig && wallpaperConfig.selectedShaderCode && wallpaperConfig.selectedShaderCode.length > 0)
                 ? ""
                 : Qt.resolvedUrl("Shaders/PS3_MenuColor.frag"))
-        shaderCode: wallpaper.configuration.selectedShaderPath
+        shaderCode: wallpaperConfig && wallpaperConfig.selectedShaderPath
             ? ""
-            : (wallpaper.configuration.selectedShaderCode || "")
+            : ((wallpaperConfig && wallpaperConfig.selectedShaderCode) || "")
 
-        // Playback control. In lock-screen mode we clamp FPS to a power-
-        // friendly ceiling regardless of the user's desktop setting — a
-        // screen the user isn't looking at doesn't need 144 Hz.
-        running: wallpaper.configuration.running && shouldRun
-        speed: wallpaper.configuration.shaderSpeed || 1.0
-        targetFps: {
-            const f = wallpaper.configuration.targetFps || 60
-            return shaderSystem.lockScreenMode ? Math.min(f, shaderSystem._lockFpsCap) : f
-        }
-        resolutionScale: wallpaper.configuration.resolutionScale || 1.0
+        running: wallpaperConfig && wallpaperConfig.running && shouldRun
+        speed: wallpaperConfig ? (wallpaperConfig.shaderSpeed || 1.0) : 1.0
+        targetFps: wallpaperConfig ? (wallpaperConfig.targetFps || 60) : 60
+        resolutionScale: wallpaperConfig ? (wallpaperConfig.resolutionScale || 1.0) : 1.0
 
         // Mouse input — disabled in lock-screen mode.
         mouseEnabled: shaderSystem._allowMouse
-        mouseBias: wallpaper.configuration.mouseBias || 1.0
+        mouseBias: wallpaperConfig.mouseBias || 1.0
 
         // Audio input — disabled in lock-screen mode.
         audioEnabled: shaderSystem._allowAudio
-        audioChannel: wallpaper.configuration.audioChannel || 0
+        audioChannel: wallpaperConfig.audioChannel || 0
 
         // Window tracking — disabled in lock-screen mode.
         windowsEnabled: shaderSystem._allowWindows
@@ -264,76 +247,74 @@ Item {
         watchSourceFile: shaderSystem._allowWatchSource
 
         // Texture channels
-        iChannel0: wallpaper.configuration.iChannel0Enabled 
-            ? Qt.resolvedUrl(wallpaper.configuration.iChannel0 || "Resources/wallpaper2.png")
+        iChannel0: wallpaperConfig.iChannel0Enabled 
+            ? Qt.resolvedUrl(wallpaperConfig.iChannel0 || "Resources/wallpaper2.png")
             : ""
-        iChannel1: wallpaper.configuration.iChannel1Enabled 
-            ? Qt.resolvedUrl(wallpaper.configuration.iChannel1 || "Resources/wallpaper2.png")
+        iChannel1: wallpaperConfig.iChannel1Enabled 
+            ? Qt.resolvedUrl(wallpaperConfig.iChannel1 || "Resources/wallpaper2.png")
             : ""
-        iChannel2: wallpaper.configuration.iChannel2Enabled 
-            ? Qt.resolvedUrl(wallpaper.configuration.iChannel2 || "Resources/Shadertoy_Organic_2.jpg")
+        iChannel2: wallpaperConfig.iChannel2Enabled 
+            ? Qt.resolvedUrl(wallpaperConfig.iChannel2 || "Resources/Shadertoy_Organic_2.jpg")
             : ""
-        iChannel3: wallpaper.configuration.iChannel3Enabled 
-            ? Qt.resolvedUrl(wallpaper.configuration.iChannel3 || "Resources/Shadertoy_Organic_2.jpg")
+        iChannel3: wallpaperConfig.iChannel3Enabled 
+            ? Qt.resolvedUrl(wallpaperConfig.iChannel3 || "Resources/Shadertoy_Organic_2.jpg")
             : ""
 
-        iChannel0Enabled: wallpaper.configuration.iChannel0Enabled !== false
-        iChannel1Enabled: wallpaper.configuration.iChannel1Enabled !== false
-        iChannel2Enabled: wallpaper.configuration.iChannel2Enabled !== false
-        iChannel3Enabled: wallpaper.configuration.iChannel3Enabled || false
+        iChannel0Enabled: wallpaperConfig.iChannel0Enabled !== false
+        iChannel1Enabled: wallpaperConfig.iChannel1Enabled !== false
+        iChannel2Enabled: wallpaperConfig.iChannel2Enabled !== false
+        iChannel3Enabled: wallpaperConfig.iChannel3Enabled || false
 
         // Buffer configuration
-        useBufferA: wallpaper.configuration.useBufferA || false
-        useBufferB: wallpaper.configuration.useBufferB || false
-        useBufferC: wallpaper.configuration.useBufferC || false
-        useBufferD: wallpaper.configuration.useBufferD || false
+        useBufferA: wallpaperConfig.useBufferA || false
+        useBufferB: wallpaperConfig.useBufferB || false
+        useBufferC: wallpaperConfig.useBufferC || false
+        useBufferD: wallpaperConfig.useBufferD || false
 
         // Common code (shared across all passes)
-        commonCode: wallpaper.configuration.commonCode || ""
+        commonCode: wallpaperConfig.commonCode || ""
         
-        bufferACode: wallpaper.configuration.bufferACode || ""
-        bufferBCode: wallpaper.configuration.bufferBCode || ""
-        bufferCCode: wallpaper.configuration.bufferCCode || ""
-        bufferDCode: wallpaper.configuration.bufferDCode || ""
+        bufferACode: wallpaperConfig.bufferACode || ""
+        bufferBCode: wallpaperConfig.bufferBCode || ""
+        bufferCCode: wallpaperConfig.bufferCCode || ""
+        bufferDCode: wallpaperConfig.bufferDCode || ""
         
         // Per-pass channel mappings
         imageChannels: [
-            wallpaper.configuration.imageChannel0 ?? 0,
-            wallpaper.configuration.imageChannel1 ?? 1,
-            wallpaper.configuration.imageChannel2 ?? 2,
-            wallpaper.configuration.imageChannel3 ?? 3
+            wallpaperConfig.imageChannel0 ?? 0,
+            wallpaperConfig.imageChannel1 ?? 1,
+            wallpaperConfig.imageChannel2 ?? 2,
+            wallpaperConfig.imageChannel3 ?? 3
         ]
         bufferAChannels: [
-            wallpaper.configuration.bufferAChannel0 ?? -1,
-            wallpaper.configuration.bufferAChannel1 ?? -1,
-            wallpaper.configuration.bufferAChannel2 ?? -1,
-            wallpaper.configuration.bufferAChannel3 ?? -1
+            wallpaperConfig.bufferAChannel0 ?? -1,
+            wallpaperConfig.bufferAChannel1 ?? -1,
+            wallpaperConfig.bufferAChannel2 ?? -1,
+            wallpaperConfig.bufferAChannel3 ?? -1
         ]
         bufferBChannels: [
-            wallpaper.configuration.bufferBChannel0 ?? -1,
-            wallpaper.configuration.bufferBChannel1 ?? -1,
-            wallpaper.configuration.bufferBChannel2 ?? -1,
-            wallpaper.configuration.bufferBChannel3 ?? -1
+            wallpaperConfig.bufferBChannel0 ?? -1,
+            wallpaperConfig.bufferBChannel1 ?? -1,
+            wallpaperConfig.bufferBChannel2 ?? -1,
+            wallpaperConfig.bufferBChannel3 ?? -1
         ]
         bufferCChannels: [
-            wallpaper.configuration.bufferCChannel0 ?? -1,
-            wallpaper.configuration.bufferCChannel1 ?? -1,
-            wallpaper.configuration.bufferCChannel2 ?? -1,
-            wallpaper.configuration.bufferCChannel3 ?? -1
+            wallpaperConfig.bufferCChannel0 ?? -1,
+            wallpaperConfig.bufferCChannel1 ?? -1,
+            wallpaperConfig.bufferCChannel2 ?? -1,
+            wallpaperConfig.bufferCChannel3 ?? -1
         ]
         bufferDChannels: [
-            wallpaper.configuration.bufferDChannel0 ?? -1,
-            wallpaper.configuration.bufferDChannel1 ?? -1,
-            wallpaper.configuration.bufferDChannel2 ?? -1,
-            wallpaper.configuration.bufferDChannel3 ?? -1
+            wallpaperConfig.bufferDChannel0 ?? -1,
+            wallpaperConfig.bufferDChannel1 ?? -1,
+            wallpaperConfig.bufferDChannel2 ?? -1,
+            wallpaperConfig.bufferDChannel3 ?? -1
         ]
 
-        // Determine if shader should run based on pause mode.
-        // In lock-screen mode we force "never pause" — the window
-        // heuristics trip on lock-screen UI overlays.
+        // In lock/login greeter mode force "never pause".
         property bool shouldRun: {
-            if (shaderSystem.lockScreenMode) return true
-            switch (wallpaper.configuration.pauseMode) {
+            if (shaderSystem.restrictedMode) return true
+            switch (wallpaperConfig.pauseMode) {
                 case 0: return !windowModel.maximizedExists
                 case 1: return !windowModel.activeExists
                 case 2: return !windowModel.visibleExists
@@ -357,12 +338,12 @@ Item {
         onTriggered: shaderSystem.refreshShaderInput()
     }
 
-    // Mouse tracking area (fallback for Wayland). Disabled in lock-screen
-    // mode so we don't intercept events the lock UI needs.
+    // Mouse tracking area (fallback for Wayland). Disabled on greeter surfaces
+    // so we don't intercept events the login/lock UI needs.
     MouseArea {
         id: mouseArea
         anchors.fill: parent
-        enabled: !shaderSystem.lockScreenMode
+        enabled: !shaderSystem.restrictedMode
         visible: enabled
         hoverEnabled: shaderSystem._allowMouse
         propagateComposedEvents: true
@@ -394,11 +375,10 @@ Item {
         onWheel: (wheel) => wheel.accepted = false
     }
 
-    // Performance monitoring widget — hidden on lock screen regardless of
-    // user preference (no diagnostics needed on a customer-facing surface).
+    // Performance HUD — hidden on greeter surfaces.
     PerformanceWidget {
         id: performanceWidget
-        visible: !shaderSystem.lockScreenMode && (wallpaper.configuration.showPerformance || false)
+        visible: !shaderSystem.restrictedMode && (wallpaperConfig.showPerformance || false)
         anchors {
             top: parent.top
             right: parent.right
@@ -433,20 +413,20 @@ Item {
             else baseCost = 85
             
             var modifier = 0
-            if (wallpaper.configuration.useBufferA || wallpaper.configuration.useBufferB ||
-                wallpaper.configuration.useBufferC || wallpaper.configuration.useBufferD) {
+            if (wallpaperConfig.useBufferA || wallpaperConfig.useBufferB ||
+                wallpaperConfig.useBufferC || wallpaperConfig.useBufferD) {
                 modifier += 15
             }
-            if (wallpaper.configuration.audioEnabled) {
+            if (wallpaperConfig.audioEnabled) {
                 modifier += 5
             }
             
             return Math.min(100, baseCost + modifier)
         }
         
-        expanded: wallpaper.configuration.performanceExpanded !== false
-        showGraph: wallpaper.configuration.showPerformanceGraph !== false
-        gpuTdp: wallpaper.configuration.gpuTdp || 75
+        expanded: wallpaperConfig.performanceExpanded !== false
+        showGraph: wallpaperConfig.showPerformanceGraph !== false
+        gpuTdp: wallpaperConfig.gpuTdp || 75
     }
     
     // Connect frame time updates to the widget
@@ -461,7 +441,7 @@ Item {
 
     // Pause indicator
     Rectangle {
-        visible: !shaderEngine.running && wallpaper.configuration.running
+        visible: !shaderEngine.running && wallpaperConfig && wallpaperConfig.running
         anchors.centerIn: parent
         width: pauseIcon.width + 40
         height: pauseIcon.height + 20
@@ -495,8 +475,9 @@ Item {
         repeat: false
         
         onTriggered: {
+            if (shaderSystem.restrictedMode) return
             if (shaderEngine.running && !shaderEngine.hasError) {
-                var shaderId = getShaderIdFromPath(wallpaper.configuration.selectedShaderPath)
+                var shaderId = getShaderIdFromPath(wallpaperConfig.selectedShaderPath)
                 if (shaderId && ShaderLibrarySingleton.needsThumbnail(shaderId)) {
                     var thumbPath = ShaderLibrarySingleton.getThumbnailPath(shaderId)
                     console.log("Capturing thumbnail for:", shaderId)
@@ -510,7 +491,7 @@ Item {
     Connections {
         target: shaderEngine
         function onFrameCaptured(path) {
-            var shaderId = getShaderIdFromPath(wallpaper.configuration.selectedShaderPath)
+            var shaderId = getShaderIdFromPath(wallpaperConfig.selectedShaderPath)
             if (shaderId) {
                 ShaderLibrarySingleton.saveThumbnail(shaderId, path)
             }
@@ -526,40 +507,46 @@ Item {
 
     Component.onCompleted: {
         console.log("Shader Wallpaper v4.0 initialized")
-        console.log("Shader:", wallpaper.configuration.selectedShaderPath)
+        if (!wallpaperConfig) {
+            console.warn("Shader Wallpaper: wallpaperConfig not wired yet")
+            return
+        }
+        console.log("Shader:", wallpaperConfig.selectedShaderPath)
         
-        if (wallpaper.configuration.selectedShaderPath) {
+        if (wallpaperConfig.selectedShaderPath) {
             thumbnailTimer.start()
         }
     }
     
     Connections {
-        target: wallpaper.configuration
+        target: wallpaperConfig
+        enabled: wallpaperConfig !== null
         function onSelectedShaderPathChanged() {
             thumbnailTimer.restart()
         }
     }
 
     // ------------------------------------------------------------------
-    // Playlist (A3) — rotates through wallpaper.configuration.playlistShaders
+    // Playlist (A3) — rotates through wallpaperConfig.playlistShaders
     // every playlistIntervalMinutes. In shuffle mode picks a random one
     // each time (never repeats the current one twice in a row); in
     // sequence mode advances to the next list entry, wrapping around.
     // ------------------------------------------------------------------
     Timer {
         id: playlistTimer
-        interval: Math.max(5, (wallpaper.configuration.playlistIntervalMinutes || 10)) * 60 * 1000
+        interval: Math.max(5, (wallpaperConfig.playlistIntervalMinutes || 10)) * 60 * 1000
         repeat: true
-        running: wallpaper.configuration.playlistEnabled
-              && (wallpaper.configuration.playlistShaders || []).length >= 2
+        running: !shaderSystem.restrictedMode
+              && wallpaperConfig.playlistEnabled
+              && (wallpaperConfig.playlistShaders || []).length >= 2
         triggeredOnStart: false
 
         onTriggered: {
-            var list = wallpaper.configuration.playlistShaders || []
+            var list = wallpaperConfig.playlistShaders || []
             if (list.length < 2) return
-            var current = wallpaper.configuration.selectedShaderPath || ""
+            var current = wallpaperConfig.selectedShaderPath || ""
             var nextPath
-            if (wallpaper.configuration.playlistShuffle) {
+            if (wallpaperConfig.playlistShuffle) {
                 var attempts = 0
                 do {
                     nextPath = list[Math.floor(Math.random() * list.length)]
@@ -570,7 +557,7 @@ Item {
                 if (idx < 0) idx = -1
                 nextPath = list[(idx + 1) % list.length]
             }
-            if (nextPath) wallpaper.configuration.selectedShaderPath = nextPath
+            if (nextPath) wallpaperConfig.selectedShaderPath = nextPath
         }
     }
 }

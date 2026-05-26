@@ -25,6 +25,13 @@ import "shaderwallpaper" as ShaderPlugin
 //      on-disk containment group). On Apply, the KCM serializes our `cfg_*`
 //      values via DBus to plasmashell's `setWallpaper`.
 //
+//   C) PLM Login Screen → Configure Appearance…
+//      Loaded by plasma-login-manager's WallpaperConfig StackView. It passes
+//      `configDialog` (= the PLM KCM) in replace() props; read config from
+//      `configDialog.wallpaperConfiguration`. The parent Appearance page also
+//      exposes `wallpaper` (= wallpaperIntegration) but StackView-loaded items
+//      do not inherit that scope — do NOT rely on bare `wallpaper` here.
+//
 // To work in both contexts the plugin must:
 //   1. Expose `wallpaperConfiguration` as a root property defaulting to
 //      `wallpaper.configuration` (so KCM can override it as a prop).
@@ -54,8 +61,16 @@ ColumnLayout {
     // KCM / shell contract
     // ════════════════════════════════════════════════════════════════════════
 
-    // Dual-mode bridge — see file header.
-    property var wallpaperConfiguration: (typeof wallpaper !== "undefined" && wallpaper) ? wallpaper.configuration : null
+    // Dual-mode bridge — see file header. Order matters: PLM passes
+    // configDialog; desktop wallpaper KCM sets wallpaperConfiguration directly
+    // as an initial property (overrides this binding); in-process desktop
+    // config uses wallpaper.configuration.
+    property var configDialog: null
+    property var wallpaperConfiguration: (configDialog && configDialog.wallpaperConfiguration)
+        ? configDialog.wallpaperConfiguration
+        : ((typeof wallpaper !== "undefined" && wallpaper && wallpaper.configuration)
+            ? wallpaper.configuration
+            : null)
 
     // Both ConfigurationContainmentAppearance.qml and kcm_wallpaper's main.qml
     // connect to this signal to enable the Apply button (and, in the desktop
@@ -78,7 +93,7 @@ ColumnLayout {
     // ════════════════════════════════════════════════════════════════════════
 
     // — Shader selection
-    property string cfg_selectedShaderPath: wallpaperConfiguration ? (wallpaperConfiguration.selectedShaderPath ?? "Shaders6/Ps3menu.frag.qsb") : "Shaders6/Ps3menu.frag.qsb"
+    property string cfg_selectedShaderPath: wallpaperConfiguration ? (wallpaperConfiguration.selectedShaderPath ?? "Shaders/PS3_MenuColor.frag") : "Shaders/PS3_MenuColor.frag"
     property string cfg_selectedShaderCode: wallpaperConfiguration ? (wallpaperConfiguration.selectedShaderCode ?? "") : ""
     property int    cfg_selectedShaderIndex: wallpaperConfiguration ? (wallpaperConfiguration.selectedShaderIndex ?? 0) : 0
 

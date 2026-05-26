@@ -21,34 +21,61 @@ WallpaperItem {
     property bool pluginAvailable: pluginStatus.installed
 
     // ────────────────────────────────────────────────────────────────────────
-    // Lock-screen detection.
+    // Host-surface detection + config bridge.
     //
-    // kscreenlocker_greet instantiates THIS same WallpaperItem (Plasma's lock
-    // screen is just another Plasma/Wallpaper consumer) — but in that context
-    // PipeWire audio capture, KWin window-tracking DBus calls, and cursor
-    // grabbing are either useless or actively unsafe (and pause-on-window
-    // semantics don't apply when no user windows are visible anyway).
+    // This WallpaperItem is loaded by three different hosts:
     //
-    // The canonical detection trick used by other Plasma 6 wallpaper plugins
-    // is to inspect the host QML Window's `source` URL: plasmashell loads
-    // Desktop.qml; kscreenlocker loads LockScreen.qml. We watch for the
-    // window-change moment and latch the result, then plumb it down into
-    // ShaderSystem.qml so the shader engine can clamp inputs to a safe
-    // lock-screen subset.
+    //   Desktop  — plasmashell / Desktop.qml
+    //              `wallpaper` context → WallpaperItem; config via
+    //              wallpaper.configuration (or our own `configuration`).
+    //
+    //   Lock     — kscreenlocker_greet / LockScreen.qml
+    //              `wallpaper` context → WallpaperIntegration; config via
+    //              wallpaper.configuration.
+    //
+    //   Login    — Plasma Login Manager (PLM) / plasma-login-wallpaper
+    //              NO `wallpaper` context object — PLM injects a
+    //              `configuration` KConfigPropertyMap directly onto this
+    //              WallpaperItem root (see plasma-login-manager
+    //              WallpaperApp::setupWallpaperPlugin). Config must be read
+    //              from WallpaperItem.configuration instead.
+    //
+    // PLM's System Settings KCM omits third-party plugins from its wallpaper-type
+    // dropdown (KDE bug 517325). Register via conf.d, then configure appearance
+    // in System Settings → Login Screen → Configure Appearance…
+    //
+    //   /etc/plasmalogin.conf.d/online.knowmad.shaderwallpaper.conf
+    //   [Greeter]
+    //   WallpaperPluginId=online.knowmad.shaderwallpaper
+    //
+    // See scripts/install-plm-greeter.sh
+    //
+    // Detection: inspect the host QQuickView's `source` URL (same trick as
+    // Smart Video Wallpaper Reborn and other dual-mode plugins).
     // ────────────────────────────────────────────────────────────────────────
     property bool lockScreenMode: false
+    property bool loginScreenMode: false
+
+    // Authoritative config map for ShaderSystem — works in all three hosts.
+    readonly property var effectiveConfiguration: {
+        if (typeof wallpaper !== "undefined" && wallpaper && wallpaper.configuration)
+            return wallpaper.configuration
+        return configuration
+    }
 
     Item {
         anchors.fill: parent
         onWindowChanged: function(window) {
             if (!window) return
-            // `source` only exists on QQuickView-style host windows
-            // (Plasma's containment views). When present, its URL filename
-            // tells us which surface we're on.
             const src = ("source" in window) ? window.source.toString() : ""
             main.lockScreenMode = src.endsWith("LockScreen.qml")
+            // PLM's wallpaper service hosts us inside
+            // qrc:/…/org/kde/plasma/login/wallpaper/main.qml
+            main.loginScreenMode = src.indexOf("plasma/login/wallpaper") >= 0
             if (main.lockScreenMode) {
-                console.log("Shader Wallpaper: running in lock-screen mode")
+                console.log("Shader Wallpaper: lock-screen mode")
+            } else if (main.loginScreenMode) {
+                console.log("Shader Wallpaper: PLM login-screen mode")
             }
         }
     }
@@ -148,11 +175,24 @@ WallpaperItem {
         anchors.fill: parent
         active: false
         source: "ShaderSystem.qml"
+    }
 
-        // Forward the lock-screen flag so ShaderSystem can disable inputs
-        // that don't make sense on the lock screen.
-        onLoaded: {
-            if (item) item.lockScreenMode = Qt.binding(function() { return main.lockScreenMode })
-        }
+    Binding {
+        target: pluginLoader.item
+        property: "wallpaperConfig"
+        value: main.effectiveConfiguration
+        when: pluginLoader.item
+    }
+    Binding {
+        target: pluginLoader.item
+        property: "lockScreenMode"
+        value: main.lockScreenMode
+        when: pluginLoader.item
+    }
+    Binding {
+        target: pluginLoader.item
+        property: "loginScreenMode"
+        value: main.loginScreenMode
+        when: pluginLoader.item
     }
 }

@@ -41,9 +41,21 @@ ShaderLibrary::ShaderLibrary(QObject *parent)
 {
     s_instance = this;
     
-    // Default library path
-    QString dataPath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
-    m_libraryPath = dataPath + QStringLiteral("/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui");
+    // Default library path: prefer the installed package under /usr/share (or
+    // ~/.local/share for user installs). Do NOT use writableLocation alone —
+    // the PLM greeter runs as user "plasmalogin" whose home is not where the
+    // plugin lives, and a root-only path would leave libraryPath empty/wrong.
+    const QString relativePath =
+        QStringLiteral("plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui");
+    const QString fromDataDirs =
+        QStandardPaths::locate(QStandardPaths::GenericDataLocation, relativePath);
+    if (!fromDataDirs.isEmpty()) {
+        m_libraryPath = fromDataDirs;
+    } else {
+        const QString dataPath =
+            QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+        m_libraryPath = dataPath + QLatin1Char('/') + relativePath;
+    }
     
     m_categories = DEFAULT_CATEGORIES;
     

@@ -8,7 +8,7 @@
     <!-- Shader Selection -->
     <entry name="selectedShaderPath" type="String">
       <label>Path to the selected shader</label>
-      <default>Shaders6/Ps3menu.frag.qsb</default>
+      <default>Shaders/PS3_MenuColor.frag</default>
     </entry>
     <entry name="selectedShaderCode" type="String">
       <label>Custom shader code (for pasted/imported shaders)</label>
