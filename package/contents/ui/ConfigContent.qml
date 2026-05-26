@@ -102,99 +102,115 @@ ColumnLayout {
         height: 0
     }
     
-    // Configuration properties (exposed at top level for cfg_ binding)
-    property string cfg_selectedShaderPath: wallpaper.configuration.selectedShaderPath
-    property string cfg_selectedShaderCode: wallpaper.configuration.selectedShaderCode
-    property int cfg_selectedShaderIndex: wallpaper.configuration.selectedShaderIndex
-    property bool cfg_running: wallpaper.configuration.running
-    property double cfg_shaderSpeed: wallpaper.configuration.shaderSpeed
-    property int cfg_targetFps: wallpaper.configuration.targetFps || 60
-    property int cfg_pauseMode: wallpaper.configuration.pauseMode
-    
-    // Mouse settings
-    property bool cfg_mouseEnabled: wallpaper.configuration.mouseEnabled
-    property double cfg_mouseBias: wallpaper.configuration.mouseBias
-    
-    // Audio settings
-    property bool cfg_audioEnabled: wallpaper.configuration.audioEnabled
-    property int cfg_audioChannel: wallpaper.configuration.audioChannel
-    property double cfg_audioSensitivity: wallpaper.configuration.audioSensitivity || 40.0
-    
-    // Window tracking
-    property bool cfg_windowsEnabled: wallpaper.configuration.windowsEnabled
-    
-    // Performance monitoring
-    property bool cfg_showPerformance: wallpaper.configuration.showPerformance
-    property bool cfg_showPerformanceGraph: wallpaper.configuration.showPerformanceGraph
-    property bool cfg_performanceExpanded: wallpaper.configuration.performanceExpanded
-    property int cfg_gpuTdp: wallpaper.configuration.gpuTdp || 75
+    // ════════════════════════════════════════════════════════════════════════
+    // cfg_<key> properties used by the UI controls below.
+    //
+    // These intentionally use LITERAL defaults (not `wallpaper.configuration.X`)
+    // because:
+    //   • In the System Settings KCM context, `wallpaper` is undefined —
+    //     bindings to it silently degrade to 0/empty, which is what produced
+    //     the "Speed = 0.00x, FPS = 0, Render scale = 0%" symptom.
+    //   • The authoritative cfg_* values are declared on `configRoot` in
+    //     config.qml (which is what the host shell instantiates) and pushed
+    //     to us via bidirectional wiring in config.qml's Loader.onLoaded.
+    //   • User edits to these properties flow back to configRoot through the
+    //     same wiring, then on to the live wallpaper / KCM as appropriate.
+    //
+    // The literals just need to be reasonable bootstrap values for the brief
+    // window between component creation and Loader.onLoaded firing.
+    // ════════════════════════════════════════════════════════════════════════
 
-    // Playlist (A3)
-    property bool cfg_playlistEnabled: wallpaper.configuration.playlistEnabled
-    property var  cfg_playlistShaders: wallpaper.configuration.playlistShaders || []
-    property int  cfg_playlistIntervalMinutes: wallpaper.configuration.playlistIntervalMinutes || 10
-    property bool cfg_playlistShuffle: wallpaper.configuration.playlistShuffle
+    // — Shader selection
+    property string cfg_selectedShaderPath: ""
+    property string cfg_selectedShaderCode: ""
+    property int    cfg_selectedShaderIndex: 0
 
-    // Experimental (B5 / B6 / B7 / C8)
-    property bool cfg_experimentalScreenUniforms: wallpaper.configuration.experimentalScreenUniforms
-    property bool cfg_experimentalDesktopUniform: wallpaper.configuration.experimentalDesktopUniform
-    property bool cfg_experimentalParallax: wallpaper.configuration.experimentalParallax
-    property real cfg_experimentalParallaxStrength: wallpaper.configuration.experimentalParallaxStrength || 0.25
-    property bool cfg_watchSourceFile: wallpaper.configuration.watchSourceFile || false
-    property bool cfg_enableShaderTweaks: wallpaper.configuration.enableShaderTweaks || false
+    // — Playback
+    property bool   cfg_running: true
+    property double cfg_shaderSpeed: 1.0
+    property int    cfg_targetFps: 60
+    property int    cfg_pauseMode: 0
+    property real   cfg_resolutionScale: 1.0
 
-    // Channel settings
-    property string cfg_iChannel0: wallpaper.configuration.iChannel0
-    property string cfg_iChannel1: wallpaper.configuration.iChannel1
-    property string cfg_iChannel2: wallpaper.configuration.iChannel2
-    property string cfg_iChannel3: wallpaper.configuration.iChannel3
-    property bool cfg_iChannel0Enabled: wallpaper.configuration.iChannel0Enabled
-    property bool cfg_iChannel1Enabled: wallpaper.configuration.iChannel1Enabled
-    property bool cfg_iChannel2Enabled: wallpaper.configuration.iChannel2Enabled
-    property bool cfg_iChannel3Enabled: wallpaper.configuration.iChannel3Enabled
-    
-    // Buffer settings
-    property bool cfg_useBufferA: wallpaper.configuration.useBufferA
-    property bool cfg_useBufferB: wallpaper.configuration.useBufferB
-    property bool cfg_useBufferC: wallpaper.configuration.useBufferC
-    property bool cfg_useBufferD: wallpaper.configuration.useBufferD
-    
-    // Window management
-    property bool cfg_checkActiveScreen: wallpaper.configuration.checkActiveScreen
-    property var cfg_excludeWindows: wallpaper.configuration.excludeWindows
+    // — Mouse
+    property bool   cfg_mouseEnabled: false
+    property double cfg_mouseBias: 1.0
 
-    // Per-pass shader code (previously written directly to wallpaper.configuration).
-    // Defined here so writes go through Plasma's dirty-tracking via the cfg_ alias.
-    property string cfg_commonCode: wallpaper.configuration.commonCode || ""
-    property string cfg_bufferACode: wallpaper.configuration.bufferACode || ""
-    property string cfg_bufferBCode: wallpaper.configuration.bufferBCode || ""
-    property string cfg_bufferCCode: wallpaper.configuration.bufferCCode || ""
-    property string cfg_bufferDCode: wallpaper.configuration.bufferDCode || ""
+    // — Audio
+    property bool   cfg_audioEnabled: false
+    property int    cfg_audioChannel: 0
+    property double cfg_audioSensitivity: 40.0
 
-    // Per-pass channel routing.
-    property int cfg_imageChannel0: wallpaper.configuration.imageChannel0 ?? 0
-    property int cfg_imageChannel1: wallpaper.configuration.imageChannel1 ?? 1
-    property int cfg_imageChannel2: wallpaper.configuration.imageChannel2 ?? 2
-    property int cfg_imageChannel3: wallpaper.configuration.imageChannel3 ?? 3
-    property int cfg_bufferAChannel0: wallpaper.configuration.bufferAChannel0 ?? -1
-    property int cfg_bufferAChannel1: wallpaper.configuration.bufferAChannel1 ?? -1
-    property int cfg_bufferAChannel2: wallpaper.configuration.bufferAChannel2 ?? -1
-    property int cfg_bufferAChannel3: wallpaper.configuration.bufferAChannel3 ?? -1
-    property int cfg_bufferBChannel0: wallpaper.configuration.bufferBChannel0 ?? -1
-    property int cfg_bufferBChannel1: wallpaper.configuration.bufferBChannel1 ?? -1
-    property int cfg_bufferBChannel2: wallpaper.configuration.bufferBChannel2 ?? -1
-    property int cfg_bufferBChannel3: wallpaper.configuration.bufferBChannel3 ?? -1
-    property int cfg_bufferCChannel0: wallpaper.configuration.bufferCChannel0 ?? -1
-    property int cfg_bufferCChannel1: wallpaper.configuration.bufferCChannel1 ?? -1
-    property int cfg_bufferCChannel2: wallpaper.configuration.bufferCChannel2 ?? -1
-    property int cfg_bufferCChannel3: wallpaper.configuration.bufferCChannel3 ?? -1
-    property int cfg_bufferDChannel0: wallpaper.configuration.bufferDChannel0 ?? -1
-    property int cfg_bufferDChannel1: wallpaper.configuration.bufferDChannel1 ?? -1
-    property int cfg_bufferDChannel2: wallpaper.configuration.bufferDChannel2 ?? -1
-    property int cfg_bufferDChannel3: wallpaper.configuration.bufferDChannel3 ?? -1
+    // — Window tracking / pause detection
+    property bool   cfg_windowsEnabled: false
+    property bool   cfg_checkActiveScreen: true
+    property var    cfg_excludeWindows: []
 
-    // Render resolution scale (0.25 .. 2.0). 1.0 = native. Lower trades fidelity for FPS.
-    property real cfg_resolutionScale: wallpaper.configuration.resolutionScale ?? 1.0
+    // — Performance HUD
+    property bool   cfg_showPerformance: false
+    property bool   cfg_showPerformanceGraph: true
+    property bool   cfg_performanceExpanded: true
+    property int    cfg_gpuTdp: 75
+
+    // — Playlist
+    property bool   cfg_playlistEnabled: false
+    property var    cfg_playlistShaders: []
+    property int    cfg_playlistIntervalMinutes: 10
+    property bool   cfg_playlistShuffle: false
+
+    // — Experimental engine features
+    property bool   cfg_experimentalScreenUniforms: false
+    property bool   cfg_experimentalDesktopUniform: false
+    property bool   cfg_experimentalParallax: false
+    property real   cfg_experimentalParallaxStrength: 0.25
+    property bool   cfg_watchSourceFile: false
+    property bool   cfg_enableShaderTweaks: false
+
+    // — iChannel textures
+    property string cfg_iChannel0: "./Resources/wallpaper2.png"
+    property string cfg_iChannel1: "./Resources/wallpaper2.png"
+    property string cfg_iChannel2: "./Resources/Shadertoy_Organic_2.jpg"
+    property string cfg_iChannel3: "./Resources/Shadertoy_Organic_2.jpg"
+    property bool   cfg_iChannel0Enabled: true
+    property bool   cfg_iChannel1Enabled: true
+    property bool   cfg_iChannel2Enabled: true
+    property bool   cfg_iChannel3Enabled: false
+
+    // — Buffer toggles
+    property bool cfg_useBufferA: false
+    property bool cfg_useBufferB: false
+    property bool cfg_useBufferC: false
+    property bool cfg_useBufferD: false
+
+    // — Per-pass shader code
+    property string cfg_commonCode: ""
+    property string cfg_bufferACode: ""
+    property string cfg_bufferBCode: ""
+    property string cfg_bufferCCode: ""
+    property string cfg_bufferDCode: ""
+
+    // — Per-buffer channel routing
+    //   (-1 = None; 0..3 = Texture0..3; 10..13 = BufferA..D; 20 = Audio)
+    property int cfg_imageChannel0: 0
+    property int cfg_imageChannel1: 1
+    property int cfg_imageChannel2: 2
+    property int cfg_imageChannel3: 3
+    property int cfg_bufferAChannel0: -1
+    property int cfg_bufferAChannel1: -1
+    property int cfg_bufferAChannel2: -1
+    property int cfg_bufferAChannel3: -1
+    property int cfg_bufferBChannel0: -1
+    property int cfg_bufferBChannel1: -1
+    property int cfg_bufferBChannel2: -1
+    property int cfg_bufferBChannel3: -1
+    property int cfg_bufferCChannel0: -1
+    property int cfg_bufferCChannel1: -1
+    property int cfg_bufferCChannel2: -1
+    property int cfg_bufferCChannel3: -1
+    property int cfg_bufferDChannel0: -1
+    property int cfg_bufferDChannel1: -1
+    property int cfg_bufferDChannel2: -1
+    property int cfg_bufferDChannel3: -1
 
     Palette {
         id: palette
@@ -439,110 +455,22 @@ ColumnLayout {
         cfg_useBufferD = !!bc["BufferD"]
     }
 
-    // ----------------------------------------------------------------------
-    // Live preview bridge: mirror every cfg_<key> write into
-    // wallpaper.configuration.<key> so the running wallpaper updates the
-    // instant the user changes anything in the dialog — instead of waiting
-    // for them to click Apply.
+    // ────────────────────────────────────────────────────────────────────────
+    // No live-preview bridge here anymore.
     //
-    // Without this bridge, picking a shader from the gallery (or moving any
-    // slider) would only stage a change to cfg_X. Plasma's KCM mirrors that
-    // to wallpaper.configuration.X on Apply, but in the meantime the
-    // ShaderSystem.qml bindings (which read wallpaper.configuration.X) see
-    // no change and the desktop wallpaper looks "stuck".
-    // ----------------------------------------------------------------------
-    function _pushToWallpaper(key, value) {
-        if (!wallpaper || !wallpaper.configuration) return
-        if (wallpaper.configuration[key] === value) return
-        wallpaper.configuration[key] = value
-    }
-
-    Connections {
-        target: configItem
-        // Shader source
-        function onCfg_selectedShaderPathChanged() { _pushToWallpaper("selectedShaderPath", cfg_selectedShaderPath) }
-        function onCfg_selectedShaderCodeChanged() { _pushToWallpaper("selectedShaderCode", cfg_selectedShaderCode) }
-        function onCfg_selectedShaderIndexChanged() { _pushToWallpaper("selectedShaderIndex", cfg_selectedShaderIndex) }
-        // Playback
-        function onCfg_runningChanged() { _pushToWallpaper("running", cfg_running) }
-        function onCfg_shaderSpeedChanged() { _pushToWallpaper("shaderSpeed", cfg_shaderSpeed) }
-        function onCfg_targetFpsChanged() { _pushToWallpaper("targetFps", cfg_targetFps) }
-        function onCfg_resolutionScaleChanged() { _pushToWallpaper("resolutionScale", cfg_resolutionScale) }
-        function onCfg_pauseModeChanged() { _pushToWallpaper("pauseMode", cfg_pauseMode) }
-        // Mouse
-        function onCfg_mouseEnabledChanged() { _pushToWallpaper("mouseEnabled", cfg_mouseEnabled) }
-        function onCfg_mouseBiasChanged() { _pushToWallpaper("mouseBias", cfg_mouseBias) }
-        // Audio
-        function onCfg_audioEnabledChanged() { _pushToWallpaper("audioEnabled", cfg_audioEnabled) }
-        function onCfg_audioChannelChanged() { _pushToWallpaper("audioChannel", cfg_audioChannel) }
-        function onCfg_audioSensitivityChanged() { _pushToWallpaper("audioSensitivity", cfg_audioSensitivity) }
-        // Window tracking
-        function onCfg_windowsEnabledChanged() { _pushToWallpaper("windowsEnabled", cfg_windowsEnabled) }
-        // Performance widget
-        function onCfg_showPerformanceChanged() { _pushToWallpaper("showPerformance", cfg_showPerformance) }
-        function onCfg_showPerformanceGraphChanged() { _pushToWallpaper("showPerformanceGraph", cfg_showPerformanceGraph) }
-        function onCfg_performanceExpandedChanged() { _pushToWallpaper("performanceExpanded", cfg_performanceExpanded) }
-        function onCfg_gpuTdpChanged() { _pushToWallpaper("gpuTdp", cfg_gpuTdp) }
-        // Playlist
-        function onCfg_playlistEnabledChanged() { _pushToWallpaper("playlistEnabled", cfg_playlistEnabled) }
-        function onCfg_playlistShadersChanged() { _pushToWallpaper("playlistShaders", cfg_playlistShaders) }
-        function onCfg_playlistIntervalMinutesChanged() { _pushToWallpaper("playlistIntervalMinutes", cfg_playlistIntervalMinutes) }
-        function onCfg_playlistShuffleChanged() { _pushToWallpaper("playlistShuffle", cfg_playlistShuffle) }
-        // Experimental
-        function onCfg_experimentalScreenUniformsChanged() { _pushToWallpaper("experimentalScreenUniforms", cfg_experimentalScreenUniforms) }
-        function onCfg_experimentalDesktopUniformChanged() { _pushToWallpaper("experimentalDesktopUniform", cfg_experimentalDesktopUniform) }
-        function onCfg_experimentalParallaxChanged() { _pushToWallpaper("experimentalParallax", cfg_experimentalParallax) }
-        function onCfg_experimentalParallaxStrengthChanged() { _pushToWallpaper("experimentalParallaxStrength", cfg_experimentalParallaxStrength) }
-        function onCfg_watchSourceFileChanged() { _pushToWallpaper("watchSourceFile", cfg_watchSourceFile) }
-        function onCfg_enableShaderTweaksChanged() { _pushToWallpaper("enableShaderTweaks", cfg_enableShaderTweaks) }
-        // iChannel paths
-        function onCfg_iChannel0Changed() { _pushToWallpaper("iChannel0", cfg_iChannel0) }
-        function onCfg_iChannel1Changed() { _pushToWallpaper("iChannel1", cfg_iChannel1) }
-        function onCfg_iChannel2Changed() { _pushToWallpaper("iChannel2", cfg_iChannel2) }
-        function onCfg_iChannel3Changed() { _pushToWallpaper("iChannel3", cfg_iChannel3) }
-        function onCfg_iChannel0EnabledChanged() { _pushToWallpaper("iChannel0Enabled", cfg_iChannel0Enabled) }
-        function onCfg_iChannel1EnabledChanged() { _pushToWallpaper("iChannel1Enabled", cfg_iChannel1Enabled) }
-        function onCfg_iChannel2EnabledChanged() { _pushToWallpaper("iChannel2Enabled", cfg_iChannel2Enabled) }
-        function onCfg_iChannel3EnabledChanged() { _pushToWallpaper("iChannel3Enabled", cfg_iChannel3Enabled) }
-        // Buffer toggles
-        function onCfg_useBufferAChanged() { _pushToWallpaper("useBufferA", cfg_useBufferA) }
-        function onCfg_useBufferBChanged() { _pushToWallpaper("useBufferB", cfg_useBufferB) }
-        function onCfg_useBufferCChanged() { _pushToWallpaper("useBufferC", cfg_useBufferC) }
-        function onCfg_useBufferDChanged() { _pushToWallpaper("useBufferD", cfg_useBufferD) }
-        // Buffer & common code
-        function onCfg_commonCodeChanged() { _pushToWallpaper("commonCode", cfg_commonCode) }
-        function onCfg_bufferACodeChanged() { _pushToWallpaper("bufferACode", cfg_bufferACode) }
-        function onCfg_bufferBCodeChanged() { _pushToWallpaper("bufferBCode", cfg_bufferBCode) }
-        function onCfg_bufferCCodeChanged() { _pushToWallpaper("bufferCCode", cfg_bufferCCode) }
-        function onCfg_bufferDCodeChanged() { _pushToWallpaper("bufferDCode", cfg_bufferDCode) }
-        // Image-pass channel routing
-        function onCfg_imageChannel0Changed() { _pushToWallpaper("imageChannel0", cfg_imageChannel0) }
-        function onCfg_imageChannel1Changed() { _pushToWallpaper("imageChannel1", cfg_imageChannel1) }
-        function onCfg_imageChannel2Changed() { _pushToWallpaper("imageChannel2", cfg_imageChannel2) }
-        function onCfg_imageChannel3Changed() { _pushToWallpaper("imageChannel3", cfg_imageChannel3) }
-        // Buffer A channel routing
-        function onCfg_bufferAChannel0Changed() { _pushToWallpaper("bufferAChannel0", cfg_bufferAChannel0) }
-        function onCfg_bufferAChannel1Changed() { _pushToWallpaper("bufferAChannel1", cfg_bufferAChannel1) }
-        function onCfg_bufferAChannel2Changed() { _pushToWallpaper("bufferAChannel2", cfg_bufferAChannel2) }
-        function onCfg_bufferAChannel3Changed() { _pushToWallpaper("bufferAChannel3", cfg_bufferAChannel3) }
-        // Buffer B channel routing
-        function onCfg_bufferBChannel0Changed() { _pushToWallpaper("bufferBChannel0", cfg_bufferBChannel0) }
-        function onCfg_bufferBChannel1Changed() { _pushToWallpaper("bufferBChannel1", cfg_bufferBChannel1) }
-        function onCfg_bufferBChannel2Changed() { _pushToWallpaper("bufferBChannel2", cfg_bufferBChannel2) }
-        function onCfg_bufferBChannel3Changed() { _pushToWallpaper("bufferBChannel3", cfg_bufferBChannel3) }
-        // Buffer C channel routing
-        function onCfg_bufferCChannel0Changed() { _pushToWallpaper("bufferCChannel0", cfg_bufferCChannel0) }
-        function onCfg_bufferCChannel1Changed() { _pushToWallpaper("bufferCChannel1", cfg_bufferCChannel1) }
-        function onCfg_bufferCChannel2Changed() { _pushToWallpaper("bufferCChannel2", cfg_bufferCChannel2) }
-        function onCfg_bufferCChannel3Changed() { _pushToWallpaper("bufferCChannel3", cfg_bufferCChannel3) }
-        // Buffer D channel routing
-        function onCfg_bufferDChannel0Changed() { _pushToWallpaper("bufferDChannel0", cfg_bufferDChannel0) }
-        function onCfg_bufferDChannel1Changed() { _pushToWallpaper("bufferDChannel1", cfg_bufferDChannel1) }
-        function onCfg_bufferDChannel2Changed() { _pushToWallpaper("bufferDChannel2", cfg_bufferDChannel2) }
-        function onCfg_bufferDChannel3Changed() { _pushToWallpaper("bufferDChannel3", cfg_bufferDChannel3) }
-        // Window-management
-        function onCfg_checkActiveScreenChanged() { _pushToWallpaper("checkActiveScreen", cfg_checkActiveScreen) }
-    }
+    // Mirroring cfg_<key> changes into the host wallpaper / KCM configuration
+    // is now done centrally in config.qml — which is the QML root that the
+    // host shell instantiates and the only place that can correctly speak the
+    // Plasma wallpaper-config contract (signal `configurationChanged`,
+    // bidirectional cfg_*/wallpaperConfiguration mirroring, etc.). See the
+    // header comment in config.qml.
+    //
+    // configRoot.cfg_* ↔ configItem.cfg_* is wired up in config.qml's
+    // contentLoader.onLoaded, so any cfg_* change we make here propagates
+    // back to configRoot, which in turn handles `wallpaperConfiguration[key]`
+    // writes (live preview in-process) and `configurationChanged` (KCM
+    // dirty tracking).
+    // ────────────────────────────────────────────────────────────────────────
 
     // ---------------------------------------------------------------------
     // Thumbnail capture from the in-config preview engine.
