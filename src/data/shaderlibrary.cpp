@@ -36,35 +36,78 @@ const QStringList ShaderLibrary::DEFAULT_CATEGORIES = {
 
 ShaderLibrary* ShaderLibrary::s_instance = nullptr;
 
+namespace {
+
+bool directoryHasShaderFiles(const QString &libraryRoot)
+{
+    const QDir shadersDir(libraryRoot + QStringLiteral("/Shaders"));
+    if (!shadersDir.exists()) {
+        return false;
+    }
+    return !shadersDir.entryList({QStringLiteral("*.frag"), QStringLiteral("*.glsl")}, QDir::Files).isEmpty();
+}
+
+QString resolveLibraryRoot()
+{
+    const QString relativePath =
+        QStringLiteral("plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui");
+
+    const QStringList located = QStandardPaths::locateAll(
+        QStandardPaths::GenericDataLocation, relativePath, QStandardPaths::LocateDirectory);
+
+    for (const QString &candidate : located) {
+        if (directoryHasShaderFiles(candidate)) {
+            return candidate;
+        }
+    }
+
+    static const QStringList fallbacks = {
+        QStringLiteral("/usr/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui"),
+    };
+    for (const QString &candidate : fallbacks) {
+        if (directoryHasShaderFiles(candidate)) {
+            return candidate;
+        }
+    }
+
+    if (!located.isEmpty()) {
+        return located.constFirst();
+    }
+    for (const QString &candidate : fallbacks) {
+        if (QDir(candidate).exists()) {
+            return candidate;
+        }
+    }
+
+    const QString dataPath =
+        QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+    return dataPath + QLatin1Char('/') + relativePath;
+}
+
+} // namespace
+
 ShaderLibrary::ShaderLibrary(QObject *parent)
     : QObject(parent)
 {
     s_instance = this;
-    
-    // Default library path: prefer the installed package under /usr/share (or
-    // ~/.local/share for user installs). Do NOT use writableLocation alone —
-    // the PLM greeter runs as user "plasmalogin" whose home is not where the
-    // plugin lives, and a root-only path would leave libraryPath empty/wrong.
-    const QString relativePath =
-        QStringLiteral("plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui");
-    const QString fromDataDirs =
-        QStandardPaths::locate(QStandardPaths::GenericDataLocation, relativePath);
-    if (!fromDataDirs.isEmpty()) {
-        m_libraryPath = fromDataDirs;
-    } else {
-        const QString dataPath =
-            QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
-        m_libraryPath = dataPath + QLatin1Char('/') + relativePath;
+
+    m_libraryPath = resolveLibraryRoot();
+
+    // /usr/.../contents/ui is the location the PLM greeter reads from
+    // (running as the plasmalogin user it cannot see ~/.local). We record
+    // it here as "greeterPath" iff it exists AND it's a different path from
+    // the writable library root — when those are the same, every shader is
+    // trivially greeter-available so the badge is irrelevant.
+    static const QString systemRoot = QStringLiteral(
+        "/usr/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui");
+    if (m_libraryPath != systemRoot && directoryHasShaderFiles(systemRoot)) {
+        m_greeterPath = systemRoot;
     }
-    
+
     m_categories = DEFAULT_CATEGORIES;
-    
+
     loadIndex();
-    
-    // If no shaders were loaded from index, scan the directories
-    if (m_shaders.isEmpty()) {
-        refresh();
-    }
+    refresh();
 }
 
 ShaderLibrary::~ShaderLibrary()
@@ -148,12 +191,48 @@ void ShaderLibrary::refresh()
         Q_EMIT shaderRemoved(id);
     }
 
+    updateGreeterAvailability();
+
     m_loading = false;
     Q_EMIT loadingChanged();
     Q_EMIT shaderCountChanged();
 
     // Persist any additions / removals.
     saveIndex();
+}
+
+void ShaderLibrary::updateGreeterAvailability()
+{
+    // If there's no /usr install detected, default everything to "available"
+    // (the badge is hidden anyway via greeterPathPresent in QML).
+    if (m_greeterPath.isEmpty()) {
+        for (const auto &shader : m_shaders) {
+            shader->setGreeterAvailable(true);
+        }
+        return;
+    }
+
+    // For each shader in the writable library, check whether the same
+    // package-relative path exists under /usr/.../contents/ui. Stock
+    // shaders are in both → available. Imports / user-only shaders are
+    // missing in /usr → not available.
+    const QString libRootPrefix = m_libraryPath + QLatin1Char('/');
+    for (const auto &shader : m_shaders) {
+        const QString local = shader->shaderPath().toLocalFile();
+        if (local.isEmpty()) {
+            shader->setGreeterAvailable(false);
+            continue;
+        }
+        if (local.startsWith(libRootPrefix)) {
+            const QString rel = local.mid(libRootPrefix.size());
+            const QString twin = m_greeterPath + QLatin1Char('/') + rel;
+            shader->setGreeterAvailable(QFile::exists(twin));
+        } else {
+            // Shader lives outside the library root (e.g. file added by drag
+            // from elsewhere). The greeter can't see arbitrary user paths.
+            shader->setGreeterAvailable(false);
+        }
+    }
 }
 
 QList<ShaderMetadata*> ShaderLibrary::allShaders() const
@@ -212,6 +291,33 @@ ShaderMetadata* ShaderLibrary::getShaderByPath(const QUrl &path) const
         return it.value().get();
     }
     return nullptr;
+}
+
+QString ShaderLibrary::toRelativeShaderPath(const QString &input) const
+{
+    if (input.isEmpty()) {
+        return input;
+    }
+
+    QString path = input;
+    // Strip a file:// URL scheme so we work purely on filesystem paths.
+    if (path.startsWith(QLatin1String("file://"))) {
+        path = QUrl(path).toLocalFile();
+    }
+
+    // Anything under .../plasma/wallpapers/<plugin>/contents/ui/ on either
+    // ~/.local/share or /usr/share collapses to the path that follows
+    // contents/ui/ — e.g. "Shaders/AlienVoxel.frag". Qt.resolvedUrl() in
+    // ShaderSystem.qml then resolves that against whichever copy of the
+    // plugin is actually running (user copy for the desktop, /usr copy for
+    // the PLM greeter), so the same saved value is portable across both.
+    static const QLatin1String marker(
+        "/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui/");
+    const int idx = path.indexOf(marker);
+    if (idx >= 0) {
+        return path.mid(idx + marker.size());
+    }
+    return input;
 }
 
 bool ShaderLibrary::addShader(ShaderMetadata *metadata)

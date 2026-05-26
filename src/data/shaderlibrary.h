@@ -50,6 +50,13 @@ class ShaderLibrary : public QObject
     Q_PROPERTY(QStringList categories READ categories NOTIFY categoriesChanged)
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
 
+    // /usr/share/.../contents/ui if it exists and has shader files. Empty
+    // string otherwise. UI uses greeterPathPresent to gate the "won't show
+    // on the sign-in screen" badge — when there's no /usr install the badge
+    // is meaningless so we hide it.
+    Q_PROPERTY(QString greeterPath READ greeterPath NOTIFY libraryPathChanged)
+    Q_PROPERTY(bool greeterPathPresent READ greeterPathPresent NOTIFY libraryPathChanged)
+
 public:
     // Default categories
     static const QStringList DEFAULT_CATEGORIES;
@@ -62,6 +69,8 @@ public:
 
     // Property getters
     QString libraryPath() const { return m_libraryPath; }
+    QString greeterPath() const { return m_greeterPath; }
+    bool greeterPathPresent() const { return !m_greeterPath.isEmpty(); }
     int shaderCount() const { return m_shaders.count(); }
     QStringList categories() const { return m_categories; }
     bool loading() const { return m_loading; }
@@ -98,6 +107,18 @@ public:
      * @brief Get shader by path
      */
     Q_INVOKABLE ShaderMetadata* getShaderByPath(const QUrl &path) const;
+
+    /**
+     * @brief Convert an absolute shader path under any known install
+     *        prefix (~/.local/share/.../contents/ui, /usr/share/.../contents/ui)
+     *        into a path relative to the plugin's UI dir
+     *        (e.g. "Shaders/AlienVoxel.frag"). Paths outside any known
+     *        install dir are returned unchanged. Used before writing
+     *        selectedShaderPath to the wallpaper config so the saved value
+     *        is portable across the desktop and the PLM greeter, neither of
+     *        which can read each other's home directories.
+     */
+    Q_INVOKABLE QString toRelativeShaderPath(const QString &input) const;
     
     /**
      * @brief Add a shader to the library
@@ -283,10 +304,14 @@ private:
     ShaderMetadata* createMetadataFromPackage(const QString &packagePath, const QString &category);
     QString detectCategory(const QString &shaderCode);
     QString generateShaderName(const QString &path);
-    
+    // Walks m_shaders and sets greeterAvailable=true on every entry whose
+    // file (or its package-relative twin) exists under m_greeterPath.
+    void updateGreeterAvailability();
+
     static ShaderLibrary* s_instance;
-    
+
     QString m_libraryPath;
+    QString m_greeterPath;  // /usr/share/.../contents/ui or empty
     QList<std::shared_ptr<ShaderMetadata>> m_shaders;
     QMap<QString, std::shared_ptr<ShaderMetadata>> m_shaderMap; // By ID
     QMap<QString, std::shared_ptr<ShaderMetadata>> m_pathMap;   // By path

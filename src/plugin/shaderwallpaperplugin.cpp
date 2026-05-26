@@ -14,6 +14,7 @@
 #include "import/shadertoyapi.h"
 #include "data/presetmanager.h"
 #include "data/shaderlibrary.h"
+#include "data/plmgreetersetup.h"
 #include "models/shaderlistmodel.h"
 #include "models/categorymodel.h"
 
@@ -43,6 +44,15 @@ void ShaderWallpaperPlugin::registerTypes(const char *uri)
     // Models for QML views
     qmlRegisterType<ShaderListModel>(uri, 1, 0, "ShaderListModel");
     qmlRegisterType<CategoryModel>(uri, 1, 0, "CategoryModel");
+
+    qmlRegisterType<PlmGreeterSetup>(uri, 1, 0, "PlmGreeterSetup");
+    qmlRegisterSingletonType<PlmGreeterSetup>(uri, 1, 0, "PlmGreeterSetupSingleton",
+        [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
+            Q_UNUSED(engine)
+            Q_UNUSED(scriptEngine)
+            static PlmGreeterSetup instance;
+            return &instance;
+        });
 
     // Register singletons
     qmlRegisterSingletonType<ShaderLibrary>(uri, 1, 0, "ShaderLibrarySingleton",

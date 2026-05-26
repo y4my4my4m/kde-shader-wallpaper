@@ -83,40 +83,41 @@
       <default>false</default>
     </entry>
 
-    <!-- Channel 0 -->
+    <!-- Channel 0..3 — empty + disabled by default. The user enables a
+         channel and picks a texture from the Texture Channels card when a
+         shader actually needs one. Previous defaults pointed at
+         ./Resources/wallpaper2.png which never shipped in the package and
+         caused per-frame "Failed to load texture:" log spam. -->
     <entry name="iChannel0" type="String">
       <label>Path to iChannel0 texture</label>
-      <default>./Resources/wallpaper2.png</default>
+      <default></default>
     </entry>
     <entry name="iChannel0Enabled" type="Bool">
       <label>Enable iChannel0</label>
-      <default>true</default>
+      <default>false</default>
     </entry>
 
-    <!-- Channel 1 -->
     <entry name="iChannel1" type="String">
       <label>Path to iChannel1 texture</label>
-      <default>./Resources/wallpaper2.png</default>
+      <default></default>
     </entry>
     <entry name="iChannel1Enabled" type="Bool">
       <label>Enable iChannel1</label>
-      <default>true</default>
+      <default>false</default>
     </entry>
 
-    <!-- Channel 2 -->
     <entry name="iChannel2" type="String">
       <label>Path to iChannel2 texture</label>
-      <default>./Resources/Shadertoy_Organic_2.jpg</default>
+      <default></default>
     </entry>
     <entry name="iChannel2Enabled" type="Bool">
       <label>Enable iChannel2</label>
-      <default>true</default>
+      <default>false</default>
     </entry>
 
-    <!-- Channel 3 -->
     <entry name="iChannel3" type="String">
       <label>Path to iChannel3 texture</label>
-      <default>./Resources/Shadertoy_Organic_2.jpg</default>
+      <default></default>
     </entry>
     <entry name="iChannel3Enabled" type="Bool">
       <label>Enable iChannel3</label>

@@ -111,67 +111,48 @@ pkill plasmashell && plasmashell &
 
 ### Login screen (Plasma Login Manager)
 
-Plasma 6.6+ can use [Plasma Login Manager (PLM)](https://wiki.archlinux.org/title/Plasma_Login_Manager) instead of SDDM. Shader Wallpaper works on the **login greeter** (the screen before you sign in).
+Shader Wallpaper works on the sign-in screen if you use [Plasma Login Manager](https://wiki.archlinux.org/title/Plasma_Login_Manager) (PLM). It does **not** work with SDDM or other display managers.
 
-**Requirements:**
+PLM runs as the `plasmalogin` user before anyone logs in, so it cannot read your home folder. Two requirements:
 
-- **System-wide install (`/usr`)** — PLM runs as the `plasmalogin` user before you log in; it cannot read `~/.local`.
-- **Plugin registration drop-in** — PLM’s wallpaper-type dropdown omits third-party plugins ([KDE bug 517325](https://bugs.kde.org/show_bug.cgi?id=517325)). Register once via `conf.d` ([ArchWiki](https://wiki.archlinux.org/title/Plasma_Login_Manager#Custom_wallpaper_plugins)), then use System Settings for everything else.
+1. The plugin must be installed system-wide in `/usr` (KDE Store / `~/.local` is not visible to PLM).
+2. `/etc/plasmalogin.conf` must register the plugin — PLM's wallpaper dropdown hides third-party plugins ([KDE bug 517325](https://bugs.kde.org/show_bug.cgi?id=517325)).
 
-**Setup:**
+The wallpaper settings UI has a **Login screen** card that handles both. From git or a KDE Store install:
 
 ```bash
+# from a git checkout
 ./scripts/install-plm-greeter.sh
+
+# from a KDE Store install
+bash ~/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/scripts/install-plm-greeter.sh
 ```
 
-This installs to `/usr` and writes:
+The script runs `sudo make install` (system-wide), then writes:
 
 ```ini
-# /etc/plasmalogin.conf.d/online.knowmad.shaderwallpaper.conf
+# /etc/plasmalogin.conf
 [Greeter]
 WallpaperPluginId=online.knowmad.shaderwallpaper
 ```
 
-Log out — you should see Shader Wallpaper with plugin defaults. To pick a shader and tune settings:
+Log out — you'll see Shader Wallpaper with the default shader. To change it:
 
-1. **System Settings** → **Login Screen**
-2. **⋮** → **Configure Appearance…** (not the “Wallpaper type” dropdown)
-3. Choose a shader → **← Back** → **Apply** → log out
+**System Settings → Login Screen → ⋮ → Configure Appearance…** (ignore the "Wallpaper type" dropdown on the main page; it can't list us)
 
-> **Do not change “Wallpaper type”** on the main Login Screen page — that dropdown only lists built-in KDE plugins.
+Your `~/.local` install keeps powering the desktop and lock screen. Having both is normal.
 
-**Manual registration** (same as the script’s `--config-only`):
-
-```bash
-sudo tee /etc/plasmalogin.conf.d/online.knowmad.shaderwallpaper.conf <<'EOF'
-[Greeter]
-WallpaperPluginId=online.knowmad.shaderwallpaper
-EOF
-sudo chmod 0644 /etc/plasmalogin.conf.d/online.knowmad.shaderwallpaper.conf
-```
-
-**Troubleshooting:**
-
-If the greeter still shows a static image or logs mention `org.kde.image` / `inaccessible config location "/etc/plasmalogin.conf"`, System Settings may have created a root-only main config file:
-
-```bash
-sudo chmod 0644 /etc/plasmalogin.conf
-cat /etc/plasmalogin.conf.d/online.knowmad.shaderwallpaper.conf
-journalctl _UID=$(id -u plasmalogin) -b | rg -i 'shader|wallpaper|online.knowmad'
-pkill systemsettings   # if System Settings says already registered
-```
-
-Remove greeter registration:
+Remove the registration only (leaves the `/usr` install in place):
 
 ```bash
 sudo ./scripts/install-plm-greeter.sh --uninstall
 ```
 
-| Surface | Config | Install |
-|---------|--------|---------|
+| Surface | Config file | Install location |
+|---------|-------------|------------------|
 | Desktop | `~/.config/plasma-org.kde.plasma.desktop-appletsrc` | `~/.local` or `/usr` |
 | Lock screen | `~/.config/kscreenlockerrc` | `~/.local` or `/usr` |
-| Login (PLM) | `/etc/plasmalogin.conf.d/*.conf` + System Settings | **`/usr` only** |
+| Login (PLM) | `/etc/plasmalogin.conf` + System Settings | **`/usr` only** |
 
 ## 🎮 Usage
 

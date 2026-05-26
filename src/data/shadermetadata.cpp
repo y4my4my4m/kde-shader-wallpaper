@@ -160,6 +160,13 @@ void ShaderMetadata::setLastMeasuredDate(const QString &date)
     Q_EMIT performanceChanged();
 }
 
+void ShaderMetadata::setGreeterAvailable(bool available)
+{
+    if (m_greeterAvailable == available) return;
+    m_greeterAvailable = available;
+    Q_EMIT greeterAvailableChanged();
+}
+
 QString ShaderMetadata::performanceTierName() const
 {
     switch (m_performanceTier) {

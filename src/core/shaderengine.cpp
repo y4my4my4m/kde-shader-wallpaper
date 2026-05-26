@@ -1276,24 +1276,31 @@ void ShaderEngineRenderer::reportCompileSuccess()
 void ShaderEngineRenderer::loadTexture(int channel, const QUrl &url)
 {
     if (channel < 0 || channel >= 4) return;
-    
+
     QString path = url.toLocalFile();
     if (path.isEmpty()) {
         path = url.path();
     }
-    
+
     QImage image(path);
     if (image.isNull()) {
-        qWarning() << "Failed to load texture:" << path;
+        // Remember this URL so the per-frame retry in updateUniforms() does
+        // not log "Failed to load texture: …" every frame. We only complain
+        // once per URL change.
+        if (m_channelFailedUrls[channel] != url) {
+            qWarning() << "Failed to load texture:" << path;
+            m_channelFailedUrls[channel] = url;
+        }
         return;
     }
-    
+
     m_channelTextures[channel] = std::make_unique<QOpenGLTexture>(image.flipped(Qt::Vertical));
     m_channelTextures[channel]->setWrapMode(QOpenGLTexture::Repeat);
     m_channelTextures[channel]->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
     m_channelTextures[channel]->setMagnificationFilter(QOpenGLTexture::Linear);
-    
+
     m_channelUrls[channel] = url;
+    m_channelFailedUrls[channel] = QUrl(); // recovered — clear failure cache
 }
 
 void ShaderEngineRenderer::updateUniforms(QOpenGLShaderProgram *program, bool forBufferPass)
@@ -1964,10 +1971,12 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
         // Fixes legacy #73: on cold boot the URL binding can arrive *before*
         // the enabled binding propagates, leaving us with a matching URL but
         // no texture. Load whenever the URL changed OR no texture is cached
-        // yet for this channel.
+        // yet for this channel — UNLESS we already tried this URL and failed,
+        // in which case retrying every frame just spams qWarning.
         const bool urlChanged = channels[i] != m_channelUrls[i];
         const bool textureMissing = !m_channelTextures[i];
-        if (urlChanged || textureMissing) {
+        const bool alreadyFailed = (channels[i] == m_channelFailedUrls[i]);
+        if ((urlChanged || textureMissing) && !alreadyFailed) {
             loadTexture(i, channels[i]);
         }
     }

@@ -218,8 +218,17 @@ Item {
         // actually takes effect. The previous always-fall-back behaviour
         // here made tweaks/inline shaders silently revert to the default
         // file on the live wallpaper instance.
+        // Resolves the saved selectedShaderPath in two contexts:
+        //   - relative "Shaders/Foo.frag"     → resolved against this QML file
+        //   - absolute file:///... under any plugin install dir → collapsed
+        //     to relative first, then resolved against the *current* QML
+        //     directory (the user picked it from ~/.local on the desktop but
+        //     the greeter runs from /usr, so we can't keep the absolute path)
+        //   - absolute path outside the plugin install (user's own .frag) →
+        //     pass through unchanged
         shaderSource: wallpaperConfig && wallpaperConfig.selectedShaderPath
-            ? Qt.resolvedUrl(wallpaperConfig.selectedShaderPath)
+            ? Qt.resolvedUrl(ShaderLibrarySingleton.toRelativeShaderPath(
+                  wallpaperConfig.selectedShaderPath.toString()))
             : ((wallpaperConfig && wallpaperConfig.selectedShaderCode && wallpaperConfig.selectedShaderCode.length > 0)
                 ? ""
                 : Qt.resolvedUrl("Shaders/PS3_MenuColor.frag"))
@@ -246,24 +255,22 @@ Item {
         // Hot-reload (C8) — disabled in lock-screen mode (dev workflow).
         watchSourceFile: shaderSystem._allowWatchSource
 
-        // Texture channels
-        iChannel0: wallpaperConfig.iChannel0Enabled 
-            ? Qt.resolvedUrl(wallpaperConfig.iChannel0 || "Resources/wallpaper2.png")
-            : ""
-        iChannel1: wallpaperConfig.iChannel1Enabled 
-            ? Qt.resolvedUrl(wallpaperConfig.iChannel1 || "Resources/wallpaper2.png")
-            : ""
-        iChannel2: wallpaperConfig.iChannel2Enabled 
-            ? Qt.resolvedUrl(wallpaperConfig.iChannel2 || "Resources/Shadertoy_Organic_2.jpg")
-            : ""
-        iChannel3: wallpaperConfig.iChannel3Enabled 
-            ? Qt.resolvedUrl(wallpaperConfig.iChannel3 || "Resources/Shadertoy_Organic_2.jpg")
-            : ""
+        // Texture channels — only resolve a URL when the user has actually
+        // picked a texture *and* enabled the channel. Empty path = no load
+        // (avoids loading the package-relative default that doesn't ship).
+        iChannel0: (wallpaperConfig.iChannel0Enabled && wallpaperConfig.iChannel0)
+            ? Qt.resolvedUrl(wallpaperConfig.iChannel0) : ""
+        iChannel1: (wallpaperConfig.iChannel1Enabled && wallpaperConfig.iChannel1)
+            ? Qt.resolvedUrl(wallpaperConfig.iChannel1) : ""
+        iChannel2: (wallpaperConfig.iChannel2Enabled && wallpaperConfig.iChannel2)
+            ? Qt.resolvedUrl(wallpaperConfig.iChannel2) : ""
+        iChannel3: (wallpaperConfig.iChannel3Enabled && wallpaperConfig.iChannel3)
+            ? Qt.resolvedUrl(wallpaperConfig.iChannel3) : ""
 
-        iChannel0Enabled: wallpaperConfig.iChannel0Enabled !== false
-        iChannel1Enabled: wallpaperConfig.iChannel1Enabled !== false
-        iChannel2Enabled: wallpaperConfig.iChannel2Enabled !== false
-        iChannel3Enabled: wallpaperConfig.iChannel3Enabled || false
+        iChannel0Enabled: wallpaperConfig.iChannel0Enabled === true
+        iChannel1Enabled: wallpaperConfig.iChannel1Enabled === true
+        iChannel2Enabled: wallpaperConfig.iChannel2Enabled === true
+        iChannel3Enabled: wallpaperConfig.iChannel3Enabled === true
 
         // Buffer configuration
         useBufferA: wallpaperConfig.useBufferA || false

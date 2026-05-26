@@ -49,7 +49,8 @@ public:
         PerformanceTierRole,
         AverageFrameTimeRole,
         EstimatedPowerCostRole,
-        LastMeasuredDateRole
+        LastMeasuredDateRole,
+        GreeterAvailableRole
     };
     Q_ENUM(Roles)
 

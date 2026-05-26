@@ -557,6 +557,10 @@ private:
     // Channel textures
     std::array<std::unique_ptr<QOpenGLTexture>, 4> m_channelTextures;
     std::array<QUrl, 4> m_channelUrls;
+    // Last URL on each channel that failed to load. Lets us skip retrying
+    // every frame (was producing "Failed to load texture:" spam at 60+ Hz
+    // whenever a channel was enabled but pointed at a missing file).
+    std::array<QUrl, 4> m_channelFailedUrls;
     std::array<bool, 4> m_channelEnabled = {true, true, true, false};
     
     // Per-pass channel mapping

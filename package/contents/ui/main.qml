@@ -41,14 +41,12 @@ WallpaperItem {
     //              from WallpaperItem.configuration instead.
     //
     // PLM's System Settings KCM omits third-party plugins from its wallpaper-type
-    // dropdown (KDE bug 517325). Register via conf.d, then configure appearance
-    // in System Settings → Login Screen → Configure Appearance…
+    // dropdown (KDE bug 517325). Register the plugin in /etc/plasmalogin.conf
+    // ([Greeter] WallpaperPluginId=online.knowmad.shaderwallpaper), then pick a
+    // shader in System Settings → Login Screen → ⋮ → Configure Appearance…
     //
-    //   /etc/plasmalogin.conf.d/online.knowmad.shaderwallpaper.conf
-    //   [Greeter]
-    //   WallpaperPluginId=online.knowmad.shaderwallpaper
-    //
-    // See scripts/install-plm-greeter.sh
+    // See scripts/install-plm-greeter.sh (and the "Login screen" card in
+    // ConfigContent.qml, which calls the same script via pkexec).
     //
     // Detection: inspect the host QQuickView's `source` URL (same trick as
     // Smart Video Wallpaper Reborn and other dual-mode plugins).

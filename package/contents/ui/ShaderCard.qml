@@ -5,6 +5,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import "shaderwallpaper"
 
 /**
  * Card component for displaying a shader in the gallery
@@ -21,6 +22,9 @@ Rectangle {
     property bool isFavorite: false
     property bool hasBuffers: false
     property bool needsAudio: false
+    // True when /usr/.../Shaders/<rel> exists too — PLM greeter can load it.
+    // Default true so cards aren't badged in single-install setups.
+    property bool greeterAvailable: true
     property bool selected: false
     // hovered is set by MouseArea below, with safe default
     property bool hovered: false
@@ -232,6 +236,38 @@ Rectangle {
                     
                     MouseArea {
                         id: audioMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                    }
+                }
+
+                // "Won't show on sign-in screen" badge. Only meaningful when
+                // a system-wide install exists (i.e. the user has set up PLM
+                // and may be expecting greeter support). Hidden entirely in
+                // single-install setups.
+                Rectangle {
+                    visible: !root.greeterAvailable
+                        && ShaderLibrarySingleton.greeterPathPresent
+                    width: greeterWarnIcon.width + 4
+                    height: width
+                    radius: width / 2
+                    color: Kirigami.Theme.negativeBackgroundColor
+
+                    Kirigami.Icon {
+                        id: greeterWarnIcon
+                        anchors.centerIn: parent
+                        width: Kirigami.Units.iconSizes.small
+                        height: width
+                        source: "system-lock-screen"
+                        color: Kirigami.Theme.negativeTextColor
+                    }
+
+                    ToolTip.visible: greeterWarnArea.containsMouse
+                    ToolTip.text: i18n("Only in your user library — the sign-in screen cannot load this shader. "
+                        + "Re-run the login-screen installer to copy it to /usr.")
+
+                    MouseArea {
+                        id: greeterWarnArea
                         anchors.fill: parent
                         hoverEnabled: true
                     }

@@ -125,6 +125,15 @@ show_complete() {
     echo "Then right-click your desktop → Configure Desktop"
     echo "and select Shader Wallpaper."
     echo ""
+    echo -e "${CYAN}Login screen (Plasma Login Manager):${NC}"
+    echo "  KDE Store / ~/.local is enough for desktop and lock screen."
+    echo "  The sign-in screen needs a one-time system install:"
+    echo ""
+    local plm_script="$HOME/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/scripts/install-plm-greeter.sh"
+    echo -e "  ${YELLOW}bash ${plm_script}${NC}"
+    echo ""
+    echo "  Or use Login screen in wallpaper settings after restarting Plasma."
+    echo ""
 }
 
 # Main

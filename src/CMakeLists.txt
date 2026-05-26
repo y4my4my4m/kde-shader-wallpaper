@@ -29,6 +29,7 @@ set(SHADER_WALLPAPER_SOURCES
     data/presetmanager.cpp
     data/shadermetadata.cpp
     data/shaderlibrary.cpp
+    data/plmgreetersetup.cpp
     
     # Models
     models/shaderlistmodel.cpp
@@ -57,6 +58,7 @@ set(SHADER_WALLPAPER_HEADERS
     data/presetmanager.h
     data/shadermetadata.h
     data/shaderlibrary.h
+    data/plmgreetersetup.h
     
     # Models
     models/shaderlistmodel.h
@@ -125,6 +127,13 @@ if(SHADERC_FOUND)
 elseif(glslang_FOUND)
     target_link_libraries(shaderwallpaperplugin PRIVATE glslang::glslang glslang::SPIRV)
 endif()
+
+target_compile_definitions(shaderwallpaperplugin PRIVATE
+    PLM_GREETER_HELPER_PATH="${KDE_INSTALL_FULL_LIBEXECDIR}/shaderwallpaper/enable-plm-greeter")
+
+install(PROGRAMS ${CMAKE_SOURCE_DIR}/scripts/enable-plm-greeter.sh
+        DESTINATION ${KDE_INSTALL_LIBEXECDIR}/shaderwallpaper
+        RENAME enable-plm-greeter)
 
 # Finalize the QML module (generates qmldir, qmltypes).
 #

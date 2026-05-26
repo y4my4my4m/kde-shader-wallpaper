@@ -77,6 +77,8 @@ ColumnLayout {
     // flow, to copy our cfg_* back into the live wallpaper configuration).
     signal configurationChanged()
 
+    property bool plmAppearanceContext: configDialog !== null
+
     // Called by the KCM right before save; placeholder — no per-save cleanup
     // needed today.
     function saveConfig() {}
@@ -119,13 +121,13 @@ ColumnLayout {
     property bool   cfg_windowsEnabled: wallpaperConfiguration ? (wallpaperConfiguration.windowsEnabled ?? false) : false
 
     // — Channels
-    property string cfg_iChannel0: wallpaperConfiguration ? (wallpaperConfiguration.iChannel0 ?? "./Resources/wallpaper2.png") : "./Resources/wallpaper2.png"
+    property string cfg_iChannel0: wallpaperConfiguration ? (wallpaperConfiguration.iChannel0 ?? "") : ""
     property bool   cfg_iChannel0Enabled: wallpaperConfiguration ? (wallpaperConfiguration.iChannel0Enabled ?? true) : true
-    property string cfg_iChannel1: wallpaperConfiguration ? (wallpaperConfiguration.iChannel1 ?? "./Resources/wallpaper2.png") : "./Resources/wallpaper2.png"
+    property string cfg_iChannel1: wallpaperConfiguration ? (wallpaperConfiguration.iChannel1 ?? "") : ""
     property bool   cfg_iChannel1Enabled: wallpaperConfiguration ? (wallpaperConfiguration.iChannel1Enabled ?? true) : true
-    property string cfg_iChannel2: wallpaperConfiguration ? (wallpaperConfiguration.iChannel2 ?? "./Resources/Shadertoy_Organic_2.jpg") : "./Resources/Shadertoy_Organic_2.jpg"
+    property string cfg_iChannel2: wallpaperConfiguration ? (wallpaperConfiguration.iChannel2 ?? "") : ""
     property bool   cfg_iChannel2Enabled: wallpaperConfiguration ? (wallpaperConfiguration.iChannel2Enabled ?? true) : true
-    property string cfg_iChannel3: wallpaperConfiguration ? (wallpaperConfiguration.iChannel3 ?? "./Resources/Shadertoy_Organic_2.jpg") : "./Resources/Shadertoy_Organic_2.jpg"
+    property string cfg_iChannel3: wallpaperConfiguration ? (wallpaperConfiguration.iChannel3 ?? "") : ""
     property bool   cfg_iChannel3Enabled: wallpaperConfiguration ? (wallpaperConfiguration.iChannel3Enabled ?? false) : false
 
     // — Buffer toggles
@@ -328,6 +330,9 @@ ColumnLayout {
                     item[key] = configRoot[key]
                 }
             })
+            if ("plmAppearanceContext" in item) {
+                item.plmAppearanceContext = configRoot.plmAppearanceContext
+            }
             _suppressBroadcast = false
 
             // Wire item.cfg_*Changed → configRoot.cfg_* . The equality check

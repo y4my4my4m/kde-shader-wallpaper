@@ -26,6 +26,29 @@ ColumnLayout {
     Layout.fillHeight: true
     spacing: 0
 
+    // PLM Login Screen → Configure Appearance passes configDialog on config.qml root.
+    property bool plmAppearanceContext: false
+
+    PlmGreeterSetup {
+        id: plmSetup
+        Component.onCompleted: refresh()
+    }
+
+    // Backing object the Login screen card binds to (copy hints + error text).
+    QtObject {
+        id: plmResultBanner
+        property bool success: false
+        property string bannerText: ""
+    }
+
+    Connections {
+        target: plmSetup
+        function onEnableFinished(success, message) {
+            plmResultBanner.success = success
+            plmResultBanner.bannerText = success ? "" : message
+        }
+    }
+
     // ====================================================================
     // Drag-and-drop (UI 3)
     //
@@ -167,10 +190,10 @@ ColumnLayout {
     property bool   cfg_enableShaderTweaks: false
 
     // — iChannel textures
-    property string cfg_iChannel0: "./Resources/wallpaper2.png"
-    property string cfg_iChannel1: "./Resources/wallpaper2.png"
-    property string cfg_iChannel2: "./Resources/Shadertoy_Organic_2.jpg"
-    property string cfg_iChannel3: "./Resources/Shadertoy_Organic_2.jpg"
+    property string cfg_iChannel0: ""
+    property string cfg_iChannel1: ""
+    property string cfg_iChannel2: ""
+    property string cfg_iChannel3: ""
     property bool   cfg_iChannel0Enabled: true
     property bool   cfg_iChannel1Enabled: true
     property bool   cfg_iChannel2Enabled: true
@@ -376,7 +399,11 @@ ColumnLayout {
     // ----------------------------------------------------------------------
     function applyShaderFromPath(path, displayName) {
         if (!path) return
-        cfg_selectedShaderPath = path
+        // Save paths relative to the plugin's contents/ui/ so the same value
+        // works on the desktop (~/.local) and the PLM greeter (/usr).
+        // Absolute paths to files outside the plugin (user-picked custom
+        // shaders) pass through unchanged.
+        cfg_selectedShaderPath = ShaderLibrarySingleton.toRelativeShaderPath(path.toString())
         cfg_selectedShaderCode = ""
 
         var bufferData = ShaderLibrarySingleton.loadBufferCodes(path)
@@ -726,10 +753,18 @@ ColumnLayout {
                                 // Don't let the preview swallow wheel events
                                 // — the surrounding form ScrollView needs them.
                                 enabled: false
+                                // toRelativeShaderPath strips an absolute
+                                // file://…/contents/ui/ prefix to a relative
+                                // path so Qt.resolvedUrl can resolve it
+                                // against THIS QML file (works in every
+                                // context — desktop, lock, PLM Configure
+                                // Appearance, /usr vs ~/.local). Plain
+                                // "file://" + cfg_selectedShaderPath was
+                                // broken because for "Shaders/Foo.frag"
+                                // QUrl parsed "Shaders" as a host.
                                 shaderSource: cfg_selectedShaderPath
-                                    ? (cfg_selectedShaderPath.indexOf("://") >= 0
-                                        ? cfg_selectedShaderPath
-                                        : "file://" + cfg_selectedShaderPath)
+                                    ? Qt.resolvedUrl(ShaderLibrarySingleton.toRelativeShaderPath(
+                                          cfg_selectedShaderPath.toString()))
                                     : ""
                                 shaderCode: cfg_selectedShaderCode
                                 running: cfg_running
@@ -752,13 +787,13 @@ ColumnLayout {
                                 iChannel2Enabled: cfg_iChannel2Enabled
                                 iChannel3Enabled: cfg_iChannel3Enabled
                                 iChannel0: cfg_iChannel0Enabled && cfg_iChannel0
-                                    ? (cfg_iChannel0.indexOf("://") >= 0 ? cfg_iChannel0 : "file://" + cfg_iChannel0) : ""
+                                    ? Qt.resolvedUrl(cfg_iChannel0) : ""
                                 iChannel1: cfg_iChannel1Enabled && cfg_iChannel1
-                                    ? (cfg_iChannel1.indexOf("://") >= 0 ? cfg_iChannel1 : "file://" + cfg_iChannel1) : ""
+                                    ? Qt.resolvedUrl(cfg_iChannel1) : ""
                                 iChannel2: cfg_iChannel2Enabled && cfg_iChannel2
-                                    ? (cfg_iChannel2.indexOf("://") >= 0 ? cfg_iChannel2 : "file://" + cfg_iChannel2) : ""
+                                    ? Qt.resolvedUrl(cfg_iChannel2) : ""
                                 iChannel3: cfg_iChannel3Enabled && cfg_iChannel3
-                                    ? (cfg_iChannel3.indexOf("://") >= 0 ? cfg_iChannel3 : "file://" + cfg_iChannel3) : ""
+                                    ? Qt.resolvedUrl(cfg_iChannel3) : ""
                                 imageChannels: [cfg_imageChannel0, cfg_imageChannel1, cfg_imageChannel2, cfg_imageChannel3]
                                 bufferAChannels: [cfg_bufferAChannel0, cfg_bufferAChannel1, cfg_bufferAChannel2, cfg_bufferAChannel3]
                                 bufferBChannels: [cfg_bufferBChannel0, cfg_bufferBChannel1, cfg_bufferBChannel2, cfg_bufferBChannel3]
@@ -2003,7 +2038,8 @@ ColumnLayout {
                         })
 
                         onPresetLoaded: (config) => {
-                            if (config.shaderPath) cfg_selectedShaderPath = config.shaderPath
+                            if (config.shaderPath)
+                                cfg_selectedShaderPath = ShaderLibrarySingleton.toRelativeShaderPath(config.shaderPath.toString())
                             if (config.speed !== undefined) cfg_shaderSpeed = config.speed
                             if (config.targetFps !== undefined) cfg_targetFps = config.targetFps
                             if (config.resolutionScale !== undefined) cfg_resolutionScale = config.resolutionScale
@@ -2224,6 +2260,230 @@ ColumnLayout {
                             }
                         }
                     }
+                }
+            }
+
+            // ============================================================
+            // Login screen (Plasma Login Manager)
+            //
+            // Plasma Login Manager runs the sign-in screen *before* anyone
+            // logs in, so it cannot read ~/.local — only /usr. This card
+            // walks the user through the one-time system install + writing
+            // /etc/plasmalogin.conf. KDE Store users have only seen
+            // ~/.local installs, so the copy is explicit, not assumed.
+            // ============================================================
+            FormCard.FormHeader {
+                Layout.fillWidth: true
+                Layout.leftMargin: configItem.cardSideMargin
+                Layout.rightMargin: configItem.cardSideMargin
+                maximumWidth: configItem.cardMaxWidth
+                title: i18n("Login screen")
+                visible: mainColumn.matchSearch("login screen plm greeter sign-in plasmalogin sddm enable")
+            }
+
+            FormCard.FormCard {
+                id: loginScreenCard
+                Layout.fillWidth: true
+                Layout.leftMargin: configItem.cardSideMargin
+                Layout.rightMargin: configItem.cardSideMargin
+                maximumWidth: configItem.cardMaxWidth
+                visible: mainColumn.matchSearch("login screen plm greeter sign-in plasmalogin sddm enable")
+
+                // ─── State A: PLM not installed ───────────────────────────
+                FormCard.AbstractFormDelegate {
+                    visible: !plmSetup.plmInstalled
+                    background: null
+                    contentItem: ColumnLayout {
+                        spacing: Kirigami.Units.smallSpacing
+                        Label {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            textFormat: Text.RichText
+                            text: i18n("Your display manager is not <b>Plasma Login Manager</b>. "
+                                + "This feature only works with PLM (some distros use it instead of SDDM for Plasma 6).")
+                        }
+                    }
+                }
+
+                // ─── State B: needs one-time system install ───────────────
+                FormCard.AbstractFormDelegate {
+                    visible: plmSetup.plmInstalled && !plmSetup.systemPluginInstalled
+                    background: null
+                    contentItem: ColumnLayout {
+                        spacing: Kirigami.Units.largeSpacing
+
+                        Label {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            textFormat: Text.RichText
+                            text: i18n("Shader Wallpaper is installed for your user (<code>~/.local</code>) — "
+                                + "that's enough for your <b>desktop</b> and <b>lock screen</b>.")
+                        }
+
+                        Label {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            textFormat: Text.RichText
+                            text: i18n("The <b>sign-in screen</b> runs before you log in, so it can only see plugins "
+                                + "installed system-wide. Below is a one-time setup command — it builds Shader "
+                                + "Wallpaper into <code>/usr</code> and registers it with Plasma Login Manager.")
+                        }
+
+                        Label {
+                            Layout.fillWidth: true
+                            font.bold: true
+                            text: i18n("1. Open a terminal (Konsole, etc.)")
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            font.bold: true
+                            text: i18n("2. Paste this command and press Enter — you'll be asked for your password:")
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: plmCommandText.implicitHeight + Kirigami.Units.largeSpacing
+                            color: Qt.rgba(0, 0, 0, 0.35)
+                            radius: Kirigami.Units.smallSpacing
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: Kirigami.Units.smallSpacing
+                                spacing: Kirigami.Units.smallSpacing
+                                TextEdit {
+                                    id: plmCommandText
+                                    Layout.fillWidth: true
+                                    readOnly: true
+                                    selectByMouse: true
+                                    wrapMode: TextEdit.WrapAnywhere
+                                    color: "#a6e3a1"
+                                    font.family: "monospace"
+                                    font.pointSize: Kirigami.Theme.smallFont.pointSize
+                                    text: plmSetup.installCommand
+                                }
+                                Button {
+                                    icon.name: "edit-copy"
+                                    flat: true
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: i18n("Copy command")
+                                    onClicked: {
+                                        plmCommandText.selectAll()
+                                        plmCommandText.copy()
+                                        plmCommandText.deselect()
+                                        plmResultBanner.success = true
+                                        plmResultBanner.bannerText = i18n("Command copied to clipboard.")
+                                    }
+                                }
+                            }
+                        }
+
+                        Label {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            opacity: 0.75
+                            textFormat: Text.RichText
+                            text: i18n("3. When it finishes, <b>log out</b> — Shader Wallpaper will be on the sign-in screen.")
+                        }
+                    }
+                }
+
+                // ─── State C: installed system-wide, needs registration ───
+                FormCard.AbstractFormDelegate {
+                    visible: plmSetup.plmInstalled && plmSetup.systemPluginInstalled && !plmSetup.loginScreenEnabled
+                    background: null
+                    contentItem: ColumnLayout {
+                        spacing: Kirigami.Units.smallSpacing
+                        Label {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            textFormat: Text.RichText
+                            text: i18n("Almost there. Shader Wallpaper is installed system-wide; one more step "
+                                + "registers it with the sign-in screen.")
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            opacity: 0.7
+                            textFormat: Text.RichText
+                            text: i18n("Clicking <b>Enable on login screen</b> writes "
+                                + "<code>[Greeter] WallpaperPluginId=online.knowmad.shaderwallpaper</code> "
+                                + "to <code>/etc/plasmalogin.conf</code>.")
+                        }
+                    }
+                }
+
+                // ─── State D: all set ─────────────────────────────────────
+                FormCard.AbstractFormDelegate {
+                    visible: plmSetup.plmInstalled && plmSetup.loginScreenEnabled
+                    background: null
+                    contentItem: ColumnLayout {
+                        spacing: Kirigami.Units.smallSpacing
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Kirigami.Units.smallSpacing
+                            Kirigami.Icon {
+                                source: "dialog-ok-apply"
+                                Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
+                                Layout.preferredHeight: Kirigami.Units.iconSizes.smallMedium
+                                color: Kirigami.Theme.positiveTextColor
+                            }
+                            Label {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                font.bold: true
+                                text: i18n("Enabled on the sign-in screen.")
+                            }
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            textFormat: Text.RichText
+                            text: i18n("<b>Log out</b> to see it. The default shader is shown until you pick "
+                                + "another one in <b>System Settings → Login Screen → ⋮ → Configure Appearance…</b> "
+                                + "(the shader you pick here on the desktop is independent — they are separate screens).")
+                        }
+                    }
+                }
+
+                // ─── Result banner (errors / copy confirmation) ───────────
+                FormCard.AbstractFormDelegate {
+                    Layout.fillWidth: true
+                    visible: plmResultBanner.bannerText.length > 0
+                    background: null
+                    contentItem: Kirigami.InlineMessage {
+                        Layout.fillWidth: true
+                        visible: plmResultBanner.bannerText.length > 0
+                        text: plmResultBanner.bannerText
+                        type: plmResultBanner.success
+                            ? Kirigami.MessageType.Positive
+                            : Kirigami.MessageType.Error
+                    }
+                }
+
+                // ─── Action buttons ───────────────────────────────────────
+                FormCard.FormButtonDelegate {
+                    visible: plmSetup.plmInstalled
+                        && plmSetup.systemPluginInstalled
+                        && !plmSetup.loginScreenEnabled
+                    text: i18n("Enable on login screen")
+                    description: i18n("You'll be asked for your administrator password.")
+                    icon.name: "system-lock-screen"
+                    enabled: !plmSetup.busy && plmSetup.helperInstalled
+                    onClicked: plmSetup.enableLoginScreen()
+                }
+
+                FormCard.FormButtonDelegate {
+                    visible: plmSetup.plmInstalled && plmSetup.loginScreenEnabled
+                    text: i18n("Open Login Screen settings")
+                    description: i18n("Pick which shader the sign-in screen uses.")
+                    icon.name: "systemsettings"
+                    onClicked: plmSetup.openLoginScreenSettings()
+                }
+
+                FormCard.FormButtonDelegate {
+                    visible: !plmSetup.plmInstalled
+                    text: i18n("About Plasma Login Manager")
+                    icon.name: "help-about"
+                    onClicked: Qt.openUrlExternally("https://wiki.archlinux.org/title/Plasma_Login_Manager")
                 }
             }
 
@@ -3380,7 +3640,7 @@ ColumnLayout {
                             icon.name: "go-jump"
                             flat: true
                             text: i18n("Play")
-                            onClicked: cfg_selectedShaderPath = modelData
+                            onClicked: cfg_selectedShaderPath = ShaderLibrarySingleton.toRelativeShaderPath(modelData.toString())
                         }
                         Button {
                             icon.name: "list-remove"

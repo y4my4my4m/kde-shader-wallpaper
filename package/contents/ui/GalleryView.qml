@@ -182,6 +182,7 @@ Item {
                         isFavorite: model.favorite
                         hasBuffers: model.hasBuffers
                         needsAudio: model.needsAudio
+                        greeterAvailable: model.greeterAvailable !== false
                         
                         // Performance data from metadata (with safe fallbacks)
                         performanceTier: (model.performanceTier !== undefined && model.performanceTier !== null) ? model.performanceTier : -1

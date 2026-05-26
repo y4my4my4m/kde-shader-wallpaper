@@ -43,6 +43,12 @@ class ShaderMetadata : public QObject
     Q_PROPERTY(int estimatedPowerCost READ estimatedPowerCost WRITE setEstimatedPowerCost NOTIFY performanceChanged)
     Q_PROPERTY(QString lastMeasuredDate READ lastMeasuredDate WRITE setLastMeasuredDate NOTIFY performanceChanged)
 
+    // True if this shader's file also exists under /usr/share/...
+    // i.e. the PLM greeter (which only reads /usr) can actually load it.
+    // Stock shaders are always true; user imports under ~/.local only are false.
+    // Set by ShaderLibrary at scan time.
+    Q_PROPERTY(bool greeterAvailable READ greeterAvailable WRITE setGreeterAvailable NOTIFY greeterAvailableChanged)
+
 public:
     explicit ShaderMetadata(QObject *parent = nullptr);
     explicit ShaderMetadata(const QJsonObject &json, QObject *parent = nullptr);
@@ -69,6 +75,7 @@ public:
     qreal averageFrameTime() const { return m_averageFrameTime; }
     int estimatedPowerCost() const { return m_estimatedPowerCost; }
     QString lastMeasuredDate() const { return m_lastMeasuredDate; }
+    bool greeterAvailable() const { return m_greeterAvailable; }
 
     // Property setters
     void setId(const QString &id);
@@ -91,6 +98,7 @@ public:
     void setAverageFrameTime(qreal time);
     void setEstimatedPowerCost(int cost);
     void setLastMeasuredDate(const QString &date);
+    void setGreeterAvailable(bool available);
 
     // Serialization
     Q_INVOKABLE QJsonObject toJson() const;
@@ -125,6 +133,7 @@ Q_SIGNALS:
     void needsAudioChanged();
     void needsTexturesChanged();
     void performanceChanged();
+    void greeterAvailableChanged();
 
 private:
     QString m_id;
@@ -149,6 +158,7 @@ private:
     qreal m_averageFrameTime = 0.0;
     int m_estimatedPowerCost = 0;
     QString m_lastMeasuredDate;
+    bool m_greeterAvailable = true;  // assume yes until ShaderLibrary says otherwise
 };
 
 #endif // SHADERMETADATA_H

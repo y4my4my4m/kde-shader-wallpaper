@@ -112,10 +112,32 @@ build() {
 }
 
 install_local() {
+    # Guard: a prior `sudo` install may have dropped root-owned files into the
+    # user prefix (e.g. ~/.local/lib/libexec/shaderwallpaper, ~/.local/lib/qml/…).
+    # When that happens, `make install` without sudo fails halfway through with
+    # "Permission denied". Detect it and offer a one-shot fix.
+    local root_owned
+    root_owned=$(find "$INSTALL_PREFIX/lib" "$INSTALL_PREFIX/share/plasma" \
+        -user root 2>/dev/null | head -1 || true)
+    if [ -n "$root_owned" ]; then
+        print_warning "Root-owned files in $INSTALL_PREFIX (left over from a previous 'sudo' install):"
+        find "$INSTALL_PREFIX/lib" "$INSTALL_PREFIX/share/plasma" \
+            -user root 2>/dev/null | sed 's/^/    /'
+        echo ""
+        echo "These will block a user install. Reclaim them with:"
+        echo ""
+        echo "    sudo chown -R $USER:$USER \\"
+        echo "        $INSTALL_PREFIX/lib/libexec \\"
+        echo "        $INSTALL_PREFIX/lib/qml/online \\"
+        echo "        $INSTALL_PREFIX/share/plasma 2>/dev/null"
+        echo ""
+        exit 1
+    fi
+
     print_step "Installing to $INSTALL_PREFIX..."
     cd "$PROJECT_DIR/build"
     make install
-    
+
     echo -e "${GREEN}✓${NC} Installation complete!"
     echo ""
     echo "To apply changes, restart plasmashell:"
@@ -126,8 +148,20 @@ install_system() {
     print_step "Installing system-wide (requires sudo)..."
     cd "$PROJECT_DIR/build"
     sudo make install
-    
+
     echo -e "${GREEN}✓${NC} System installation complete!"
+
+    local local_wallpaper="$HOME/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper"
+    if [ -d "$local_wallpaper" ]; then
+        echo ""
+        print_warning "You also have a ~/.local copy of this plugin."
+        echo "  Desktop wallpaper settings load ~/.local before /usr, so you may"
+        echo "  still see an older config UI until you update or remove it:"
+        echo ""
+        echo "    $0 install          # sync ~/.local to match this build"
+        echo "    rm -rf \"$local_wallpaper\"   # use /usr for desktop too"
+        echo ""
+    fi
 }
 
 uninstall() {

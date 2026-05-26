@@ -61,6 +61,7 @@ QVariant ShaderListModel::data(const QModelIndex &index, int role) const
         case AverageFrameTimeRole: return shader->averageFrameTime();
         case EstimatedPowerCostRole: return shader->estimatedPowerCost();
         case LastMeasuredDateRole: return shader->lastMeasuredDate();
+        case GreeterAvailableRole: return shader->greeterAvailable();
         default: return QVariant();
     }
 }
@@ -89,7 +90,8 @@ QHash<int, QByteArray> ShaderListModel::roleNames() const
         {PerformanceTierRole, "performanceTier"},
         {AverageFrameTimeRole, "averageFrameTime"},
         {EstimatedPowerCostRole, "estimatedPowerCost"},
-        {LastMeasuredDateRole, "lastMeasuredDate"}
+        {LastMeasuredDateRole, "lastMeasuredDate"},
+        {GreeterAvailableRole, "greeterAvailable"}
     };
     return roles;
 }
