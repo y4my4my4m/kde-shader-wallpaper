@@ -14,12 +14,45 @@ import "shaderwallpaper" as ShaderPlugin
 
 WallpaperItem {
     id: main
-    
+
     // Check plugin status - stub returns false, real plugin returns true
     ShaderPlugin.PluginStatus { id: pluginStatus }
-    
+
     property bool pluginAvailable: pluginStatus.installed
-    
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Lock-screen detection.
+    //
+    // kscreenlocker_greet instantiates THIS same WallpaperItem (Plasma's lock
+    // screen is just another Plasma/Wallpaper consumer) — but in that context
+    // PipeWire audio capture, KWin window-tracking DBus calls, and cursor
+    // grabbing are either useless or actively unsafe (and pause-on-window
+    // semantics don't apply when no user windows are visible anyway).
+    //
+    // The canonical detection trick used by other Plasma 6 wallpaper plugins
+    // is to inspect the host QML Window's `source` URL: plasmashell loads
+    // Desktop.qml; kscreenlocker loads LockScreen.qml. We watch for the
+    // window-change moment and latch the result, then plumb it down into
+    // ShaderSystem.qml so the shader engine can clamp inputs to a safe
+    // lock-screen subset.
+    // ────────────────────────────────────────────────────────────────────────
+    property bool lockScreenMode: false
+
+    Item {
+        anchors.fill: parent
+        onWindowChanged: function(window) {
+            if (!window) return
+            // `source` only exists on QQuickView-style host windows
+            // (Plasma's containment views). When present, its URL filename
+            // tells us which surface we're on.
+            const src = ("source" in window) ? window.source.toString() : ""
+            main.lockScreenMode = src.endsWith("LockScreen.qml")
+            if (main.lockScreenMode) {
+                console.log("Shader Wallpaper: running in lock-screen mode")
+            }
+        }
+    }
+
     Component.onCompleted: {
         if (pluginAvailable) {
             console.log("Shader Wallpaper: Plugin found!")
@@ -115,5 +148,11 @@ WallpaperItem {
         anchors.fill: parent
         active: false
         source: "ShaderSystem.qml"
+
+        // Forward the lock-screen flag so ShaderSystem can disable inputs
+        // that don't make sense on the lock screen.
+        onLoaded: {
+            if (item) item.lockScreenMode = Qt.binding(function() { return main.lockScreenMode })
+        }
     }
 }

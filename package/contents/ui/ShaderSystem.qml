@@ -14,6 +14,37 @@ Item {
     anchors.fill: parent
     clip: true  // ShaderEngine overscans during parallax — clip to screen
 
+    // ────────────────────────────────────────────────────────────────────────
+    // Lock-screen mode (set by main.qml's Loader.onLoaded).
+    //
+    // When true, we treat the user's configured inputs as ceilings rather
+    // than literal values:
+    //   • mouse / audio / window tracking are forced OFF — kscreenlocker_greet
+    //     can't reliably acquire those, and they're nonsensical anyway since
+    //     no user input/audio/windows should be reaching the lock surface.
+    //   • watchSourceFile is forced OFF — saving a .frag while locked is a
+    //     development workflow that doesn't belong here.
+    //   • pauseMode is forced to "never" — the window/active-window heuristics
+    //     trip on lock-screen UI surfaces.
+    //   • targetFps is clamped — animation on a lock screen costs battery for
+    //     a screen the user isn't actually looking at; 30 fps is plenty for
+    //     ambient motion. (Hard clamp, ignores user setting in lock mode.)
+    //   • All experimental engine features are disabled, since they query
+    //     virtual desktops / multi-monitor topology that the lock screen
+    //     doesn't expose.
+    // The user's saved desktop settings are untouched — they come back
+    // verbatim the next time the desktop instance loads.
+    // ────────────────────────────────────────────────────────────────────────
+    property bool lockScreenMode: false
+    readonly property int  _lockFpsCap: 30
+    readonly property bool _allowMouse:   !lockScreenMode && (wallpaper.configuration.mouseEnabled || false)
+    readonly property bool _allowAudio:   !lockScreenMode && (wallpaper.configuration.audioEnabled || false)
+    readonly property bool _allowWindows: !lockScreenMode && (wallpaper.configuration.windowsEnabled || false)
+    readonly property bool _allowExperimentalDesktop: !lockScreenMode && (wallpaper.configuration.experimentalDesktopUniform || false)
+    readonly property bool _allowExperimentalParallax: !lockScreenMode && (wallpaper.configuration.experimentalParallax || false)
+    readonly property bool _allowExperimentalScreens:  !lockScreenMode && (wallpaper.configuration.experimentalScreenUniforms || false)
+    readonly property bool _allowWatchSource: !lockScreenMode && (wallpaper.configuration.watchSourceFile || false)
+
     // Window model for pause detection
     WindowModel {
         id: windowModel
@@ -26,7 +57,7 @@ Item {
     // with different heights would put the impulse off-cursor).
     CursorTracker {
         id: cursorTracker
-        enabled: wallpaper.configuration.mouseEnabled && shaderEngine.running
+        enabled: shaderSystem._allowMouse && shaderEngine.running
         sensitivity: wallpaper.configuration.mouseBias || 1.0
         screen: shaderSystem.Window.window ? shaderSystem.Window.window.screen : null
         // Same pixel space as fragCoord / iResolution (ShaderEngine FBO).
@@ -42,11 +73,11 @@ Item {
     }
 
     function refreshShaderInput() {
-        if (wallpaper.configuration.mouseEnabled) {
+        if (shaderSystem._allowMouse) {
             cursorTracker.refresh()
             shaderEngine.iMouse = cursorTracker.iMouse
         }
-        if (wallpaper.configuration.windowsEnabled) {
+        if (shaderSystem._allowWindows) {
             windowTracker.refresh()
             shaderEngine.windowCount = windowTracker.windowCount
             shaderEngine.windowRects = windowTracker.windowRectsFlat()
@@ -57,7 +88,7 @@ Item {
     // Audio capture for audio-reactive shaders
     AudioCapture {
         id: audioCapture
-        enabled: wallpaper.configuration.audioEnabled && shaderEngine.running
+        enabled: shaderSystem._allowAudio && shaderEngine.running
         sensitivity: wallpaper.configuration.audioSensitivity || 40.0
         
         onAudioDataReady: {
@@ -68,7 +99,7 @@ Item {
     // Window tracking for window-reactive effects
     WindowTracker {
         id: windowTracker
-        enabled: wallpaper.configuration.windowsEnabled && shaderEngine.running
+        enabled: shaderSystem._allowWindows && shaderEngine.running
         pollInterval: 33  // 30Hz polling
         referenceWidth: shaderEngine.width
         referenceHeight: shaderEngine.height
@@ -88,8 +119,8 @@ Item {
     // ------------------------------------------------------------------
     VirtualDesktopWatcher {
         id: vdesktopWatcher
-        enabled: wallpaper.configuration.experimentalDesktopUniform
-              || wallpaper.configuration.experimentalParallax
+        enabled: shaderSystem._allowExperimentalDesktop
+              || shaderSystem._allowExperimentalParallax
         onCurrentDesktopChanged: shaderEngine.virtualDesktop = currentDesktop
         onDesktopCountChanged:   shaderEngine.virtualDesktopCount = desktopCount
         onTransitionProgressChanged: shaderEngine.virtualDesktopAnim = transitionProgress
@@ -135,7 +166,7 @@ Item {
         function onMyIndexChanged() { _pushScreenUniforms() }
     }
     function _pushScreenUniforms() {
-        if (!wallpaper.configuration.experimentalScreenUniforms) {
+        if (!shaderSystem._allowExperimentalScreens) {
             shaderEngine.screenOffset = Qt.vector2d(0, 0)
             shaderEngine.screenIndex  = 0
             shaderEngine.screenCount  = 1
@@ -162,7 +193,7 @@ Item {
     // feature is on, so single-desktop / parallax-off users pay zero
     // overhead.
     // ------------------------------------------------------------------
-    property real _parallaxStrength: wallpaper.configuration.experimentalParallax
+    property real _parallaxStrength: shaderSystem._allowExperimentalParallax
                                    ? Math.max(0, Math.min(1, wallpaper.configuration.experimentalParallaxStrength || 0.25))
                                    : 0.0
     property real _desktopFraction: {
@@ -207,26 +238,30 @@ Item {
             ? ""
             : (wallpaper.configuration.selectedShaderCode || "")
 
-        // Playback control
+        // Playback control. In lock-screen mode we clamp FPS to a power-
+        // friendly ceiling regardless of the user's desktop setting — a
+        // screen the user isn't looking at doesn't need 144 Hz.
         running: wallpaper.configuration.running && shouldRun
         speed: wallpaper.configuration.shaderSpeed || 1.0
-        targetFps: wallpaper.configuration.targetFps || 60
+        targetFps: {
+            const f = wallpaper.configuration.targetFps || 60
+            return shaderSystem.lockScreenMode ? Math.min(f, shaderSystem._lockFpsCap) : f
+        }
         resolutionScale: wallpaper.configuration.resolutionScale || 1.0
 
-        // Mouse input
-        mouseEnabled: wallpaper.configuration.mouseEnabled || false
+        // Mouse input — disabled in lock-screen mode.
+        mouseEnabled: shaderSystem._allowMouse
         mouseBias: wallpaper.configuration.mouseBias || 1.0
 
-        // Audio input
-        audioEnabled: wallpaper.configuration.audioEnabled || false
+        // Audio input — disabled in lock-screen mode.
+        audioEnabled: shaderSystem._allowAudio
         audioChannel: wallpaper.configuration.audioChannel || 0
-        
-        // Window tracking
-        windowsEnabled: wallpaper.configuration.windowsEnabled || false
 
-        // Hot-reload (C8): when enabled, watches main + buffer + common
-        // .frag files and reloads them on save (see ShaderEngine).
-        watchSourceFile: wallpaper.configuration.watchSourceFile || false
+        // Window tracking — disabled in lock-screen mode.
+        windowsEnabled: shaderSystem._allowWindows
+
+        // Hot-reload (C8) — disabled in lock-screen mode (dev workflow).
+        watchSourceFile: shaderSystem._allowWatchSource
 
         // Texture channels
         iChannel0: wallpaper.configuration.iChannel0Enabled 
@@ -293,8 +328,11 @@ Item {
             wallpaper.configuration.bufferDChannel3 ?? -1
         ]
 
-        // Determine if shader should run based on pause mode
+        // Determine if shader should run based on pause mode.
+        // In lock-screen mode we force "never pause" — the window
+        // heuristics trip on lock-screen UI overlays.
         property bool shouldRun: {
+            if (shaderSystem.lockScreenMode) return true
             switch (wallpaper.configuration.pauseMode) {
                 case 0: return !windowModel.maximizedExists
                 case 1: return !windowModel.activeExists
@@ -315,36 +353,38 @@ Item {
     // Refresh mouse/window input every QML frame for smooth buffer trails.
     FrameAnimation {
         running: shaderEngine.running
-              && (wallpaper.configuration.mouseEnabled
-               || wallpaper.configuration.windowsEnabled)
+              && (shaderSystem._allowMouse || shaderSystem._allowWindows)
         onTriggered: shaderSystem.refreshShaderInput()
     }
 
-    // Mouse tracking area (fallback for Wayland)
+    // Mouse tracking area (fallback for Wayland). Disabled in lock-screen
+    // mode so we don't intercept events the lock UI needs.
     MouseArea {
         id: mouseArea
         anchors.fill: parent
-        hoverEnabled: wallpaper.configuration.mouseEnabled
+        enabled: !shaderSystem.lockScreenMode
+        visible: enabled
+        hoverEnabled: shaderSystem._allowMouse
         propagateComposedEvents: true
         preventStealing: false
 
         onPositionChanged: (mouse) => {
             mouse.accepted = false
-            if (wallpaper.configuration.mouseEnabled) {
+            if (shaderSystem._allowMouse) {
                 cursorTracker.updatePosition(mouseX, mouseY)
             }
         }
 
         onPressed: (mouse) => {
             mouse.accepted = false
-            if (wallpaper.configuration.mouseEnabled) {
+            if (shaderSystem._allowMouse) {
                 cursorTracker.updateClick(mouseX, mouseY, true)
             }
         }
 
         onReleased: (mouse) => {
             mouse.accepted = false
-            if (wallpaper.configuration.mouseEnabled) {
+            if (shaderSystem._allowMouse) {
                 cursorTracker.updatePressed(false)
             }
         }
@@ -354,10 +394,11 @@ Item {
         onWheel: (wheel) => wheel.accepted = false
     }
 
-    // Performance monitoring widget
+    // Performance monitoring widget — hidden on lock screen regardless of
+    // user preference (no diagnostics needed on a customer-facing surface).
     PerformanceWidget {
         id: performanceWidget
-        visible: wallpaper.configuration.showPerformance || false
+        visible: !shaderSystem.lockScreenMode && (wallpaper.configuration.showPerformance || false)
         anchors {
             top: parent.top
             right: parent.right
