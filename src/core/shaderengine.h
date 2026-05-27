@@ -399,6 +399,8 @@ private:
     void setError(const QString &error);
     void clearError();
     void applyVisibilityState(bool visible);
+    // Coalesce update() so animation/input cannot bypass targetFps (legacy #85).
+    void requestUpdate();
 
     // Shader sources
     QUrl m_shaderSource;

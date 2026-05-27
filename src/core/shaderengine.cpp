@@ -143,14 +143,15 @@ QQuickFramebufferObject::Renderer *ShaderEngine::createRenderer() const
     return new ShaderEngineRenderer();
 }
 
-void ShaderEngine::handleTimeout()
+void ShaderEngine::requestUpdate()
 {
     if (!m_running) return;
 
     // Real FPS gate (legacy #85): coalesce update() requests so we never ask
     // the scene graph for frames faster than targetFps, regardless of how
-    // often the QTimer fires. m_gateClock is free-running and never restarted,
-    // so the diff below is always monotonically non-negative.
+    // often the QTimer fires or input callbacks fire. m_gateClock is free-
+    // running and never restarted, so the diff below is always monotonically
+    // non-negative.
     const qint64 nowMs = m_gateClock.isValid()
         ? m_gateClock.nsecsElapsed() / 1'000'000
         : 0;
@@ -162,6 +163,11 @@ void ShaderEngine::handleTimeout()
     m_lastUpdateRequestMs = nowMs;
 
     update();  // Time advances inside accumulateFrame(), driven by synchronize().
+}
+
+void ShaderEngine::handleTimeout()
+{
+    requestUpdate();
 }
 
 void ShaderEngine::accumulateFrame()
@@ -440,7 +446,7 @@ void ShaderEngine::setIMouse(const QVector4D &mouse)
     if (m_iMouse == mouse) return;
     m_iMouse = mouse;
     Q_EMIT iMouseChanged();
-    update();
+    requestUpdate();
 }
 
 void ShaderEngine::setMouseEnabled(bool enabled)
@@ -455,6 +461,7 @@ void ShaderEngine::setMouseBias(qreal bias)
     if (qFuzzyCompare(m_mouseBias, bias)) return;
     m_mouseBias = bias;
     Q_EMIT mouseBiasChanged();
+    requestUpdate();
 }
 
 void ShaderEngine::setIChannel0(const QUrl &url)
@@ -678,7 +685,8 @@ void ShaderEngine::setAudioData(const QVariantList &data)
 {
     m_audioData = data;
     Q_EMIT audioDataChanged();
-    update();
+    // Audio FFT is sampled on the next gated render; do not call update()
+    // here or PipeWire's 60 Hz feed bypasses targetFps (legacy #85).
 }
 
 void ShaderEngine::setWindowsEnabled(bool enabled)
@@ -753,14 +761,14 @@ void ShaderEngine::setWindowRects(const QVariantList &rects)
     // the extrapolation timer from this snapshot).
     ++m_windowRectsSequence;
     Q_EMIT windowRectsChanged();
-    update();
+    requestUpdate();
 }
 
 void ShaderEngine::setWindowVelocities(const QVariantList &velocities)
 {
     m_windowVelocities = velocities;
     Q_EMIT windowVelocitiesChanged();
-    update();
+    requestUpdate();
 }
 
 void ShaderEngine::resetTime()
@@ -1832,7 +1840,15 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
     m_iTime = engine->iTime();
     m_iFrame = engine->iFrame();
     // Snapshot mouse: previous render-frame position vs current.
-    const QVector4D engineMouse = engine->iMouse();
+    // mouseBias scales pixel-space coords (Shadertoy iMouse convention).
+    const qreal mouseBias = engine->mouseBias();
+    QVector4D engineMouse = engine->iMouse();
+    if (!qFuzzyCompare(mouseBias, 1.0)) {
+        engineMouse = QVector4D(engineMouse.x() * mouseBias,
+                                engineMouse.y() * mouseBias,
+                                engineMouse.z() * mouseBias,
+                                engineMouse.w() * mouseBias);
+    }
     const QVector2D mouseCur(engineMouse.x(), engineMouse.y());
     m_iMousePrev = m_hasPrevMousePos ? m_prevMousePos : mouseCur;
     m_prevMousePos = mouseCur;
