@@ -38,6 +38,7 @@ set(SHADER_WALLPAPER_SOURCES
 
 set(SHADER_WALLPAPER_HEADERS
     # Core
+    core/framebufferutils.h
     core/shaderengine.h
     core/shaderbuffer.h
     core/shadercompiler.h
