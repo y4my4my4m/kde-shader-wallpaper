@@ -3,6 +3,7 @@
 
 #include "shaderengine.h"
 #include "shadercompiler.h"
+#include "framebufferutils.h"
 #include "data/shaderlibrary.h"
 
 #include <QFile>
@@ -1516,46 +1517,42 @@ void ShaderEngineRenderer::ensureBufferFBOs(int bufferIndex)
         f->glBindTexture(GL_TEXTURE_2D, 0);
     };
 
-    QOpenGLFramebufferObjectFormat bufferFormat;
-    bufferFormat.setAttachment(QOpenGLFramebufferObject::NoAttachment);
-    bufferFormat.setInternalTextureFormat(GL_RGBA32F);
-    
-    // Ensure both ping-pong FBOs exist for this buffer
-    if (!m_bufferFBOs[bufferIndex] || m_bufferFBOs[bufferIndex]->size() != bufSize) {
-        m_bufferFBOs[bufferIndex] = std::make_unique<QOpenGLFramebufferObject>(bufSize, bufferFormat);
-        
-        if (!m_bufferFBOs[bufferIndex]->isValid()) {
-            qWarning() << "Buffer" << bufferIndex << "FBO creation failed!";
-        } else {
-            configureBufferTexture(m_bufferFBOs[bufferIndex]->texture());
-            qDebug() << "Created Buffer" << bufferIndex << "FBO, size:" << bufSize
-                     << "(native" << m_fboSize << ", simMaxH" << m_bufferSimulationMaxHeight << ")";
-        }
-        
-        // Clear the new FBO
-        auto *f = QOpenGLContext::currentContext()->functions();
-        m_bufferFBOs[bufferIndex]->bind();
+    const bool needsFBOs =
+        !m_bufferFBOs[bufferIndex]
+        || !m_bufferFBOsBack[bufferIndex]
+        || m_bufferFBOs[bufferIndex]->size() != bufSize
+        || m_bufferFBOsBack[bufferIndex]->size() != bufSize;
+    if (!needsFBOs) {
+        return;
+    }
+
+    auto pair = FramebufferUtils::createBufferPair(bufSize);
+    if (!pair) {
+        m_bufferFBOs[bufferIndex].reset();
+        m_bufferFBOsBack[bufferIndex].reset();
+        qWarning() << "Buffer" << bufferIndex
+                   << "FBO creation failed for GL_RGBA32F, GL_RGBA16F, and GL_RGBA8";
+        return;
+    }
+
+    m_bufferFBOs[bufferIndex] = std::move(pair.front);
+    m_bufferFBOsBack[bufferIndex] = std::move(pair.back);
+
+    configureBufferTexture(m_bufferFBOs[bufferIndex]->texture());
+    configureBufferTexture(m_bufferFBOsBack[bufferIndex]->texture());
+
+    auto *f = QOpenGLContext::currentContext()->functions();
+    for (QOpenGLFramebufferObject *fbo :
+         {m_bufferFBOs[bufferIndex].get(), m_bufferFBOsBack[bufferIndex].get()}) {
+        fbo->bind();
         f->glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         f->glClear(GL_COLOR_BUFFER_BIT);
-        m_bufferFBOs[bufferIndex]->release();
+        fbo->release();
     }
-    
-    if (!m_bufferFBOsBack[bufferIndex] || m_bufferFBOsBack[bufferIndex]->size() != bufSize) {
-        m_bufferFBOsBack[bufferIndex] = std::make_unique<QOpenGLFramebufferObject>(bufSize, bufferFormat);
-        
-        if (!m_bufferFBOsBack[bufferIndex]->isValid()) {
-            qWarning() << "Buffer" << bufferIndex << "back FBO creation failed!";
-        } else {
-            configureBufferTexture(m_bufferFBOsBack[bufferIndex]->texture());
-        }
-        
-        // Clear the new FBO
-        auto *f = QOpenGLContext::currentContext()->functions();
-        m_bufferFBOsBack[bufferIndex]->bind();
-        f->glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        f->glClear(GL_COLOR_BUFFER_BIT);
-        m_bufferFBOsBack[bufferIndex]->release();
-    }
+
+    qInfo() << "Created Buffer" << bufferIndex << "FBO pair, size:" << bufSize
+            << "format:" << FramebufferUtils::textureFormatName(pair.internalTextureFormat)
+            << "(native" << m_fboSize << ", simMaxH" << m_bufferSimulationMaxHeight << ")";
 }
 
 QSize ShaderEngineRenderer::computeBufferSimSize() const
@@ -2091,4 +2088,3 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
     m_virtualDesktopCount = engine->virtualDesktopCount();
     m_virtualDesktopAnim  = engine->virtualDesktopAnim();
 }
-

@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2024 @y4my4my4m <y4my4my4m@protonmail.com>
 
 #include "shaderbuffer.h"
+#include "framebufferutils.h"
 
+#include <QDebug>
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
 
@@ -140,14 +142,17 @@ void ShaderBuffer::resize(const QSize &size)
 
 void ShaderBuffer::createFBOs()
 {
-    QOpenGLFramebufferObjectFormat format;
-    format.setAttachment(QOpenGLFramebufferObject::NoAttachment);
-    format.setInternalTextureFormat(GL_RGBA32F);
-    format.setMipmap(false);
+    auto pair = FramebufferUtils::createBufferPair(m_size);
+    if (!pair) {
+        m_fbo[0].reset();
+        m_fbo[1].reset();
+        qWarning() << m_name
+                   << "FBO creation failed for GL_RGBA32F, GL_RGBA16F, and GL_RGBA8";
+        return;
+    }
 
-    m_fbo[0] = std::make_unique<QOpenGLFramebufferObject>(m_size, format);
-    m_fbo[1] = std::make_unique<QOpenGLFramebufferObject>(m_size, format);
-
+    m_fbo[0] = std::move(pair.front);
+    m_fbo[1] = std::move(pair.back);
     auto *f = QOpenGLContext::currentContext()->functions();
 
     for (int i = 0; i < 2; i++) {
@@ -169,6 +174,9 @@ void ShaderBuffer::createFBOs()
         f->glClear(GL_COLOR_BUFFER_BIT);
         m_fbo[i]->release();
     }
+
+    qInfo() << "Created" << m_name << "FBO pair, size:" << m_size
+            << "format:" << FramebufferUtils::textureFormatName(pair.internalTextureFormat);
 }
 
 bool ShaderBuffer::compile()
@@ -220,7 +228,7 @@ void ShaderBuffer::render(const std::function<void(QOpenGLShaderProgram*)> &unif
                           const std::function<GLuint(int)> &getTexture)
 {
     if (!m_enabled || !m_compiled || !m_program) return;
-    if (!m_fbo[m_currentBuffer]) return;
+    if (!m_fbo[m_currentBuffer] || !m_fbo[m_currentBuffer]->isValid()) return;
 
     auto *f = QOpenGLContext::currentContext()->functions();
 
@@ -325,7 +333,7 @@ void ShaderBuffer::swapBuffers()
 
 GLuint ShaderBuffer::currentTexture() const
 {
-    if (m_fbo[m_currentBuffer]) {
+    if (m_fbo[m_currentBuffer] && m_fbo[m_currentBuffer]->isValid()) {
         return m_fbo[m_currentBuffer]->texture();
     }
     return 0;
@@ -334,7 +342,7 @@ GLuint ShaderBuffer::currentTexture() const
 GLuint ShaderBuffer::previousTexture() const
 {
     const int prevBuffer = 1 - m_currentBuffer;
-    if (m_fbo[prevBuffer]) {
+    if (m_fbo[prevBuffer] && m_fbo[prevBuffer]->isValid()) {
         return m_fbo[prevBuffer]->texture();
     }
     return 0;
