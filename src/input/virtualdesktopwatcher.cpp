@@ -4,11 +4,18 @@
 
 #include <QDBusConnection>
 #include <QDBusInterface>
-#include <QDBusReply>
+#include <QDBusPendingCall>
+#include <QDBusPendingCallWatcher>
+#include <QDBusPendingReply>
 #include <QDBusMessage>
-#include <QElapsedTimer>
 #include <QDateTime>
 #include <QDebug>
+
+// All KWin queries in this file are ASYNCHRONOUS. This object lives on
+// plasmashell's GUI thread; a synchronous D-Bus call here stalls the whole
+// shell (wallpaper rendering included) for as long as KWin takes to answer.
+// The old implementation did exactly that on a 2s poll timer and produced a
+// visible frame hitch every 2 seconds.
 
 namespace {
 inline const QString kKWinService()   { return QStringLiteral("org.kde.KWin"); }
@@ -69,93 +76,105 @@ void VirtualDesktopWatcher::setEnabled(bool enabled)
     }
 }
 
-QString VirtualDesktopWatcher::currentIdString() const
-{
-    if (!m_iface || !m_iface->isValid()) return {};
-    QDBusReply<QString> reply = m_iface->call(QStringLiteral("current"));
-    if (reply.isValid()) return reply.value();
-    return {};
-}
-
-int VirtualDesktopWatcher::indexFromId(const QString &id) const
-{
-    return m_desktopIds.indexOf(id);
-}
-
-void VirtualDesktopWatcher::rebuildIdList()
-{
-    m_desktopIds.clear();
-    if (!m_iface || !m_iface->isValid()) return;
-
-    // KWin returns a list of structs (id, name, position) — we just want
-    // the ids in their reported order. Use desktopRows or desktops()…
-    // Different Plasma versions have different APIs; try the most common.
-    QDBusReply<QStringList> reply = m_iface->call(QStringLiteral("desktopsRows")); // unlikely to work but try
-    if (!reply.isValid()) {
-        // Fallback: try the property "desktops" via QVariant
-        QVariant v = m_iface->property("desktops");
-        if (v.isValid()) {
-            // It's an array of structs — we can't fully decode without
-            // generated proxies, so fall back to counting via 'count'.
-        }
-    }
-
-    // Simpler & reliable: query 'count' property and accept that we may
-    // not have stable UUIDs. The transitionProgress feature still works
-    // if we just map current desktop index numerically.
-    QVariant countV = m_iface->property("count");
-    int count = countV.toInt();
-    if (count < 1) count = 1;
-    if (count != m_desktopCount) {
-        m_desktopCount = count;
-        Q_EMIT desktopCountChanged();
-    }
-}
-
 void VirtualDesktopWatcher::refresh()
 {
     if (!m_enabled) return;
-    if (!m_iface || !m_iface->isValid()) return;
+    requestDesktopCount();
+    requestCurrentDesktop();
+}
 
-    rebuildIdList();
+void VirtualDesktopWatcher::requestDesktopCount()
+{
+    if (m_countInFlight) return;
+    m_countInFlight = true;
 
-    // Try to get the current desktop's position/index. KWin's
-    // VirtualDesktopManager exposes a 'current' property that returns
-    // the UUID string, plus 'desktops' for the list — but as a struct
-    // array which is hard to decode without generated proxies. As a
-    // pragmatic alternative we use the legacy `currentRow()` or fall
-    // back to parsing the active window's desktop. For now, use the
-    // 'desktopRows' to detect changes:
-    int newIdx = m_currentDesktop;
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        kKWinService(), kKWinPath(),
+        QStringLiteral("org.freedesktop.DBus.Properties"),
+        QStringLiteral("Get"));
+    msg << kKWinInterface() << QStringLiteral("count");
 
-    // Try the simple 'currentRow' first (some Plasma versions have it).
-    QDBusReply<uint> currentRowReply = m_iface->call(QStringLiteral("currentRow"));
-    if (currentRowReply.isValid()) {
-        newIdx = qMax(0, int(currentRowReply.value()) - 1); // KWin is 1-based here
-    } else {
-        // Otherwise fall back to KGlobalAccel-style approach via
-        // org.kde.KWin /KWin currentDesktop (legacy API)
-        QDBusInterface kwinLegacy(kKWinService(), QStringLiteral("/KWin"),
-                                  QStringLiteral("org.kde.KWin"),
-                                  QDBusConnection::sessionBus());
-        if (kwinLegacy.isValid()) {
-            QDBusReply<int> legacy = kwinLegacy.call(QStringLiteral("currentDesktop"));
-            if (legacy.isValid()) newIdx = qMax(0, legacy.value() - 1);
+    auto *watcher = new QDBusPendingCallWatcher(
+        QDBusConnection::sessionBus().asyncCall(msg), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this,
+            [this](QDBusPendingCallWatcher *w) {
+        w->deleteLater();
+        m_countInFlight = false;
+        QDBusPendingReply<QVariant> reply = *w;
+        if (!reply.isValid()) return;
+        int count = reply.value().toInt();
+        if (count < 1) count = 1;
+        if (count != m_desktopCount) {
+            m_desktopCount = count;
+            Q_EMIT desktopCountChanged();
         }
+    });
+}
+
+void VirtualDesktopWatcher::requestCurrentDesktop()
+{
+    if (m_currentInFlight) return;
+    m_currentInFlight = true;
+
+    if (m_currentApiMode >= 0) {
+        // Probe / use currentRow (present on some Plasma versions).
+        QDBusMessage msg = QDBusMessage::createMethodCall(
+            kKWinService(), kKWinPath(), kKWinInterface(),
+            QStringLiteral("currentRow"));
+        auto *watcher = new QDBusPendingCallWatcher(
+            QDBusConnection::sessionBus().asyncCall(msg), this);
+        connect(watcher, &QDBusPendingCallWatcher::finished, this,
+                [this](QDBusPendingCallWatcher *w) {
+            w->deleteLater();
+            QDBusPendingReply<uint> reply = *w;
+            if (reply.isValid()) {
+                m_currentApiMode = 1;
+                m_currentInFlight = false;
+                applyCurrentDesktop(qMax(0, int(reply.value()) - 1)); // KWin is 1-based here
+            } else if (m_currentApiMode == 0) {
+                // Probe failed — fall back to the legacy API from now on.
+                m_currentApiMode = -1;
+                m_currentInFlight = false;
+                requestCurrentDesktop();
+            } else {
+                m_currentInFlight = false;
+            }
+        });
+        return;
     }
 
-    if (newIdx != m_currentDesktop) {
-        m_previousDesktop = m_currentDesktop;
-        m_currentDesktop = newIdx;
-        Q_EMIT currentDesktopChanged();
-        Q_EMIT desktopSwitched(m_previousDesktop, m_currentDesktop);
+    // Legacy org.kde.KWin /KWin currentDesktop.
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        kKWinService(), QStringLiteral("/KWin"),
+        QStringLiteral("org.kde.KWin"),
+        QStringLiteral("currentDesktop"));
+    auto *watcher = new QDBusPendingCallWatcher(
+        QDBusConnection::sessionBus().asyncCall(msg), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this,
+            [this](QDBusPendingCallWatcher *w) {
+        w->deleteLater();
+        m_currentInFlight = false;
+        QDBusPendingReply<int> reply = *w;
+        if (reply.isValid()) {
+            applyCurrentDesktop(qMax(0, reply.value() - 1));
+        }
+    });
+}
 
-        // Kick off the transition animation
-        m_animStartMs = double(QDateTime::currentMSecsSinceEpoch());
-        m_transitionProgress = 0.0;
-        Q_EMIT transitionProgressChanged();
-        m_animTimer.start();
-    }
+void VirtualDesktopWatcher::applyCurrentDesktop(int newIdx)
+{
+    if (newIdx == m_currentDesktop) return;
+
+    m_previousDesktop = m_currentDesktop;
+    m_currentDesktop = newIdx;
+    Q_EMIT currentDesktopChanged();
+    Q_EMIT desktopSwitched(m_previousDesktop, m_currentDesktop);
+
+    // Kick off the transition animation
+    m_animStartMs = double(QDateTime::currentMSecsSinceEpoch());
+    m_transitionProgress = 0.0;
+    Q_EMIT transitionProgressChanged();
+    m_animTimer.start();
 }
 
 void VirtualDesktopWatcher::animateStep()

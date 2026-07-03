@@ -239,8 +239,28 @@ void CursorTracker::stopPolling()
 
 void CursorTracker::pollCursor()
 {
-    QPoint globalPos = getGlobalCursorPosition();
-    bool buttonState = getButtonState();
+    // One xcb_query_pointer reply carries both position and button mask —
+    // fetch it once instead of paying two X round trips per poll.
+    QPoint globalPos;
+    bool buttonState = m_pressed;
+    bool haveReply = false;
+
+#ifdef HAVE_XCB
+    if (m_isX11 && m_xcbConnection && m_xcbScreen) {
+        xcb_query_pointer_cookie_t cookie = xcb_query_pointer(m_xcbConnection, m_xcbScreen->root);
+        xcb_query_pointer_reply_t *reply = xcb_query_pointer_reply(m_xcbConnection, cookie, nullptr);
+        if (reply) {
+            globalPos = QPoint(reply->root_x, reply->root_y);
+            buttonState = (reply->mask & (XCB_BUTTON_MASK_1 | XCB_BUTTON_MASK_2 | XCB_BUTTON_MASK_3)) != 0;
+            free(reply);
+            haveReply = true;
+        }
+    }
+#endif
+
+    if (!haveReply) {
+        globalPos = QCursor::pos();
+    }
     
     // Transform to local/normalized coordinates if needed
     QPointF localPos = globalPos;

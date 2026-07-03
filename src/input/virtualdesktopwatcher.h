@@ -58,9 +58,9 @@ private Q_SLOTS:
     void animateStep();
 
 private:
-    QString currentIdString() const;
-    int indexFromId(const QString &id) const;
-    void rebuildIdList();
+    void requestDesktopCount();
+    void requestCurrentDesktop();
+    void applyCurrentDesktop(int newIdx);
 
     bool m_enabled = true;
     int m_currentDesktop = 0;
@@ -68,9 +68,15 @@ private:
     int m_desktopCount = 1;
     qreal m_transitionProgress = 0.0;
 
-    QStringList m_desktopIds; // KWin's vdesktop UUIDs in order; index = our 0-based desktop number
-    QDBusInterface *m_iface = nullptr;
-    QTimer m_pollTimer;       // 1s fallback poll
+    // Which "current desktop" API this KWin answers: 0 = probing
+    // (try currentRow first), 1 = currentRow works, -1 = use the legacy
+    // org.kde.KWin /KWin currentDesktop call.
+    int m_currentApiMode = 0;
+    bool m_countInFlight = false;
+    bool m_currentInFlight = false;
+
+    QDBusInterface *m_iface = nullptr; // kept only for available()
+    QTimer m_pollTimer;       // 2s fallback poll
     QTimer m_animTimer;       // ~60Hz transition animation
     qreal m_animStartMs = 0.0;
     static constexpr qreal kAnimDurationMs = 350.0;
