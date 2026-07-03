@@ -76,7 +76,11 @@ Item {
     WindowTracker {
         id: windowTracker
         enabled: shaderSystem._allowWindows && shaderEngine.running
-        pollInterval: 33  // 30Hz polling
+        // Poll at the shader's render cadence: a fixed 30Hz reads as visible
+        // steps when dragging windows on high-refresh displays. Idle polls
+        // are nearly free (the tracker skips all X traffic without events),
+        // so the only cost is during actual window motion.
+        pollInterval: Math.max(4, Math.round(1000 / (shaderEngine.targetFps || 60)))
         referenceWidth: shaderEngine.width
         referenceHeight: shaderEngine.height
         devicePixelRatio: cursorTracker.devicePixelRatio

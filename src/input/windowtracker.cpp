@@ -13,6 +13,9 @@ WindowTracker::WindowTracker(QObject *parent)
     : QObject(parent)
     , m_pollTimer(new QTimer(this))
 {
+    // Coarse (default) timers have ±5% slack — at render-rate intervals the
+    // resulting cadence jitter is visible as uneven window-motion updates.
+    m_pollTimer->setTimerType(Qt::PreciseTimer);
     connect(m_pollTimer, &QTimer::timeout, this, &WindowTracker::pollWindows);
 #ifdef HAVE_XCB
     initXcb();
@@ -132,7 +135,7 @@ void WindowTracker::setEnabled(bool enabled)
 void WindowTracker::setPollInterval(int ms)
 {
     if (m_pollInterval == ms) return;
-    m_pollInterval = qMax(16, ms);  // Minimum ~60Hz
+    m_pollInterval = qMax(4, ms);  // Minimum ~250Hz — QML paces this to targetFps
     
     if (m_pollTimer->isActive()) {
         m_pollTimer->setInterval(m_pollInterval);
