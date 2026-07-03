@@ -781,7 +781,15 @@ void ShaderLibrary::saveIndex()
     
     QJsonArray shadersArray;
     for (const auto &shader : m_shaders) {
-        shadersArray.append(shader->toJson());
+        QJsonObject json = shader->toJson();
+        // Serialize paths in the portable contents/ui-relative form so the
+        // index stays machine-independent; loadIndex() resolves them back
+        // against m_libraryPath.
+        json[QStringLiteral("shaderPath")] =
+            toRelativeShaderPath(json[QStringLiteral("shaderPath")].toString());
+        json[QStringLiteral("thumbnailPath")] =
+            toRelativeShaderPath(json[QStringLiteral("thumbnailPath")].toString());
+        shadersArray.append(json);
     }
     
     QJsonArray categoriesArray;
