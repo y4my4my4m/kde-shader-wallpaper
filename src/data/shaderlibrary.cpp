@@ -95,6 +95,7 @@ ShaderLibrary::ShaderLibrary(QObject *parent)
     s_instance = this;
 
     m_libraryPath = resolveLibraryRoot();
+    m_canonicalLibraryRoot = QFileInfo(m_libraryPath).canonicalFilePath();
 
     // /usr/.../contents/ui is the location the PLM greeter reads from
     // (running as the plasmalogin user it cannot see ~/.local). We record
@@ -140,6 +141,7 @@ void ShaderLibrary::setLibraryPath(const QString &path)
 {
     if (m_libraryPath == path) return;
     m_libraryPath = path;
+    m_canonicalLibraryRoot = QFileInfo(m_libraryPath).canonicalFilePath();
     Q_EMIT libraryPathChanged();
     refresh();
 }
@@ -299,6 +301,21 @@ ShaderMetadata* ShaderLibrary::getShaderByPath(const QUrl &path) const
     if (it != m_pathMap.end()) {
         return it.value().get();
     }
+
+    // The same shader file can be named several ways depending on who wrote
+    // the value: relative "Shaders/X.frag" (saved config), absolute via the
+    // ~/.local symlink (this process's scan), or the symlink's canonical
+    // target (hosts that canonicalize QML urls). Compare in collapsed form
+    // before giving up.
+    const QString wanted = toRelativeShaderPath(pathStr);
+    if (wanted.isEmpty()) {
+        return nullptr;
+    }
+    for (const auto &shader : m_shaders) {
+        if (toRelativeShaderPath(shader->shaderPath().toString()) == wanted) {
+            return shader.get();
+        }
+    }
     return nullptr;
 }
 
@@ -325,6 +342,20 @@ QString ShaderLibrary::toRelativeShaderPath(const QString &input) const
     const int idx = path.indexOf(marker);
     if (idx >= 0) {
         return path.mid(idx + marker.size());
+    }
+
+    // Symlinked installs (~/.local/... -> a git checkout): some hosts
+    // canonicalize QML urls (the System Settings wallpaper KCM does, the
+    // in-process desktop dialog doesn't), so the same shader arrives here
+    // as the symlink *target* path, which never contains the marker. Those
+    // absolute paths used to pass through into the saved config, and then
+    // exact-match lookups in the other process failed. Collapse anything
+    // whose canonical form lives under the canonical library root.
+    if (!m_canonicalLibraryRoot.isEmpty()) {
+        const QString canonical = QFileInfo(path).canonicalFilePath();
+        if (canonical.startsWith(m_canonicalLibraryRoot + QLatin1Char('/'))) {
+            return canonical.mid(m_canonicalLibraryRoot.size() + 1);
+        }
     }
     return input;
 }
