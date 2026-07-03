@@ -7,15 +7,19 @@
 //
 // Adaptations:
 //
-//   1) TIMESTEP. The original advances delta=1.0 once per frame; the feel
-//      this wallpaper is tuned for is that shader at 240fps — fast waves
-//      that also FADE fast (damping is per-step, so more steps/second
-//      means quicker settling). delta is derived from iTimeDelta with
-//      240fps as the reference so the feel doesn't change with the FPS
-//      cap. It saturates at the 1.4 stability limit ("don't make it
-//      bigger than 1.4 or the universe will explode"), so below ~170fps
-//      the sim runs proportionally slower — that's the PDE's hard limit,
-//      not a bug.
+//   1) TIMESTEP. The original advances delta=1.0 once per frame, so its
+//      wave speed and decay are proportional to FPS. Here the sim must be
+//      FPS-independent (only shaderSpeed may change the feel). A single
+//      pass can't substep (neighbours come from last frame's texture), so
+//      the frame's time budget D = iTimeDelta * REF_FPS is split between
+//      the stencil SPACING h and the step size: lattice wave speed goes
+//      as h * sqrt(delta) per step, so h = ceil(D), delta = (D/h)^2 keeps
+//      pixels-per-second constant at any FPS. Low FPS trades fine ripple
+//      detail (coarser stencil) for correct speed, never the other way.
+//      Damping is applied as exp(-rate * D): time-based, FPS-independent,
+//      tuned to settle like https://www.shadertoy.com/view/dldSR7
+//      (0.98/frame at 60fps) rather than the original's near-immortal
+//      0.998/step.
 //
 //   2) DISTURBANCES. Shadertoy stamps a radius-20 cone while the mouse
 //      button is held; the cursor here stamps the same cone along its
@@ -69,27 +73,30 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
         return;
     }
 
-    // Cap at 1.0 — the original's proven-stable step. The author's 1.4
-    // limit is where instability BEGINS; running there with continuous
-    // cursor/window forcing makes high-frequency modes grow slowly into
-    // an ever-spreading blob. Below 240fps the sim simply runs at one
-    // step per frame, exactly like the original.
-    float delta = clamp(iTimeDelta * REF_FPS, 0.05, 1.0);
+    // Frame time budget in reference steps. Split into stencil spacing h
+    // and per-step delta so wave speed (px/sec) is the same at any FPS:
+    // lattice speed ~ h * sqrt(delta) per step, so keep h*sqrt(delta) = D
+    // with delta capped at 1.0 (the original's proven-stable step — 1.4
+    // is where instability begins under continuous forcing).
+    float D = clamp(iTimeDelta * REF_FPS, 0.05, 8.0);
+    int   h = int(ceil(D));
+    float delta = clamp((D / float(h)) * (D / float(h)), 0.05, 1.0);
 
     ivec2 ifc = ivec2(fragCoord);
     float pressure = texelFetch(iChannel0, ifc, 0).x;
     float pVel     = texelFetch(iChannel0, ifc, 0).y;
 
-    float p_right = texelFetch(iChannel0, ifc + ivec2( 1,  0), 0).x;
-    float p_left  = texelFetch(iChannel0, ifc + ivec2(-1,  0), 0).x;
-    float p_up    = texelFetch(iChannel0, ifc + ivec2( 0,  1), 0).x;
-    float p_down  = texelFetch(iChannel0, ifc + ivec2( 0, -1), 0).x;
+    float p_right = texelFetch(iChannel0, ifc + ivec2( h,  0), 0).x;
+    float p_left  = texelFetch(iChannel0, ifc + ivec2(-h,  0), 0).x;
+    float p_up    = texelFetch(iChannel0, ifc + ivec2( 0,  h), 0).x;
+    float p_down  = texelFetch(iChannel0, ifc + ivec2( 0, -h), 0).x;
 
     // Change values so the screen boundaries aren't fixed.
-    if (fragCoord.x < 1.0)                     p_left  = p_right;
-    if (fragCoord.x > iResolution.x - 1.0)     p_right = p_left;
-    if (fragCoord.y < 1.0)                     p_down  = p_up;
-    if (fragCoord.y > iResolution.y - 1.0)     p_up    = p_down;
+    float fh = float(h);
+    if (fragCoord.x < fh)                      p_left  = p_right;
+    if (fragCoord.x > iResolution.x - fh)      p_right = p_left;
+    if (fragCoord.y < fh)                      p_down  = p_up;
+    if (fragCoord.y > iResolution.y - fh)      p_up    = p_down;
 
     // Apply horizontal wave function
     pVel += delta * (-2.0 * pressure + p_right + p_left) / 4.0;
@@ -101,13 +108,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
     // "Spring" motion. This makes the waves look more like water waves
     // and less like sound waves.
-    pVel -= 0.005 * delta * pressure;
+    pVel -= 0.005 * D * pressure;
 
-    // Velocity damping so things eventually calm down
-    pVel *= 1.0 - 0.002 * delta;
-
-    // Pressure damping to prevent it from building up forever.
-    pressure *= 1.0 - 0.001 * delta;
+    // Damping, time-based (exp(-rate*D), FPS-independent). Rates chosen to
+    // settle like dldSR7's 0.98/frame at 60fps (~exp(-1.2)/sec): ripples
+    // ring for a moment, then the surface actually calms down.
+    pVel     *= exp(-0.005 * D);
+    pressure *= exp(-0.002 * D);
 
     // --- Cursor ripples ---------------------------------------------------
     float stamp = 0.0;
@@ -159,10 +166,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
         // Press harder the faster the window moves (full depth at a brisk
         // drag, native pixels/second).
-        float strength = clamp(speed / 1000.0, 0.0, 1.0);
+        float strength = clamp(speed / 600.0, 0.0, 1.0);
 
-        float k = clamp(0.35 * ring * strength * delta, 0.0, 1.0);
-        pressure = mix(pressure, -0.5 * strength, k);
+        // Full-depth constraint: the depression amplitude matches a cursor
+        // stamp (1.0 — one Shadertoy click), so window wakes read as
+        // strongly as cursor ripples. Still a constraint, not an impulse:
+        // pressure is pinned toward a fixed depth, so no energy can
+        // accumulate along the hull (the old standing-plaid failure mode).
+        float k = clamp(ring * strength * min(D, 1.0), 0.0, 1.0);
+        pressure = mix(pressure, -1.0 * strength, k);
         pVel     = mix(pVel, 0.0, k);
     }
 
@@ -172,6 +184,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     pressure = clamp(pressure, -2.0, 2.0);
     pVel     = clamp(pVel, -2.0, 2.0);
 
-    // x = pressure. y = pressure velocity. Z and W = X and Y gradient.
-    fragColor = vec4(pressure, pVel, (p_right - p_left) / 2.0, (p_up - p_down) / 2.0);
+    // x = pressure. y = pressure velocity. Z and W = X and Y gradient —
+    // divided by the stencil spacing so refraction/glint magnitude in the
+    // image pass doesn't change with FPS.
+    fragColor = vec4(pressure, pVel, (p_right - p_left) / (2.0 * fh), (p_up - p_down) / (2.0 * fh));
 }
