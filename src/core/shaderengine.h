@@ -23,8 +23,6 @@ class QFileSystemWatcher;
 #include <array>
 #include <deque>
 
-class ShaderBuffer;
-class UniformManager;
 class CursorTracker;
 class AudioCapture;
 
@@ -61,6 +59,14 @@ class ShaderEngine : public QQuickFramebufferObject
     // The buffer texture is linearly upsampled when the main pass reads it.
     Q_PROPERTY(int bufferSimulationMaxHeight READ bufferSimulationMaxHeight
                WRITE setBufferSimulationMaxHeight NOTIFY bufferSimulationMaxHeightChanged)
+
+    // Experimental HDR pipeline. When on, the main pass and the
+    // resolution-scale FBO use GL_RGBA16F instead of GL_RGBA8, so shader
+    // output above 1.0 and fine gradients survive the plugin's own pipeline
+    // unclamped. plasmashell still composites its window as SDR, so this
+    // cannot light up an HDR monitor by itself — the ceiling is the shell's
+    // surface format, not this plugin.
+    Q_PROPERTY(bool hdrPipeline READ hdrPipeline WRITE setHdrPipeline NOTIFY hdrPipelineChanged)
     
     // Time control
     Q_PROPERTY(qreal iTime READ iTime NOTIFY iTimeChanged)
@@ -170,8 +176,10 @@ public:
     int currentFps() const { return m_currentFps; }
     qreal resolutionScale() const { return m_resolutionScale; }
     int bufferSimulationMaxHeight() const { return m_bufferSimulationMaxHeight; }
+    bool hdrPipeline() const { return m_hdrPipeline; }
     qreal iTime() const { return m_iTime; }
     int iFrame() const { return m_iFrame; }
+    qreal lastTimeDelta() const { return m_lastTimeDelta; }
     QVector4D iMouse() const { return m_iMouse; }
     bool mouseEnabled() const { return m_mouseEnabled; }
     qreal mouseBias() const { return m_mouseBias; }
@@ -250,6 +258,7 @@ public:
     void setTargetFps(int fps);
     void setResolutionScale(qreal scale);
     void setBufferSimulationMaxHeight(int height);
+    void setHdrPipeline(bool enabled);
     void setIMouse(const QVector4D &mouse);
     void setMouseEnabled(bool enabled);
     void setMouseBias(qreal bias);
@@ -321,6 +330,7 @@ Q_SIGNALS:
     void currentFpsChanged();
     void resolutionScaleChanged();
     void bufferSimulationMaxHeightChanged();
+    void hdrPipelineChanged();
     void iTimeChanged();
     void iFrameChanged();
     void iMouseChanged();
@@ -399,8 +409,6 @@ private:
     void setError(const QString &error);
     void clearError();
     void applyVisibilityState(bool visible);
-    // Coalesce update() so animation/input cannot bypass targetFps (legacy #85).
-    void requestUpdate();
 
     // Shader sources
     QUrl m_shaderSource;
@@ -413,16 +421,16 @@ private:
     int m_currentFps = 0;
     qreal m_resolutionScale = 1.0;
     int m_bufferSimulationMaxHeight = 0;
-    
+    bool m_hdrPipeline = false;
+
     // Timing
     qreal m_iTime = 0.0;
     int m_iFrame = 0;
-    QElapsedTimer m_gateClock;        // Free-running monotonic clock for the FPS gate.
+    qreal m_lastTimeDelta = 1.0 / 60.0; // Shader-time delta of the last rendered frame.
     QElapsedTimer m_frameTimer;       // Per-frame delta for iTime accumulation.
     QTimer *m_renderTimer = nullptr;
     QTimer *m_fpsTimer = nullptr;
     int m_frameCount = 0;
-    qint64 m_lastUpdateRequestMs = 0; // Throttling cursor for the FPS gate.
 
     // Window visibility tracking. When the wallpaper window goes hidden
     // (lockscreen overlay, compositor suspends paint of the wallpaper, etc.)
@@ -606,6 +614,8 @@ private:
     // Uniforms from ShaderEngine
     QVector3D m_iResolution;
     qreal m_iTime = 0.0;
+    qreal m_iTimeDelta = 1.0 / 60.0;
+    float m_iFrameRate = 60.0f;
     int m_iFrame = 0;
     QVector4D m_iMouse;
     QVector4D m_iDate;
@@ -632,6 +642,11 @@ private:
     qreal m_resolutionScale = 1.0;
     QSize m_lowResSize;
     std::unique_ptr<QOpenGLFramebufferObject> m_lowResFBO;
+
+    // Experimental HDR pipeline: main-pass + low-res FBOs use GL_RGBA16F.
+    bool m_hdrPipeline = false;
+    bool m_hdrSupported = true;     // cleared when a 16F output FBO fails to validate
+    bool m_lowResFBOIsHdr = false;  // format the current m_lowResFBO was built with
     
     // Ping-pong state
     bool m_pingPong = false;

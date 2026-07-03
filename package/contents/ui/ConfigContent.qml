@@ -186,6 +186,7 @@ ColumnLayout {
     property bool   cfg_experimentalDesktopUniform: false
     property bool   cfg_experimentalParallax: false
     property real   cfg_experimentalParallaxStrength: 0.25
+    property bool   cfg_experimentalHdrPipeline: false
     property bool   cfg_watchSourceFile: false
     property bool   cfg_enableShaderTweaks: false
 
@@ -418,25 +419,57 @@ ColumnLayout {
         cfg_useBufferC = !!bufferData.useBufferC
         cfg_useBufferD = !!bufferData.useBufferD
 
+        // Reset routings to plain defaults first, so a routing left over from
+        // the previous shader (e.g. imageChannel0=BufferA) can't dangle when
+        // the new shader has no such buffer.
+        cfg_imageChannel0 = 0;  cfg_imageChannel1 = 1
+        cfg_imageChannel2 = 2;  cfg_imageChannel3 = 3
+        cfg_bufferAChannel0 = -1; cfg_bufferAChannel1 = -1
+        cfg_bufferAChannel2 = -1; cfg_bufferAChannel3 = -1
+        cfg_bufferBChannel0 = -1; cfg_bufferBChannel1 = -1
+        cfg_bufferBChannel2 = -1; cfg_bufferBChannel3 = -1
+        cfg_bufferCChannel0 = -1; cfg_bufferCChannel1 = -1
+        cfg_bufferCChannel2 = -1; cfg_bufferCChannel3 = -1
+        cfg_bufferDChannel0 = -1; cfg_bufferDChannel1 = -1
+        cfg_bufferDChannel2 = -1; cfg_bufferDChannel3 = -1
+
         // Default channel routings for buffer-based shaders (self-feedback +
         // image pass reads Buffer A output). Mirrors the old behavior.
         if (cfg_useBufferA) {
-            cfg_bufferAChannel0 = 10; cfg_bufferAChannel1 = -1
-            cfg_bufferAChannel2 = -1; cfg_bufferAChannel3 = -1
+            cfg_bufferAChannel0 = 10
             cfg_imageChannel0 = 10; cfg_imageChannel1 = 1
             cfg_imageChannel2 = 2;  cfg_imageChannel3 = 3
         }
         if (cfg_useBufferB) {
-            cfg_bufferBChannel0 = 11; cfg_bufferBChannel1 = -1
-            cfg_bufferBChannel2 = -1; cfg_bufferBChannel3 = -1
+            cfg_bufferBChannel0 = 11
         }
         if (cfg_useBufferC) {
-            cfg_bufferCChannel0 = 12; cfg_bufferCChannel1 = -1
-            cfg_bufferCChannel2 = -1; cfg_bufferCChannel3 = -1
+            cfg_bufferCChannel0 = 12
         }
         if (cfg_useBufferD) {
-            cfg_bufferDChannel0 = 13; cfg_bufferDChannel1 = -1
-            cfg_bufferDChannel2 = -1; cfg_bufferDChannel3 = -1
+            cfg_bufferDChannel0 = 13
+        }
+
+        // Shader packages can carry explicit channel routing in their
+        // manifest.json — restore it over the generic defaults.
+        var manifestChannels = bufferData.channels
+        if (manifestChannels) {
+            if (manifestChannels.imageChannel0 !== undefined) cfg_imageChannel0 = manifestChannels.imageChannel0
+            if (manifestChannels.imageChannel1 !== undefined) cfg_imageChannel1 = manifestChannels.imageChannel1
+            if (manifestChannels.imageChannel2 !== undefined) cfg_imageChannel2 = manifestChannels.imageChannel2
+            if (manifestChannels.imageChannel3 !== undefined) cfg_imageChannel3 = manifestChannels.imageChannel3
+        }
+        var manifestBufferChannels = bufferData.bufferChannels
+        if (manifestBufferChannels) {
+            var keys = ["A", "B", "C", "D"]
+            for (var bi = 0; bi < keys.length; bi++) {
+                for (var ci = 0; ci < 4; ci++) {
+                    var mKey = "buffer" + keys[bi] + "Channel" + ci
+                    if (manifestBufferChannels[mKey] !== undefined) {
+                        configItem["cfg_" + mKey] = manifestBufferChannels[mKey]
+                    }
+                }
+            }
         }
 
         // Auto-detect which engine features the shader actually uses so we
@@ -2496,7 +2529,7 @@ ColumnLayout {
                 Layout.rightMargin: configItem.cardSideMargin
                 maximumWidth: configItem.cardMaxWidth
                 title: i18n("Experimental")
-                visible: mainColumn.matchSearch("experimental multi monitor screen virtual desktop parallax hot reload watch editor screenoffset iscreenoffset iscreenindex ivirtualdesktop")
+                visible: mainColumn.matchSearch("experimental multi monitor screen virtual desktop parallax hot reload watch editor screenoffset iscreenoffset iscreenindex ivirtualdesktop hdr float16 rgba16f")
             }
 
             FormCard.FormCard {
@@ -2504,7 +2537,7 @@ ColumnLayout {
                 Layout.leftMargin: configItem.cardSideMargin
                 Layout.rightMargin: configItem.cardSideMargin
                 maximumWidth: configItem.cardMaxWidth
-                visible: mainColumn.matchSearch("experimental multi monitor screen virtual desktop parallax hot reload watch editor screenoffset iscreenoffset iscreenindex ivirtualdesktop")
+                visible: mainColumn.matchSearch("experimental multi monitor screen virtual desktop parallax hot reload watch editor screenoffset iscreenoffset iscreenindex ivirtualdesktop hdr float16 rgba16f")
 
                 Kirigami.InlineMessage {
                     Layout.fillWidth: true
@@ -2559,6 +2592,13 @@ ColumnLayout {
                             horizontalAlignment: Text.AlignRight
                         }
                     }
+                }
+
+                FormCard.FormSwitchDelegate {
+                    text: i18n("HDR render pipeline (float16 framebuffers)")
+                    description: i18n("Renders the shader through GL_RGBA16F framebuffers so values above 1.0 and subtle gradients survive the plugin's pipeline. Note: Plasma still composites the desktop in SDR, so this won't brighten an HDR monitor yet — it reduces banding today and makes the wallpaper HDR-ready. Slightly higher VRAM use.")
+                    checked: cfg_experimentalHdrPipeline
+                    onToggled: cfg_experimentalHdrPipeline = checked
                 }
 
                 FormCard.FormSwitchDelegate {
@@ -3364,7 +3404,15 @@ ColumnLayout {
                     bufferBChannel0: cfg_bufferBChannel0,
                     bufferBChannel1: cfg_bufferBChannel1,
                     bufferBChannel2: cfg_bufferBChannel2,
-                    bufferBChannel3: cfg_bufferBChannel3
+                    bufferBChannel3: cfg_bufferBChannel3,
+                    bufferCChannel0: cfg_bufferCChannel0,
+                    bufferCChannel1: cfg_bufferCChannel1,
+                    bufferCChannel2: cfg_bufferCChannel2,
+                    bufferCChannel3: cfg_bufferCChannel3,
+                    bufferDChannel0: cfg_bufferDChannel0,
+                    bufferDChannel1: cfg_bufferDChannel1,
+                    bufferDChannel2: cfg_bufferDChannel2,
+                    bufferDChannel3: cfg_bufferDChannel3
                 }
             }
             

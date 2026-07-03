@@ -7,13 +7,16 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QFileSystemWatcher>
 #include <QJsonDocument>
 #include <QJsonArray>
+#include <QSaveFile>
 #include <QStandardPaths>
 #include <QRegularExpression>
 #include <QDateTime>
 #include <QQmlEngine>
 #include <QProcess>
+#include <QTimer>
 
 const QStringList ShaderLibrary::DEFAULT_CATEGORIES = {
     QStringLiteral("All"),
@@ -108,6 +111,7 @@ ShaderLibrary::ShaderLibrary(QObject *parent)
 
     loadIndex();
     refresh();
+    watchIndexFile();
 }
 
 ShaderLibrary::~ShaderLibrary()
@@ -163,6 +167,7 @@ void ShaderLibrary::refresh()
     // ---------------------------------------------------------------------
 
     // 1) Add anything new on disk.
+    const int countBeforeScan = m_shaders.size();
     const QStringList scanRoots = {
         m_libraryPath + QStringLiteral("/Shaders"),
         m_libraryPath + QStringLiteral("/Shaders6"),
@@ -197,8 +202,12 @@ void ShaderLibrary::refresh()
     Q_EMIT loadingChanged();
     Q_EMIT shaderCountChanged();
 
-    // Persist any additions / removals.
-    saveIndex();
+    // Persist only when the scan actually added or removed something —
+    // the index file is shared across processes, and every write is a
+    // chance to overwrite another process's newer state.
+    if (m_shaders.size() != countBeforeScan || !stale.isEmpty()) {
+        saveIndex();
+    }
 }
 
 void ShaderLibrary::updateGreeterAvailability()
@@ -786,15 +795,96 @@ void ShaderLibrary::saveIndex()
     root[QStringLiteral("shaders")] = shadersArray;
     root[QStringLiteral("categories")] = categoriesArray;
     root[QStringLiteral("version")] = 1;
-    
-    QFile file(indexPath);
+
+    // Atomic write: a truncated index fails to parse on next start, which
+    // re-mints every shader (and loses favorites) — never leave one behind.
+    QSaveFile file(indexPath);
     if (!file.open(QIODevice::WriteOnly)) {
         Q_EMIT error(QStringLiteral("Failed to save shader index"));
         return;
     }
-    
+
     file.write(QJsonDocument(root).toJson());
+    if (!file.commit()) {
+        Q_EMIT error(QStringLiteral("Failed to commit shader index: %1")
+                     .arg(file.errorString()));
+        return;
+    }
+
+    // QSaveFile replaces the file by rename, which drops it from the
+    // watcher — re-arm so we keep seeing other processes' writes.
+    watchIndexFile();
+}
+
+void ShaderLibrary::watchIndexFile()
+{
+    const QString indexPath = m_libraryPath + QStringLiteral("/shader_index.json");
+    if (!QFile::exists(indexPath)) {
+        return;
+    }
+
+    if (!m_indexWatcher) {
+        m_indexWatcher = new QFileSystemWatcher(this);
+        m_indexReloadDebounce = new QTimer(this);
+        m_indexReloadDebounce->setSingleShot(true);
+        m_indexReloadDebounce->setInterval(250);
+        connect(m_indexReloadDebounce, &QTimer::timeout,
+                this, &ShaderLibrary::mergeIndexFromDisk);
+        connect(m_indexWatcher, &QFileSystemWatcher::fileChanged,
+                this, [this](const QString &path) {
+            // Atomic saves replace the inode — always re-add.
+            if (!m_indexWatcher->files().contains(path) && QFile::exists(path)) {
+                m_indexWatcher->addPath(path);
+            }
+            m_indexReloadDebounce->start();
+        });
+    }
+
+    if (!m_indexWatcher->files().contains(indexPath)) {
+        m_indexWatcher->addPath(indexPath);
+    }
+}
+
+void ShaderLibrary::mergeIndexFromDisk()
+{
+    // Fold another process's index write into our in-memory state so a later
+    // save from this process doesn't roll their changes back. Merging our own
+    // write back is a harmless no-op — every field already matches — so we
+    // don't bother distinguishing writers.
+    const QString indexPath = m_libraryPath + QStringLiteral("/shader_index.json");
+    QFile file(indexPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return;
+    }
+    const QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
     file.close();
+    if (!doc.isObject()) {
+        return;  // partial/corrupt write — keep our state, we'll re-save it
+    }
+
+    const QJsonArray shadersArray = doc.object()[QStringLiteral("shaders")].toArray();
+    for (const auto &shaderRef : shadersArray) {
+        const QJsonObject obj = shaderRef.toObject();
+        const QString id = obj[QStringLiteral("id")].toString();
+        if (id.isEmpty()) {
+            continue;
+        }
+        auto it = m_shaderMap.find(id);
+        if (it == m_shaderMap.end()) {
+            continue;  // unknown entry; our next refresh()/scan will find its file
+        }
+        auto &shader = it.value();
+        const bool fav = obj[QStringLiteral("favorite")].toBool();
+        if (shader->favorite() != fav) {
+            shader->setFavorite(fav);
+            Q_EMIT shaderUpdated(id);
+        }
+        const QUrl thumb(obj[QStringLiteral("thumbnailPath")].toString());
+        if (!thumb.isEmpty() && shader->thumbnailPath() != thumb) {
+            shader->setThumbnailPath(thumb);
+            Q_EMIT shaderUpdated(id);
+        }
+    }
 }
 
 void ShaderLibrary::scanDirectory(const QString &path, const QString &category)
@@ -1168,7 +1258,37 @@ QVariantMap ShaderLibrary::loadBufferCodes(const QUrl &shaderPath) const
     bufferCodes[QStringLiteral("useBufferB")] = bufferPaths.contains(QStringLiteral("BufferB"));
     bufferCodes[QStringLiteral("useBufferC")] = bufferPaths.contains(QStringLiteral("BufferC"));
     bufferCodes[QStringLiteral("useBufferD")] = bufferPaths.contains(QStringLiteral("BufferD"));
-    
+
+    // Shader packages store channel routing in manifest.json — surface it so
+    // the config UI can restore it when the package is applied.
+    QString mainPath = shaderPath.toLocalFile();
+    if (mainPath.isEmpty()) {
+        mainPath = shaderPath.path();
+    }
+    if (!mainPath.isEmpty() && !QDir::isAbsolutePath(mainPath)) {
+        mainPath = QDir(m_libraryPath).filePath(mainPath);
+    }
+    const QFileInfo mainInfo(mainPath);
+    const QString manifestPath = mainInfo.absolutePath() + QStringLiteral("/manifest.json");
+    if (mainInfo.completeBaseName() == QStringLiteral("main") && QFile::exists(manifestPath)) {
+        QFile manifestFile(manifestPath);
+        if (manifestFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            const QJsonDocument doc = QJsonDocument::fromJson(manifestFile.readAll());
+            manifestFile.close();
+            if (doc.isObject()) {
+                const QJsonObject manifest = doc.object();
+                if (manifest.contains(QStringLiteral("channels"))) {
+                    bufferCodes[QStringLiteral("channels")] =
+                        manifest[QStringLiteral("channels")].toObject().toVariantMap();
+                }
+                if (manifest.contains(QStringLiteral("bufferChannels"))) {
+                    bufferCodes[QStringLiteral("bufferChannels")] =
+                        manifest[QStringLiteral("bufferChannels")].toObject().toVariantMap();
+                }
+            }
+        }
+    }
+
     return bufferCodes;
 }
 

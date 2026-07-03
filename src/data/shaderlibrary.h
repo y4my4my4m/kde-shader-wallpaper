@@ -27,6 +27,8 @@
  */
 class QQmlEngine;
 class QJSEngine;
+class QFileSystemWatcher;
+class QTimer;
 
 class ShaderLibrary : public QObject
 {
@@ -299,6 +301,12 @@ Q_SIGNALS:
 private:
     void loadIndex();
     void saveIndex();
+    // shader_index.json is shared by several processes (plasmashell, System
+    // Settings, the greeters), each with its own ShaderLibrary. A long-lived
+    // instance must fold external index writes back into memory before its
+    // own next save, or its stale state overwrites theirs.
+    void watchIndexFile();
+    void mergeIndexFromDisk();
     void scanDirectory(const QString &path, const QString &category);
     ShaderMetadata* createMetadataFromFile(const QString &path, const QString &category);
     ShaderMetadata* createMetadataFromPackage(const QString &packagePath, const QString &category);
@@ -317,6 +325,9 @@ private:
     QMap<QString, std::shared_ptr<ShaderMetadata>> m_pathMap;   // By path
     QStringList m_categories;
     bool m_loading = false;
+
+    QFileSystemWatcher *m_indexWatcher = nullptr;
+    QTimer *m_indexReloadDebounce = nullptr;
 };
 
 #endif // SHADERLIBRARY_H

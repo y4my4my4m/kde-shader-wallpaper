@@ -318,7 +318,15 @@ void PresetManager::ensurePresetsDirectory()
 
 QString PresetManager::presetFilePath(const QString &name) const
 {
-    return m_presetsPath + QStringLiteral("/") + name + QStringLiteral(".json");
+    // Keep preset names filesystem-safe: strip path separators so a name
+    // like "a/b" or "../x" can't escape the presets directory.
+    QString safe = name;
+    safe.replace(QLatin1Char('/'), QLatin1Char('_'));
+    safe.replace(QLatin1Char('\\'), QLatin1Char('_'));
+    while (safe.startsWith(QLatin1Char('.'))) {
+        safe.remove(0, 1);
+    }
+    return m_presetsPath + QStringLiteral("/") + safe + QStringLiteral(".json");
 }
 
 QJsonObject PresetManager::configToJson(const QVariantMap &config) const

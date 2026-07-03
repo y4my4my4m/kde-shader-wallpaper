@@ -122,11 +122,11 @@ ColumnLayout {
 
     // — Channels
     property string cfg_iChannel0: wallpaperConfiguration ? (wallpaperConfiguration.iChannel0 ?? "") : ""
-    property bool   cfg_iChannel0Enabled: wallpaperConfiguration ? (wallpaperConfiguration.iChannel0Enabled ?? true) : true
+    property bool   cfg_iChannel0Enabled: wallpaperConfiguration ? (wallpaperConfiguration.iChannel0Enabled ?? false) : false
     property string cfg_iChannel1: wallpaperConfiguration ? (wallpaperConfiguration.iChannel1 ?? "") : ""
-    property bool   cfg_iChannel1Enabled: wallpaperConfiguration ? (wallpaperConfiguration.iChannel1Enabled ?? true) : true
+    property bool   cfg_iChannel1Enabled: wallpaperConfiguration ? (wallpaperConfiguration.iChannel1Enabled ?? false) : false
     property string cfg_iChannel2: wallpaperConfiguration ? (wallpaperConfiguration.iChannel2 ?? "") : ""
-    property bool   cfg_iChannel2Enabled: wallpaperConfiguration ? (wallpaperConfiguration.iChannel2Enabled ?? true) : true
+    property bool   cfg_iChannel2Enabled: wallpaperConfiguration ? (wallpaperConfiguration.iChannel2Enabled ?? false) : false
     property string cfg_iChannel3: wallpaperConfiguration ? (wallpaperConfiguration.iChannel3 ?? "") : ""
     property bool   cfg_iChannel3Enabled: wallpaperConfiguration ? (wallpaperConfiguration.iChannel3Enabled ?? false) : false
 
@@ -186,6 +186,7 @@ ColumnLayout {
     property bool   cfg_experimentalDesktopUniform:   wallpaperConfiguration ? (wallpaperConfiguration.experimentalDesktopUniform ?? false) : false
     property bool   cfg_experimentalParallax:         wallpaperConfiguration ? (wallpaperConfiguration.experimentalParallax ?? false) : false
     property double cfg_experimentalParallaxStrength: wallpaperConfiguration ? (wallpaperConfiguration.experimentalParallaxStrength ?? 0.25) : 0.25
+    property bool   cfg_experimentalHdrPipeline:      wallpaperConfiguration ? (wallpaperConfiguration.experimentalHdrPipeline ?? false) : false
 
     // — Shader tweaks
     property bool cfg_enableShaderTweaks: wallpaperConfiguration ? (wallpaperConfiguration.enableShaderTweaks ?? false) : false
@@ -247,6 +248,7 @@ ColumnLayout {
         "cfg_watchSourceFile",
         "cfg_experimentalScreenUniforms", "cfg_experimentalDesktopUniform",
         "cfg_experimentalParallax", "cfg_experimentalParallaxStrength",
+        "cfg_experimentalHdrPipeline",
         "cfg_enableShaderTweaks",
         "cfg_infoPlasma6Preview_dismissed", "cfg_warningResources_dismissed", "cfg_emergencyHelp_dismissed"
     ]

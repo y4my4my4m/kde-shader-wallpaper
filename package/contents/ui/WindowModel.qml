@@ -25,7 +25,10 @@ import org.kde.kwindowsystem
 Item {
     id: wModel
     property var screenGeometry
-    property int pauseMode: wallpaper.configuration.pauseMode
+    // Config map injected by the host (ShaderSystem.qml) — the PLM login
+    // greeter provides no `wallpaper` context object to read directly.
+    property var config: null
+    property int pauseMode: config ? (config.pauseMode ?? 0) : 0
     property bool runShader: false
     property bool maximizedExists: false
     property bool visibleExists: false
@@ -38,11 +41,12 @@ Item {
     property var isFullScreen: abstractTasksModel.IsFullScreen
     property var isActive: abstractTasksModel.IsActive
     property var isHidden: abstractTasksModel.IsHidden
-    property bool activeScreenOnly: wallpaper.configuration.checkActiveScreen
-    property var excludeWindows: wallpaper.configuration.excludeWindows
+    property bool activeScreenOnly: config ? (config.checkActiveScreen ?? true) : true
+    property var excludeWindows: (config && config.excludeWindows) || []
 
     Connections {
-        target: wallpaper.configuration
+        target: wModel.config
+        enabled: wModel.config !== null
         function onValueChanged() {
             updateWindowsInfo();
         }

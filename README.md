@@ -83,8 +83,9 @@ sudo apt install cmake extra-cmake-modules build-essential \
 
 ```bash
 sudo dnf install cmake extra-cmake-modules gcc-c++ \
-    qt6-qtbase-devel qt6-qtdeclarative-devel libplasma-devel \
-    kf6-kconfig-devel kf6-ki18n-devel kf6-kpackage-devel \
+    qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtmultimedia-devel \
+    libplasma-devel kf6-kconfig-devel kf6-kcoreaddons-devel \
+    kf6-ki18n-devel kf6-kpackage-devel \
     pipewire-devel libxcb-devel
 ```
 </details>
@@ -94,8 +95,9 @@ sudo dnf install cmake extra-cmake-modules gcc-c++ \
 
 ```bash
 sudo zypper install cmake extra-cmake-modules gcc-c++ \
-    qt6-base-devel qt6-declarative-devel libplasma-devel \
-    kf6-kconfig-devel kf6-ki18n-devel kf6-kpackage-devel \
+    qt6-base-devel qt6-declarative-devel qt6-multimedia-devel \
+    libplasma6-devel kf6-kconfig-devel kf6-kcoreaddons-devel \
+    kf6-ki18n-devel kf6-kpackage-devel \
     pipewire-devel libxcb-devel
 ```
 </details>

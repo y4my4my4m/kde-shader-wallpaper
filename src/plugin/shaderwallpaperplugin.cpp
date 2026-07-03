@@ -4,7 +4,6 @@
 #include "shaderwallpaperplugin.h"
 
 #include "core/shaderengine.h"
-#include "core/shaderbuffer.h"
 #include "core/uniformmanager.h"
 #include "core/performancemonitor.h"
 #include "input/cursortracker.h"
@@ -24,7 +23,6 @@ void ShaderWallpaperPlugin::registerTypes(const char *uri)
 
     // Core rendering
     qmlRegisterType<ShaderEngine>(uri, 1, 0, "ShaderEngine");
-    qmlRegisterType<ShaderBuffer>(uri, 1, 0, "ShaderBuffer");
     qmlRegisterType<UniformManager>(uri, 1, 0, "UniformManager");
     qmlRegisterType<PerformanceMonitor>(uri, 1, 0, "PerformanceMonitor");
 

@@ -356,6 +356,7 @@ void WindowTracker::updateWindowListFromSystem()
     if (!screen) return;
     
     xcb_window_t root = screen->root;
+    qreal screenWidth = screen->width_in_pixels;
     qreal screenHeight = screen->height_in_pixels;
     
     // Cache atoms for performance
@@ -397,16 +398,13 @@ void WindowTracker::updateWindowListFromSystem()
         QRectF geom;
         if (!getWindowGeometry(conn, win, geom)) continue;
         
-        // Skip tiny windows (toolbars, popups, etc.)
-        if (geom.width() < 100 || geom.height() < 100) continue;
-        
-        // Skip windows that are the same size as the screen (likely desktop/wallpaper)
-        if (geom.width() >= screenHeight * 0.95 && geom.height() >= screenHeight * 0.95) {
+        // Skip tiny/thin windows (toolbars, popups, panels, etc.)
+        if (geom.width() < 150 || geom.height() < 150) continue;
+
+        // Skip windows that cover the whole screen (likely desktop/wallpaper).
+        if (geom.width() >= screenWidth * 0.95 && geom.height() >= screenHeight * 0.95) {
             continue;
         }
-        
-        // Skip very thin windows (likely panels)
-        if (geom.width() < 150 || geom.height() < 150) continue;
         
         // Store global desktop geometry (Y=0 at top); map to shader space in windowRectsFlat().
         WindowInfo info;

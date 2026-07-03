@@ -15,6 +15,9 @@ ShaderMetadata::ShaderMetadata(QObject *parent)
 ShaderMetadata::ShaderMetadata(const QJsonObject &json, QObject *parent)
     : QObject(parent)
 {
+    // Fallback id first — fromJson keeps it when the JSON entry has none,
+    // so no two entries can share an empty id in ShaderLibrary's id map.
+    m_id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     fromJson(json);
 }
 
@@ -223,7 +226,10 @@ QJsonObject ShaderMetadata::toJson() const
 
 void ShaderMetadata::fromJson(const QJsonObject &json)
 {
-    setId(json[QStringLiteral("id")].toString());
+    const QString jsonId = json[QStringLiteral("id")].toString();
+    if (!jsonId.isEmpty()) {
+        setId(jsonId);
+    }
     setName(json[QStringLiteral("name")].toString());
     setAuthor(json[QStringLiteral("author")].toString());
     setDescription(json[QStringLiteral("description")].toString());

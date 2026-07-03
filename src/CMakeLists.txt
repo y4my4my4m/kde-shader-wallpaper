@@ -10,7 +10,6 @@ set(PLUGIN_OUTPUT_DIR "${PACKAGE_UI_DIR}/shaderwallpaper")
 set(SHADER_WALLPAPER_SOURCES
     # Core
     core/shaderengine.cpp
-    core/shaderbuffer.cpp
     core/shadercompiler.cpp
     core/uniformmanager.cpp
     core/performancemonitor.cpp
@@ -40,7 +39,6 @@ set(SHADER_WALLPAPER_HEADERS
     # Core
     core/framebufferutils.h
     core/shaderengine.h
-    core/shaderbuffer.h
     core/shadercompiler.h
     core/uniformmanager.h
     core/performancemonitor.h

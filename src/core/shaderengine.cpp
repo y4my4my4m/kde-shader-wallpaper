@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 @y4my4my4m <y4my4m@protonmail.com>
 
 #include "shaderengine.h"
-#include "shadercompiler.h"
 #include "framebufferutils.h"
 #include "data/shaderlibrary.h"
 
@@ -110,8 +109,11 @@ ShaderEngine::ShaderEngine(QQuickItem *parent)
     setFlag(ItemHasContents, true);
     setMirrorVertically(true);
 
-    // Render timer for animation
+    // Render timer for animation. Must be PreciseTimer: the default coarse
+    // type has ±5% slack, enough to make frame pacing visibly uneven at low
+    // FPS caps.
     m_renderTimer = new QTimer(this);
+    m_renderTimer->setTimerType(Qt::PreciseTimer);
     connect(m_renderTimer, &QTimer::timeout, this, &ShaderEngine::handleTimeout);
 
     // FPS measurement timer
@@ -120,7 +122,6 @@ ShaderEngine::ShaderEngine(QQuickItem *parent)
     connect(m_fpsTimer, &QTimer::timeout, this, &ShaderEngine::updateFps);
     m_fpsTimer->start();
 
-    m_gateClock.start();
     m_frameTimer.start();
 
     // Track the QQuickWindow we end up parented to so we can pause rendering
@@ -144,31 +145,14 @@ QQuickFramebufferObject::Renderer *ShaderEngine::createRenderer() const
     return new ShaderEngineRenderer();
 }
 
-void ShaderEngine::requestUpdate()
-{
-    if (!m_running) return;
-
-    // Real FPS gate (legacy #85): coalesce update() requests so we never ask
-    // the scene graph for frames faster than targetFps, regardless of how
-    // often the QTimer fires or input callbacks fire. m_gateClock is free-
-    // running and never restarted, so the diff below is always monotonically
-    // non-negative.
-    const qint64 nowMs = m_gateClock.isValid()
-        ? m_gateClock.nsecsElapsed() / 1'000'000
-        : 0;
-    const qint64 minIntervalMs = m_targetFps > 0 ? (1000 / m_targetFps) : 0;
-    if (m_lastUpdateRequestMs > 0 && minIntervalMs > 0
-        && (nowMs - m_lastUpdateRequestMs) < minIntervalMs - 1) {
-        return;
-    }
-    m_lastUpdateRequestMs = nowMs;
-
-    update();  // Time advances inside accumulateFrame(), driven by synchronize().
-}
-
 void ShaderEngine::handleTimeout()
 {
-    requestUpdate();
+    // This timer is the ONLY thing that calls update() while running —
+    // that's what enforces targetFps. Input callbacks (mouse, window,
+    // audio) must only write engine state; synchronize() picks it up on
+    // the next timer-paced frame.
+    if (!m_running) return;
+    update();  // Time advances inside accumulateFrame(), driven by synchronize().
 }
 
 void ShaderEngine::accumulateFrame()
@@ -206,7 +190,8 @@ void ShaderEngine::accumulateFrame()
         dt = 0.0;
     }
 
-    m_iTime += dt * m_speed;
+    m_lastTimeDelta = dt * m_speed;
+    m_iTime += m_lastTimeDelta;
     m_iFrame++;
     m_frameCount++;
 
@@ -384,7 +369,6 @@ void ShaderEngine::setRunning(bool running)
         // Reset the per-frame timer so the first frame after un-pausing
         // contributes a small delta rather than the full pause duration.
         m_frameTimer.restart();
-        m_lastUpdateRequestMs = 0;
         m_renderTimer->start(1000 / m_targetFps);
     } else {
         m_renderTimer->stop();
@@ -424,16 +408,22 @@ void ShaderEngine::setBufferSimulationMaxHeight(int height)
     update();
 }
 
+void ShaderEngine::setHdrPipeline(bool enabled)
+{
+    if (m_hdrPipeline == enabled) return;
+    m_hdrPipeline = enabled;
+    Q_EMIT hdrPipelineChanged();
+    // Renderer drops & recreates its FBOs with the new format on the next
+    // synchronize().
+    update();
+}
+
 void ShaderEngine::setTargetFps(int fps)
 {
     if (m_targetFps == fps) return;
     // Allow up to 360Hz for high-refresh monitors (legacy #43 - the UI
     // slider goes to 360 too). Below 1 makes no sense.
     m_targetFps = qBound(1, fps, 360);
-
-    // Reset the gate so the next handleTimeout fire isn't pre-throttled
-    // against the old interval.
-    m_lastUpdateRequestMs = 0;
 
     if (m_running) {
         m_renderTimer->setInterval(1000 / m_targetFps);
@@ -447,7 +437,7 @@ void ShaderEngine::setIMouse(const QVector4D &mouse)
     if (m_iMouse == mouse) return;
     m_iMouse = mouse;
     Q_EMIT iMouseChanged();
-    requestUpdate();
+    // No update(): mouse polls must not push the render rate past targetFps.
 }
 
 void ShaderEngine::setMouseEnabled(bool enabled)
@@ -462,7 +452,6 @@ void ShaderEngine::setMouseBias(qreal bias)
     if (qFuzzyCompare(m_mouseBias, bias)) return;
     m_mouseBias = bias;
     Q_EMIT mouseBiasChanged();
-    requestUpdate();
 }
 
 void ShaderEngine::setIChannel0(const QUrl &url)
@@ -686,8 +675,8 @@ void ShaderEngine::setAudioData(const QVariantList &data)
 {
     m_audioData = data;
     Q_EMIT audioDataChanged();
-    // Audio FFT is sampled on the next gated render; do not call update()
-    // here or PipeWire's 60 Hz feed bypasses targetFps (legacy #85).
+    // Audio FFT is sampled on the next timer-paced render; do not call
+    // update() here or PipeWire's feed bypasses targetFps.
 }
 
 void ShaderEngine::setWindowsEnabled(bool enabled)
@@ -762,14 +751,13 @@ void ShaderEngine::setWindowRects(const QVariantList &rects)
     // the extrapolation timer from this snapshot).
     ++m_windowRectsSequence;
     Q_EMIT windowRectsChanged();
-    requestUpdate();
+    // No update(): window polls must not push the render rate past targetFps.
 }
 
 void ShaderEngine::setWindowVelocities(const QVariantList &velocities)
 {
     m_windowVelocities = velocities;
     Q_EMIT windowVelocitiesChanged();
-    requestUpdate();
 }
 
 void ShaderEngine::resetTime()
@@ -1355,8 +1343,8 @@ void ShaderEngineRenderer::updateUniforms(QOpenGLShaderProgram *program, bool fo
     
     program->setUniformValue("iResolution", resolution);
     program->setUniformValue("iTime", (float)m_iTime);
-    program->setUniformValue("iTimeDelta", 1.0f / 60.0f); // TODO: actual delta
-    program->setUniformValue("iFrameRate", 60.0f); // TODO: actual framerate
+    program->setUniformValue("iTimeDelta", (float)m_iTimeDelta);
+    program->setUniformValue("iFrameRate", m_iFrameRate);
     program->setUniformValue("iFrame", m_iFrame);
     program->setUniformValue("iMouse", mouse);
     program->setUniformValue("iMousePrev", mousePrev);
@@ -1678,20 +1666,19 @@ void ShaderEngineRenderer::renderMainPass()
         bindChannelInput(i, m_imageChannelMapping[i], -1);  // -1 = no current buffer (image pass)
     }
     
-    // Update audio texture data if enabled
+    // Update audio texture data if enabled. bind() binds on the currently
+    // active texture unit, so the audio channel's unit must be selected
+    // first or the upload clobbers whichever unit the channel loop left
+    // active.
     if (m_audioEnabled && m_audioTexture) {
-        // Upload audio data to texture if we have data
-        if (!m_audioData.empty()) {
-            m_audioTexture->bind();
-            // Expected format: 512x2 RGBA (4096 floats total)
-            // Row 0: waveform, Row 1: FFT spectrum
-            if (m_audioData.size() >= 512 * 2 * 4) {
-                f->glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 2, 
-                                   GL_RGBA, GL_FLOAT, m_audioData.data());
-            }
-        }
         f->glActiveTexture(GL_TEXTURE0 + m_audioChannel);
         m_audioTexture->bind();
+        // Expected format: 512x2 RGBA (4096 floats total)
+        // Row 0: FFT spectrum, Row 1: waveform
+        if (m_audioData.size() >= 512 * 2 * 4) {
+            f->glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 2,
+                               GL_RGBA, GL_FLOAT, m_audioData.data());
+        }
     }
     
     f->glBindVertexArray(m_vao);
@@ -1755,13 +1742,19 @@ void ShaderEngineRenderer::ensureLowResFBO()
     QSize target(qMax(64, (int)std::lround(m_fboSize.width() * m_resolutionScale)),
                  qMax(64, (int)std::lround(m_fboSize.height() * m_resolutionScale)));
 
-    if (m_lowResFBO && m_lowResFBO->size() == target) {
-        return;  // Already the right size.
+    if (m_lowResFBO && m_lowResFBO->size() == target
+        && m_lowResFBOIsHdr == (m_hdrPipeline && m_hdrSupported)) {
+        return;  // Already the right size and format.
     }
 
     m_lowResSize = target;
+    // Match the output FBO's format — glBlitFramebuffer requires the read
+    // and draw buffers to both be fixed-point or both be float.
+    const bool wantHdr = m_hdrPipeline && m_hdrSupported;
     m_lowResFBO = std::make_unique<QOpenGLFramebufferObject>(
-        target, QOpenGLFramebufferObject::NoAttachment, GL_TEXTURE_2D, GL_RGBA8);
+        target, QOpenGLFramebufferObject::NoAttachment, GL_TEXTURE_2D,
+        wantHdr ? GL_RGBA16F : GL_RGBA8);
+    m_lowResFBOIsHdr = wantHdr;
 
     if (!m_lowResFBO->isValid()) {
         qWarning() << "ShaderEngine: low-res FBO allocation failed for size" << target;
@@ -1813,6 +1806,22 @@ QOpenGLFramebufferObject *ShaderEngineRenderer::createFramebufferObject(const QS
     format.setAttachment(QOpenGLFramebufferObject::NoAttachment);
     format.setSamples(0);
 
+    if (m_hdrPipeline && m_hdrSupported) {
+        // HDR pipeline: keep shader output in float16 all the way to the
+        // scene graph. On fallback, m_hdrSupported also keeps the low-res
+        // FBO in a blit-compatible fixed-point format.
+        format.setInternalTextureFormat(GL_RGBA16F);
+        auto *fbo = new QOpenGLFramebufferObject(size, format);
+        if (fbo->isValid()) {
+            qInfo() << "ShaderEngine: HDR pipeline active — GL_RGBA16F output FBO" << size;
+            return fbo;
+        }
+        qWarning() << "ShaderEngine: GL_RGBA16F output FBO unsupported, falling back to RGBA8";
+        delete fbo;
+        m_hdrSupported = false;
+        format.setInternalTextureFormat(GL_RGBA8);
+    }
+
     return new QOpenGLFramebufferObject(size, format);
 }
 
@@ -1835,6 +1844,10 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
 
     // Pull updated timing/mouse uniforms into the renderer copy.
     m_iTime = engine->iTime();
+    m_iTimeDelta = engine->lastTimeDelta();
+    m_iFrameRate = engine->currentFps() > 0
+        ? float(engine->currentFps())
+        : float(engine->targetFps());
     m_iFrame = engine->iFrame();
     // Snapshot mouse: previous render-frame position vs current.
     // mouseBias scales pixel-space coords (Shadertoy iMouse convention).
@@ -1855,6 +1868,13 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
     m_resolutionScale = engine->resolutionScale();
     m_bufferSimulationMaxHeight = engine->bufferSimulationMaxHeight();
     m_bufferSimSize = computeBufferSimSize();
+
+    // HDR pipeline toggle: the output FBO's format is fixed at creation, so
+    // force Qt to call createFramebufferObject() again with the new format.
+    if (m_hdrPipeline != engine->hdrPipeline()) {
+        m_hdrPipeline = engine->hdrPipeline();
+        invalidateFramebufferObject();
+    }
     
     // Calculate iDate
     QDateTime now = QDateTime::currentDateTime();

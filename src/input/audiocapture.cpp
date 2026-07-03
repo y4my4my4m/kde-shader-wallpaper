@@ -488,30 +488,37 @@ void AudioCapture::updateBands()
     int bassEnd = 3;
     int midEnd = 47;
     int trebleEnd = qMin(233, TEXTURE_WIDTH);
-    
+
     float bassSum = 0, midSum = 0, trebleSum = 0;
-    
-    for (int i = 0; i < bassEnd; i++) {
-        bassSum += m_smoothedSpectrum[i];
+
+    {
+        // m_waveform is written from the PipeWire thread. Emit outside the
+        // lock so a slot calling back into getWaveform()/getTextureData()
+        // can't deadlock on the non-recursive mutex.
+        QMutexLocker locker(&m_dataMutex);
+
+        for (int i = 0; i < bassEnd; i++) {
+            bassSum += m_smoothedSpectrum[i];
+        }
+        for (int i = bassEnd; i < midEnd; i++) {
+            midSum += m_smoothedSpectrum[i];
+        }
+        for (int i = midEnd; i < trebleEnd; i++) {
+            trebleSum += m_smoothedSpectrum[i];
+        }
+
+        m_bass = bassSum / bassEnd;
+        m_mid = midSum / (midEnd - bassEnd);
+        m_treble = trebleSum / (trebleEnd - midEnd);
+
+        // Calculate overall volume
+        float sum = 0;
+        for (const auto &s : m_waveform) {
+            sum += std::abs(s);
+        }
+        m_volume = m_waveform.isEmpty() ? 0.0f : sum / m_waveform.size();
     }
-    for (int i = bassEnd; i < midEnd; i++) {
-        midSum += m_smoothedSpectrum[i];
-    }
-    for (int i = midEnd; i < trebleEnd; i++) {
-        trebleSum += m_smoothedSpectrum[i];
-    }
-    
-    m_bass = bassSum / bassEnd;
-    m_mid = midSum / (midEnd - bassEnd);
-    m_treble = trebleSum / (trebleEnd - midEnd);
-    
-    // Calculate overall volume
-    float sum = 0;
-    for (const auto &s : m_waveform) {
-        sum += std::abs(s);
-    }
-    m_volume = sum / m_waveform.size();
-    
+
     Q_EMIT volumeChanged();
     Q_EMIT bassChanged();
     Q_EMIT midChanged();

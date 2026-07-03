@@ -292,6 +292,9 @@ bool CursorTracker::initX11()
     m_xcbConnection = xcb_connect(nullptr, &screenNum);
     
     if (xcb_connection_has_error(m_xcbConnection)) {
+        // xcb_connect never returns null — even the error case must be
+        // released with xcb_disconnect or the connection object leaks.
+        xcb_disconnect(m_xcbConnection);
         m_xcbConnection = nullptr;
         return false;
     }

@@ -319,6 +319,10 @@
       <label>How far the wallpaper pans (1.0 = one full screen width per desktop).</label>
       <default>0.25</default>
     </entry>
+    <entry name="experimentalHdrPipeline" type="Bool">
+      <label>Render the shader through GL_RGBA16F float framebuffers instead of 8-bit. Preserves values above 1.0 and reduces banding inside the plugin's pipeline; true HDR display output additionally requires the Plasma shell itself to composite in HDR.</label>
+      <default>false</default>
+    </entry>
 
     <!-- Shader Tweaks (experimental) -->
     <entry name="enableShaderTweaks" type="Bool">
