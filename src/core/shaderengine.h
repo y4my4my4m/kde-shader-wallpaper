@@ -615,6 +615,9 @@ private:
     QVector3D m_iResolution;
     qreal m_iTime = 0.0;
     qreal m_iTimeDelta = 1.0 / 60.0;
+    // Buffer-pass substeps this frame (set in render()): holds simulations
+    // at a fixed ~240 steps/sec independent of render FPS.
+    int m_bufferSubSteps = 1;
     float m_iFrameRate = 60.0f;
     int m_iFrame = 0;
     QVector4D m_iMouse;

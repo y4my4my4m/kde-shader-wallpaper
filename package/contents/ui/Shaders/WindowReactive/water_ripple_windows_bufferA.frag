@@ -8,15 +8,13 @@
 // Adaptations:
 //
 //   1) TIMESTEP. The original advances delta=1.0 once per frame, so its
-//      wave speed and decay are proportional to FPS. Here the sim must be
-//      FPS-independent (only shaderSpeed may change the feel). A single
-//      pass can't substep (neighbours come from last frame's texture), so
-//      the frame's time budget D = iTimeDelta * REF_FPS is split between
-//      the stencil SPACING h and the step size: lattice wave speed goes
-//      as h * sqrt(delta) per step, so h = ceil(D), delta = (D/h)^2 keeps
-//      pixels-per-second constant at any FPS. Low FPS trades fine ripple
-//      detail (coarser stencil) for correct speed, never the other way.
-//      Damping is applied as exp(-rate * D): time-based, FPS-independent,
+//      wave speed and decay are proportional to FPS. Here the ENGINE makes
+//      it FPS-independent: buffer passes are substepped to a fixed ~240
+//      steps/sec (ShaderEngineRenderer::render()), each pass receiving its
+//      share of the frame's time in iTimeDelta, so delta stays ~1.0 and
+//      the original's proven-stable 1-pixel scheme runs unchanged at any
+//      render FPS. Only shaderSpeed changes the feel (it scales the step
+//      count upstream). Damping is applied as exp(-rate * D): time-based,
 //      tuned to settle like https://www.shadertoy.com/view/dldSR7
 //      (0.98/frame at 60fps) rather than the original's near-immortal
 //      0.998/step.
@@ -73,30 +71,30 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
         return;
     }
 
-    // Frame time budget in reference steps. Split into stencil spacing h
-    // and per-step delta so wave speed (px/sec) is the same at any FPS:
-    // lattice speed ~ h * sqrt(delta) per step, so keep h*sqrt(delta) = D
-    // with delta capped at 1.0 (the original's proven-stable step — 1.4
-    // is where instability begins under continuous forcing).
-    float D = clamp(iTimeDelta * REF_FPS, 0.05, 8.0);
-    int   h = int(ceil(D));
-    float delta = clamp((D / float(h)) * (D / float(h)), 0.05, 1.0);
+    // The engine substeps buffer passes (fixed ~240 steps/sec at any render
+    // FPS) and hands each pass its share of the frame's time in iTimeDelta,
+    // so D stays ~1 and the original's proven-stable 1-pixel scheme runs
+    // unchanged. Do NOT widen the stencil to catch up on time instead: a
+    // spacing of h>1 texels splits the grid into h^2 sub-lattices that
+    // texelFetch never couples, and the decoupled checkerboard mode grows
+    // under forcing until it swallows the screen.
+    float D = clamp(iTimeDelta * REF_FPS, 0.05, 1.0);
+    float delta = D;
 
     ivec2 ifc = ivec2(fragCoord);
     float pressure = texelFetch(iChannel0, ifc, 0).x;
     float pVel     = texelFetch(iChannel0, ifc, 0).y;
 
-    float p_right = texelFetch(iChannel0, ifc + ivec2( h,  0), 0).x;
-    float p_left  = texelFetch(iChannel0, ifc + ivec2(-h,  0), 0).x;
-    float p_up    = texelFetch(iChannel0, ifc + ivec2( 0,  h), 0).x;
-    float p_down  = texelFetch(iChannel0, ifc + ivec2( 0, -h), 0).x;
+    float p_right = texelFetch(iChannel0, ifc + ivec2( 1,  0), 0).x;
+    float p_left  = texelFetch(iChannel0, ifc + ivec2(-1,  0), 0).x;
+    float p_up    = texelFetch(iChannel0, ifc + ivec2( 0,  1), 0).x;
+    float p_down  = texelFetch(iChannel0, ifc + ivec2( 0, -1), 0).x;
 
     // Change values so the screen boundaries aren't fixed.
-    float fh = float(h);
-    if (fragCoord.x < fh)                      p_left  = p_right;
-    if (fragCoord.x > iResolution.x - fh)      p_right = p_left;
-    if (fragCoord.y < fh)                      p_down  = p_up;
-    if (fragCoord.y > iResolution.y - fh)      p_up    = p_down;
+    if (fragCoord.x < 1.0)                     p_left  = p_right;
+    if (fragCoord.x > iResolution.x - 1.0)     p_right = p_left;
+    if (fragCoord.y < 1.0)                     p_down  = p_up;
+    if (fragCoord.y > iResolution.y - 1.0)     p_up    = p_down;
 
     // Apply horizontal wave function
     pVel += delta * (-2.0 * pressure + p_right + p_left) / 4.0;
@@ -184,8 +182,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     pressure = clamp(pressure, -2.0, 2.0);
     pVel     = clamp(pVel, -2.0, 2.0);
 
-    // x = pressure. y = pressure velocity. Z and W = X and Y gradient —
-    // divided by the stencil spacing so refraction/glint magnitude in the
-    // image pass doesn't change with FPS.
-    fragColor = vec4(pressure, pVel, (p_right - p_left) / (2.0 * fh), (p_up - p_down) / (2.0 * fh));
+    // x = pressure. y = pressure velocity. Z and W = X and Y gradient.
+    fragColor = vec4(pressure, pVel, (p_right - p_left) / 2.0, (p_up - p_down) / 2.0);
 }
