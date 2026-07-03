@@ -222,7 +222,11 @@ void WindowTracker::pollWindows()
     m_windowsDirty = false;
 
     qint64 now = QDateTime::currentMSecsSinceEpoch();
-    qreal dt = (now - m_lastPollTime) / 1000.0;
+    // Clamp dt: after an idle stretch (skipped polls) the previous
+    // timestamp is old, and dividing the first movement delta by minutes
+    // yields ~zero velocity — which suppresses the wake for one poll.
+    // Movement that woke us happened within the last couple of intervals.
+    qreal dt = qMin((now - m_lastPollTime) / 1000.0, m_pollInterval * 2 / 1000.0);
     m_lastPollTime = now;
 
     const QVector<WindowInfo> before = m_windows;
