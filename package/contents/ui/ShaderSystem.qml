@@ -228,6 +228,12 @@ Item {
         speed: wallpaperConfig ? (wallpaperConfig.shaderSpeed || 1.0) : 1.0
         targetFps: wallpaperConfig ? (wallpaperConfig.targetFps || 60) : 60
         resolutionScale: wallpaperConfig ? (wallpaperConfig.resolutionScale || 1.0) : 1.0
+        // 0 = buffer sims run at full native resolution (default). Users on
+        // weak GPUs can cap the sim grid height here; the image pass
+        // upsamples linearly.
+        bufferSimulationMaxHeight: wallpaperConfig
+            ? (wallpaperConfig.bufferSimulationMaxHeight || 0)
+            : 0
         hdrPipeline: (wallpaperConfig && wallpaperConfig.experimentalHdrPipeline) || false
 
         // Mouse input — disabled in lock-screen mode.

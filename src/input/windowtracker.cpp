@@ -2,6 +2,7 @@
 #include <QDateTime>
 #include <QGuiApplication>
 #include <QScreen>
+#include <QSocketNotifier>
 #include <QDebug>
 
 #ifdef HAVE_XCB
@@ -36,17 +37,64 @@ void WindowTracker::initXcb()
         m_dbusAvailable = false;
         return;
     }
-    
+
     m_xcbConnection = conn;
     m_dbusAvailable = true;
-    qDebug() << "WindowTracker: Connected to X server via XCB";
+
+    // Subscribe to top-level window activity on the root window. This is
+    // notification only (SubstructureNotify, not Redirect) so it can't
+    // conflict with the window manager. It lets pollWindows() skip all X
+    // traffic while the desktop is idle instead of re-querying every
+    // window 20 times a second.
+    const xcb_setup_t *setup = xcb_get_setup(conn);
+    xcb_screen_t *screen = xcb_setup_roots_iterator(setup).data;
+    if (screen) {
+        const uint32_t mask = XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY;
+        xcb_change_window_attributes(conn, screen->root, XCB_CW_EVENT_MASK, &mask);
+        xcb_flush(conn);
+    }
+
+    m_xcbNotifier = new QSocketNotifier(xcb_get_file_descriptor(conn),
+                                        QSocketNotifier::Read, this);
+    connect(m_xcbNotifier, &QSocketNotifier::activated,
+            this, [this]() { processXcbEvents(); });
+
+    qDebug() << "WindowTracker: Connected to X server via XCB (event-driven)";
 }
 
 void WindowTracker::cleanupXcb()
 {
+    delete m_xcbNotifier;
+    m_xcbNotifier = nullptr;
     if (m_xcbConnection) {
         xcb_disconnect(static_cast<xcb_connection_t*>(m_xcbConnection));
         m_xcbConnection = nullptr;
+    }
+}
+
+void WindowTracker::processXcbEvents()
+{
+    xcb_connection_t *conn = static_cast<xcb_connection_t*>(m_xcbConnection);
+    if (!conn) return;
+    if (xcb_connection_has_error(conn)) {
+        if (m_xcbNotifier) m_xcbNotifier->setEnabled(false);
+        return;
+    }
+
+    while (xcb_generic_event_t *ev = xcb_poll_for_event(conn)) {
+        switch (ev->response_type & ~0x80) {
+        case XCB_CREATE_NOTIFY:
+        case XCB_DESTROY_NOTIFY:
+        case XCB_MAP_NOTIFY:
+        case XCB_UNMAP_NOTIFY:
+        case XCB_REPARENT_NOTIFY:
+        case XCB_CONFIGURE_NOTIFY:
+            m_windowsDirty = true;
+            break;
+        default:
+            break;
+        }
+        free(ev);
     }
 }
 #endif
@@ -152,6 +200,7 @@ QRectF WindowTracker::mapRectToShader(const QRectF &globalTopLeft) const
 void WindowTracker::refresh()
 {
     if (m_enabled) {
+        m_windowsDirty = true; // forced refresh bypasses the idle skip
         pollWindows();
     }
 }
@@ -159,15 +208,56 @@ void WindowTracker::refresh()
 void WindowTracker::pollWindows()
 {
     if (!m_dbusAvailable) return;
-    
+
+#ifdef HAVE_XCB
+    // Replies read during the last poll may have queued events on the
+    // connection without waking the socket notifier — drain them here too.
+    processXcbEvents();
+#endif
+
+    // Idle desktop: X reported no window activity and no tracked window
+    // still carries velocity that needs decaying. Skip entirely — zero
+    // round trips, zero allocations.
+    if (!m_windowsDirty && !m_hadMotion) return;
+    m_windowsDirty = false;
+
     qint64 now = QDateTime::currentMSecsSinceEpoch();
     qreal dt = (now - m_lastPollTime) / 1000.0;
     m_lastPollTime = now;
-    
+
+    const QVector<WindowInfo> before = m_windows;
     updateWindowList();
     calculateVelocities(dt);
-    
-    Q_EMIT windowsChanged();
+
+    // Only notify when something actually changed. The QML side rebuilds
+    // three QVariantLists on every windowsChanged; emitting at the full
+    // poll rate on an idle desktop churns JS garbage for nothing (and the
+    // resulting GC pauses read as periodic frame hitches).
+    bool changed = before.size() != m_windows.size();
+    if (!changed) {
+        for (int i = 0; i < m_windows.size(); ++i) {
+            if (before[i].id != m_windows[i].id
+                || before[i].geometry != m_windows[i].geometry
+                || before[i].velocity != m_windows[i].velocity) {
+                changed = true;
+                break;
+            }
+        }
+    }
+    // Keep polling (without X events) until all velocities have decayed
+    // to zero, so a window that just stopped still gets its final
+    // zero-velocity update.
+    m_hadMotion = false;
+    for (const auto &win : m_windows) {
+        if (!win.velocity.isNull()) {
+            m_hadMotion = true;
+            break;
+        }
+    }
+
+    if (changed) {
+        Q_EMIT windowsChanged();
+    }
 }
 
 void WindowTracker::updateWindowList()
@@ -176,42 +266,16 @@ void WindowTracker::updateWindowList()
 }
 
 #ifdef HAVE_XCB
-// Helper to get window geometry
-static bool getWindowGeometry(xcb_connection_t *conn, xcb_window_t win, QRectF &outGeom)
+// Check an already-fetched atom-list property for a specific atom.
+static bool propertyHasAtom(xcb_get_property_reply_t *reply, xcb_atom_t target)
 {
-    xcb_get_geometry_cookie_t cookie = xcb_get_geometry(conn, win);
-    xcb_get_geometry_reply_t *geom = xcb_get_geometry_reply(conn, cookie, nullptr);
-    
-    if (!geom) return false;
-    
-    // Get absolute coordinates by translating to root
-    xcb_translate_coordinates_cookie_t transCookie = 
-        xcb_translate_coordinates(conn, win, geom->root, 0, 0);
-    xcb_translate_coordinates_reply_t *trans = 
-        xcb_translate_coordinates_reply(conn, transCookie, nullptr);
-    
-    if (trans) {
-        outGeom = QRectF(trans->dst_x, trans->dst_y, geom->width, geom->height);
-        free(trans);
-    } else {
-        outGeom = QRectF(geom->x, geom->y, geom->width, geom->height);
+    if (!reply || reply->type != XCB_ATOM_ATOM) return false;
+    int count = xcb_get_property_value_length(reply) / sizeof(xcb_atom_t);
+    xcb_atom_t *atoms = (xcb_atom_t *)xcb_get_property_value(reply);
+    for (int i = 0; i < count; i++) {
+        if (atoms[i] == target) return true;
     }
-    
-    free(geom);
-    return true;
-}
-
-// Helper to check if window is viewable (mapped and visible)
-static bool isWindowVisible(xcb_connection_t *conn, xcb_window_t win)
-{
-    xcb_get_window_attributes_cookie_t cookie = xcb_get_window_attributes(conn, win);
-    xcb_get_window_attributes_reply_t *attrs = xcb_get_window_attributes_reply(conn, cookie, nullptr);
-    
-    if (!attrs) return false;
-    
-    bool visible = (attrs->map_state == XCB_MAP_STATE_VIEWABLE);
-    free(attrs);
-    return visible;
+    return false;
 }
 
 // Helper to get atom (cached for performance)
@@ -255,72 +319,39 @@ static QVector<xcb_window_t> getWindowList(xcb_connection_t *conn, xcb_window_t 
     return windows;
 }
 
-// Check if window has a specific state atom
-static bool hasState(xcb_connection_t *conn, xcb_window_t win, xcb_atom_t stateAtom, xcb_atom_t targetState)
+// Check window type from an already-fetched _NET_WM_WINDOW_TYPE property.
+static bool isNormalWindowType(xcb_get_property_reply_t *reply,
+                               xcb_atom_t typeNormal, xcb_atom_t typeDialog,
+                               xcb_atom_t typeDesktop, xcb_atom_t typeDock, xcb_atom_t typeSplash,
+                               xcb_atom_t typeToolbar, xcb_atom_t typeMenu, xcb_atom_t typeUtility)
 {
-    xcb_get_property_cookie_t cookie = xcb_get_property(conn, 0, win, stateAtom, 
-                                                         XCB_ATOM_ATOM, 0, 32);
-    xcb_get_property_reply_t *reply = xcb_get_property_reply(conn, cookie, nullptr);
-    
-    if (!reply) return false;
-    
-    bool found = false;
-    if (reply->type == XCB_ATOM_ATOM) {
-        int count = xcb_get_property_value_length(reply) / sizeof(xcb_atom_t);
-        xcb_atom_t *atoms = (xcb_atom_t *)xcb_get_property_value(reply);
-        
-        for (int i = 0; i < count; i++) {
-            if (atoms[i] == targetState) {
-                found = true;
-                break;
-            }
-        }
-    }
-    
-    free(reply);
-    return found;
-}
-
-// Check window type - returns true if it's a normal/dialog window we should track
-static bool isNormalWindow(xcb_connection_t *conn, xcb_window_t win, 
-                           xcb_atom_t typeAtom, xcb_atom_t typeNormal, xcb_atom_t typeDialog,
-                           xcb_atom_t typeDesktop, xcb_atom_t typeDock, xcb_atom_t typeSplash,
-                           xcb_atom_t typeToolbar, xcb_atom_t typeMenu, xcb_atom_t typeUtility)
-{
-    xcb_get_property_cookie_t cookie = xcb_get_property(conn, 0, win, typeAtom, 
-                                                         XCB_ATOM_ATOM, 0, 32);
-    xcb_get_property_reply_t *reply = xcb_get_property_reply(conn, cookie, nullptr);
-    
     if (!reply || reply->type != XCB_ATOM_ATOM) {
-        if (reply) free(reply);
         // No type set - assume it's a normal window
         return true;
     }
-    
+
     int count = xcb_get_property_value_length(reply) / sizeof(xcb_atom_t);
     xcb_atom_t *atoms = (xcb_atom_t *)xcb_get_property_value(reply);
-    
+
     bool isNormal = false;
     bool isExcluded = false;
-    
+
     for (int i = 0; i < count; i++) {
         // Check for types we want
         if (atoms[i] == typeNormal || atoms[i] == typeDialog) {
             isNormal = true;
         }
         // Check for types we DON'T want
-        if (atoms[i] == typeDesktop || atoms[i] == typeDock || 
+        if (atoms[i] == typeDesktop || atoms[i] == typeDock ||
             atoms[i] == typeSplash || atoms[i] == typeToolbar ||
             atoms[i] == typeMenu || atoms[i] == typeUtility) {
             isExcluded = true;
         }
     }
-    
-    free(reply);
-    
+
     // Exclude if it has an excluded type
     if (isExcluded) return false;
-    
+
     // Include if it's marked as normal/dialog, or has no specific type
     return isNormal || count == 0;
 }
@@ -378,48 +409,86 @@ void WindowTracker::updateWindowListFromSystem()
     xcb_atom_t typeUtility = getAtom(conn, "_NET_WM_WINDOW_TYPE_UTILITY", atomCache);
     
     QVector<xcb_window_t> windowList = getWindowList(conn, root, netClientList);
-    
-    for (xcb_window_t win : windowList) {
-        if (m_windows.size() >= MAX_WINDOWS) break;
-        
-        // Check if window is visible
-        if (!isWindowVisible(conn, win)) continue;
-        
-        // Check if window is hidden (minimized)
-        if (hasState(conn, win, netWmState, netWmStateHidden)) continue;
-        
-        // Check window type - skip desktop, dock, splash, toolbar, menu, utility
-        if (!isNormalWindow(conn, win, netWmWindowType, typeNormal, typeDialog,
-                           typeDesktop, typeDock, typeSplash, typeToolbar, typeMenu, typeUtility)) {
-            continue;
-        }
-        
-        // Get window geometry
-        QRectF geom;
-        if (!getWindowGeometry(conn, win, geom)) continue;
-        
-        // Skip tiny/thin windows (toolbars, popups, panels, etc.)
-        if (geom.width() < 150 || geom.height() < 150) continue;
 
-        // Skip windows that cover the whole screen (likely desktop/wallpaper).
-        if (geom.width() >= screenWidth * 0.95 && geom.height() >= screenHeight * 0.95) {
-            continue;
+    // XCB is asynchronous by design: issue every request for every window
+    // up front, flush once, then collect the replies. Total stall on the
+    // GUI thread is ~one X round trip instead of five per window (the old
+    // serial version blocked up to ~1000 times/second with 10 windows).
+    struct Probe {
+        xcb_window_t win;
+        xcb_get_window_attributes_cookie_t attr;
+        xcb_get_property_cookie_t state;
+        xcb_get_property_cookie_t type;
+        xcb_get_geometry_cookie_t geom;
+        xcb_translate_coordinates_cookie_t trans;
+    };
+    QVector<Probe> probes;
+    probes.reserve(windowList.size());
+    for (xcb_window_t win : windowList) {
+        Probe p;
+        p.win   = win;
+        p.attr  = xcb_get_window_attributes(conn, win);
+        p.state = xcb_get_property(conn, 0, win, netWmState, XCB_ATOM_ATOM, 0, 32);
+        p.type  = xcb_get_property(conn, 0, win, netWmWindowType, XCB_ATOM_ATOM, 0, 32);
+        p.geom  = xcb_get_geometry(conn, win);
+        p.trans = xcb_translate_coordinates(conn, win, root, 0, 0);
+        probes.append(p);
+    }
+    xcb_flush(conn);
+
+    for (const Probe &p : probes) {
+        // Always collect every reply, even for windows we end up skipping —
+        // unconsumed cookies leak in xcb.
+        xcb_get_window_attributes_reply_t *attrs =
+            xcb_get_window_attributes_reply(conn, p.attr, nullptr);
+        xcb_get_property_reply_t *stateReply =
+            xcb_get_property_reply(conn, p.state, nullptr);
+        xcb_get_property_reply_t *typeReply =
+            xcb_get_property_reply(conn, p.type, nullptr);
+        xcb_get_geometry_reply_t *geomReply =
+            xcb_get_geometry_reply(conn, p.geom, nullptr);
+        xcb_translate_coordinates_reply_t *transReply =
+            xcb_translate_coordinates_reply(conn, p.trans, nullptr);
+
+        bool keep = m_windows.size() < MAX_WINDOWS
+            // Visible (mapped)?
+            && attrs && attrs->map_state == XCB_MAP_STATE_VIEWABLE
+            // Not minimized?
+            && !propertyHasAtom(stateReply, netWmStateHidden)
+            // Skip desktop, dock, splash, toolbar, menu, utility.
+            && isNormalWindowType(typeReply, typeNormal, typeDialog,
+                                  typeDesktop, typeDock, typeSplash,
+                                  typeToolbar, typeMenu, typeUtility)
+            && geomReply;
+
+        if (keep) {
+            QRectF geom = transReply
+                ? QRectF(transReply->dst_x, transReply->dst_y,
+                         geomReply->width, geomReply->height)
+                : QRectF(geomReply->x, geomReply->y,
+                         geomReply->width, geomReply->height);
+
+            // Skip tiny/thin windows (toolbars, popups, panels, etc.) and
+            // windows that cover the whole screen (likely desktop/wallpaper).
+            if (geom.width() >= 150 && geom.height() >= 150
+                && !(geom.width() >= screenWidth * 0.95
+                     && geom.height() >= screenHeight * 0.95)) {
+                // Store global desktop geometry (Y=0 at top); map to shader
+                // space in windowRectsFlat().
+                WindowInfo info;
+                info.id = QString::number(p.win, 16);
+                info.geometry = geom;
+                info.prevGeometry = prevPositions.value(info.id, geom);
+                info.isVisible = true;
+                m_windows.append(info);
+            }
         }
-        
-        // Store global desktop geometry (Y=0 at top); map to shader space in windowRectsFlat().
-        WindowInfo info;
-        info.id = QString::number(win, 16);
-        info.geometry = geom;
-        
-        // Restore previous geometry for velocity
-        if (prevPositions.contains(info.id)) {
-            info.prevGeometry = prevPositions[info.id];
-        } else {
-            info.prevGeometry = info.geometry;
-        }
-        
-        info.isVisible = true;
-        m_windows.append(info);
+
+        free(attrs);
+        free(stateReply);
+        free(typeReply);
+        free(geomReply);
+        free(transReply);
     }
     
     // Only log when the set of tracked windows actually changes — the
