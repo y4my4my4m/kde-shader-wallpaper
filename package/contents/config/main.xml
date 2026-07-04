@@ -254,6 +254,11 @@
       <default>-1</default>
     </entry>
 
+    <entry name="bufferSimulationMaxHeight" type="Int">
+      <label>Cap buffer-pass FBO height in pixels (0 = full resolution). Lowering this makes buffer sims coarser/cheaper; the image pass upsamples linearly.</label>
+      <default>0</default>
+    </entry>
+
     <!-- Debug -->
     <entry name="showFps" type="Bool">
       <label>Show FPS counter</label>

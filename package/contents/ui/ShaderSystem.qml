@@ -76,7 +76,11 @@ Item {
     WindowTracker {
         id: windowTracker
         enabled: shaderSystem._allowWindows && shaderEngine.running
-        pollInterval: 33  // 30Hz polling
+        // Poll at the shader's render cadence: a fixed 30Hz reads as visible
+        // steps when dragging windows on high-refresh displays. Idle polls
+        // are nearly free (the tracker skips all X traffic without events),
+        // so the only cost is during actual window motion.
+        pollInterval: Math.max(4, Math.round(1000 / (shaderEngine.targetFps || 60)))
         referenceWidth: shaderEngine.width
         referenceHeight: shaderEngine.height
         devicePixelRatio: cursorTracker.devicePixelRatio
@@ -228,6 +232,12 @@ Item {
         speed: wallpaperConfig ? (wallpaperConfig.shaderSpeed || 1.0) : 1.0
         targetFps: wallpaperConfig ? (wallpaperConfig.targetFps || 60) : 60
         resolutionScale: wallpaperConfig ? (wallpaperConfig.resolutionScale || 1.0) : 1.0
+        // 0 = buffer sims run at full native resolution (default). Users on
+        // weak GPUs can cap the sim grid height here; the image pass
+        // upsamples linearly.
+        bufferSimulationMaxHeight: wallpaperConfig
+            ? (wallpaperConfig.bufferSimulationMaxHeight || 0)
+            : 0
         hdrPipeline: (wallpaperConfig && wallpaperConfig.experimentalHdrPipeline) || false
 
         // Mouse input — disabled in lock-screen mode.

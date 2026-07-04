@@ -319,6 +319,9 @@ private:
     static ShaderLibrary* s_instance;
 
     QString m_libraryPath;
+    // Symlink-resolved m_libraryPath — lets toRelativeShaderPath() collapse
+    // paths that hosts hand us in canonical form (symlinked dev installs).
+    QString m_canonicalLibraryRoot;
     QString m_greeterPath;  // /usr/share/.../contents/ui or empty
     QList<std::shared_ptr<ShaderMetadata>> m_shaders;
     QMap<QString, std::shared_ptr<ShaderMetadata>> m_shaderMap; // By ID

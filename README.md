@@ -94,12 +94,19 @@ sudo dnf install cmake extra-cmake-modules gcc-c++ \
 <summary><strong>openSUSE Tumbleweed</strong></summary>
 
 ```bash
-sudo zypper install cmake extra-cmake-modules gcc-c++ \
+sudo zypper install cmake kf6-extra-cmake-modules gcc-c++ \
     qt6-base-devel qt6-declarative-devel qt6-multimedia-devel \
     libplasma6-devel kf6-kconfig-devel kf6-kcoreaddons-devel \
     kf6-ki18n-devel kf6-kpackage-devel \
     pipewire-devel libxcb-devel
+
+# Optional — Wayland cursor tracking and runtime shader compilation:
+sudo zypper install wayland-devel wayland-protocols-devel shaderc-devel
 ```
+
+> Note: openSUSE names the Plasma 6 library package `libplasma6-devel`
+> (it provides the `Plasma` and `PlasmaQuick` CMake configs), not
+> `libplasma-devel` as on Fedora/Debian.
 </details>
 
 ### Uninstall

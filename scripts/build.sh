@@ -56,11 +56,19 @@ check_dependencies() {
         missing+=("pkg-config")
     fi
     
-    # Check for Qt6
+    # Check for Qt6 modules (all required by CMakeLists.txt)
     if ! pkg-config --exists Qt6Core 2>/dev/null; then
         missing+=("qt6-base")
     fi
-    
+
+    if ! pkg-config --exists Qt6Qml 2>/dev/null; then
+        missing+=("qt6-declarative")
+    fi
+
+    if ! pkg-config --exists Qt6Multimedia 2>/dev/null; then
+        missing+=("qt6-multimedia")
+    fi
+
     if [ ${#missing[@]} -ne 0 ]; then
         print_error "Missing dependencies: ${missing[*]}"
         echo ""
@@ -68,15 +76,23 @@ check_dependencies() {
         echo ""
         echo "  Arch/Manjaro:"
         echo "    sudo pacman -S cmake extra-cmake-modules qt6-base qt6-declarative \\"
-        echo "        libplasma pipewire libpipewire"
+        echo "        qt6-multimedia libplasma pipewire libpipewire"
         echo ""
         echo "  Ubuntu/Debian (24.04+):"
         echo "    sudo apt install cmake extra-cmake-modules qt6-base-dev \\"
-        echo "        qt6-declarative-dev libplasma-dev libpipewire-0.3-dev libxcb1-dev"
+        echo "        qt6-declarative-dev qt6-multimedia-dev libplasma-dev \\"
+        echo "        libpipewire-0.3-dev libxcb1-dev"
         echo ""
         echo "  Fedora:"
         echo "    sudo dnf install cmake extra-cmake-modules qt6-qtbase-devel \\"
-        echo "        qt6-qtdeclarative-devel libplasma-devel pipewire-devel"
+        echo "        qt6-qtdeclarative-devel qt6-qtmultimedia-devel libplasma-devel \\"
+        echo "        pipewire-devel"
+        echo ""
+        echo "  openSUSE Tumbleweed:"
+        echo "    sudo zypper install cmake kf6-extra-cmake-modules gcc-c++ \\"
+        echo "        qt6-base-devel qt6-declarative-devel qt6-multimedia-devel \\"
+        echo "        libplasma6-devel kf6-kconfig-devel kf6-ki18n-devel \\"
+        echo "        kf6-kpackage-devel pipewire-devel libxcb-devel"
         echo ""
         exit 1
     fi

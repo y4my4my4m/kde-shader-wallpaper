@@ -5,6 +5,8 @@
 #include "framebufferutils.h"
 #include "data/shaderlibrary.h"
 
+#include <algorithm>
+
 #include <QFile>
 #include <QFileSystemWatcher>
 #include <QDateTime>
@@ -1343,7 +1345,13 @@ void ShaderEngineRenderer::updateUniforms(QOpenGLShaderProgram *program, bool fo
     
     program->setUniformValue("iResolution", resolution);
     program->setUniformValue("iTime", (float)m_iTime);
-    program->setUniformValue("iTimeDelta", (float)m_iTimeDelta);
+    // Buffer passes are substepped (see render()): each of the N passes this
+    // frame advances 1/N of the frame's delta, so simulations step at a
+    // fixed rate regardless of render FPS.
+    const float passDelta = forBufferPass
+        ? (float)(m_iTimeDelta / qMax(1, m_bufferSubSteps))
+        : (float)m_iTimeDelta;
+    program->setUniformValue("iTimeDelta", passDelta);
     program->setUniformValue("iFrameRate", m_iFrameRate);
     program->setUniformValue("iFrame", m_iFrame);
     program->setUniformValue("iMouse", mouse);
@@ -1705,10 +1713,26 @@ void ShaderEngineRenderer::render()
     f->glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     f->glClear(GL_COLOR_BUFFER_BIT);
 
-    // Render buffer passes in order
-    for (int i = 0; i < 4; i++) {
-        if (m_useBuffers[i]) {
-            renderBuffer(i);
+    // Render buffer passes in order, substepped: pixel-lattice simulations
+    // (wave PDEs etc.) advance a fixed amount per PASS, so running one pass
+    // per frame ties simulation speed to render FPS. Instead run enough
+    // passes per frame to hold a fixed ~240 steps/sec, each fed 1/N of the
+    // frame's iTimeDelta (see updateUniforms). At a 240fps cap this is one
+    // pass per frame — identical to the old behavior; at 60fps it's four.
+    // shaderSpeed scales m_iTimeDelta upstream, so it scales the step count
+    // too, keeping each step inside the sim's stability budget.
+    m_bufferSubSteps = std::clamp((int)std::lround(m_iTimeDelta * 240.0), 1, 8);
+    for (int s = 0; s < m_bufferSubSteps; s++) {
+        for (int i = 0; i < 4; i++) {
+            if (m_useBuffers[i]) {
+                renderBuffer(i);
+            }
+        }
+        // Each substep must read the previous substep's output, not the
+        // previous frame's. The end-of-frame toggle below completes the
+        // final swap.
+        if (s + 1 < m_bufferSubSteps) {
+            m_pingPong = !m_pingPong;
         }
     }
 

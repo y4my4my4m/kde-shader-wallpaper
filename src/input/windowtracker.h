@@ -5,6 +5,8 @@
 #include <QRect>
 #include <QVariantList>
 
+class QSocketNotifier;
+
 /**
  * @brief Tracks window geometries from KWin for shader interaction
  * 
@@ -110,10 +112,18 @@ private:
     qreal m_screenVirtualX = 0.0;
     qreal m_screenVirtualY = 0.0;
     
+    // Event-driven gating: X notifies us (SubstructureNotify on the root)
+    // when any top-level window is created/destroyed/moved/mapped. Between
+    // notifications an idle desktop costs zero X round trips.
+    bool m_windowsDirty = true;   // X reported window activity since last poll
+    bool m_hadMotion = false;     // a tracked window still has nonzero velocity
+
 #ifdef HAVE_XCB
     void *m_xcbConnection = nullptr;  // xcb_connection_t*
+    QSocketNotifier *m_xcbNotifier = nullptr;
     void initXcb();
     void cleanupXcb();
+    void processXcbEvents();
 #endif
 };
 
