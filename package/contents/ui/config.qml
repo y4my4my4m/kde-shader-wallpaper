@@ -64,14 +64,20 @@ Kirigami.FormLayout {
             currentIndex: cfg_selectedShaderIndex
             displayText: currentIndex === -1 ? "Custom Shader" : currentText.replace("_", " ").charAt(0).toUpperCase() + currentText.replace("_", " ").slice(1)
 
-            onCurrentTextChanged: {
-                cfg_selectedShaderIndex = currentIndex;
-                if (cfg_selectedShaderIndex === -1) {
+            // onActivated fires only on an actual user selection.
+            // onCurrentTextChanged also fired while the async
+            // FolderListModel loaded and on every dialog re-open, rewriting
+            // selectedShaderPath from a stale currentIndex and overwriting
+            // the user's choice (github issue: "cannot change shader after
+            // clicking update").
+            onActivated: (index) => {
+                cfg_selectedShaderIndex = index;
+                if (index === -1) {
                     return;
                 }
 
-                wallpaper.configuration.selectedShaderPath = Qt.resolvedUrl("./Shaders6/" + model.get(currentIndex, "fileName"));
-                cfg_selectedShaderPath = Qt.resolvedUrl("./Shaders6/" + model.get(currentIndex, "fileName"));
+                cfg_selectedShaderPath = Qt.resolvedUrl("./Shaders6/" + model.get(index, "fileName"));
+                wallpaper.configuration.selectedShaderPath = cfg_selectedShaderPath;
             }
         }
 
