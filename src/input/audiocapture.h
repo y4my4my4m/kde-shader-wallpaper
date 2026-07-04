@@ -57,7 +57,10 @@ public:
     static constexpr int TEXTURE_WIDTH = 512;
     static constexpr int TEXTURE_HEIGHT = 2;
     static constexpr int DEFAULT_SAMPLE_RATE = 44100;
-    static constexpr int DEFAULT_FFT_SIZE = 512;
+    // 2048 matches WebAudio's analyser as Shadertoy uses it: 1024 bins, of
+    // which the texture row shows the first 512 one-per-texel (issue #120 —
+    // a 512-point FFT only has 256 bins and smears them across the row).
+    static constexpr int DEFAULT_FFT_SIZE = 2048;
 
     explicit AudioCapture(QObject *parent = nullptr);
     ~AudioCapture() override;
@@ -143,6 +146,10 @@ private:
     qreal m_sensitivity = 40.0;
     
     // Audio buffers
+    // Ring of the newest m_fftSize samples, written by the PipeWire thread;
+    // m_ringPos is the write cursor (= oldest sample).
+    QVector<float> m_sampleRing;
+    int m_ringPos = 0;
     QVector<float> m_waveform;
     QVector<float> m_spectrum;
     QVector<float> m_smoothedSpectrum;

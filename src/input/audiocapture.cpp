@@ -72,6 +72,8 @@ AudioCapture::AudioCapture(QObject *parent)
     m_smoothedSpectrum.resize(TEXTURE_WIDTH);
     m_fftInput.resize(m_fftSize);
     m_fftOutput.resize(m_fftSize);
+    m_sampleRing.resize(m_fftSize);
+    m_sampleRing.fill(0.0f);
     
     // Timer for processing audio data on main thread (prevents Qt threading issues)
     // Fixed audio update rate - independent of shader FPS for consistent audio response
@@ -129,7 +131,13 @@ void AudioCapture::setFftSize(int size)
     
     m_fftInput.resize(m_fftSize);
     m_fftOutput.resize(m_fftSize);
-    
+    {
+        QMutexLocker locker(&m_dataMutex);
+        m_sampleRing.resize(m_fftSize);
+        m_sampleRing.fill(0.0f);
+        m_ringPos = 0;
+    }
+
     Q_EMIT fftSizeChanged();
 }
 
@@ -409,85 +417,66 @@ void AudioCapture::processAudioData()
 void AudioCapture::computeFFT()
 {
     QMutexLocker locker(&m_dataMutex);
-    
-    // Copy waveform to FFT input with windowing (Hann window)
-    for (int i = 0; i < m_fftSize && i < m_waveform.size(); i++) {
-        float window = 0.5f * (1.0f - std::cos(2.0f * M_PI * i / (m_fftSize - 1)));
-        m_fftInput[i] = m_waveform[i] * window;
+
+    const int n = m_fftSize;
+
+    // Unroll the sample ring (oldest -> newest) into the FFT input with a
+    // Hann window. The ring always holds the newest n samples, so no
+    // zero-padding — a short PipeWire quantum no longer truncates the
+    // analysis window (issue #120).
+    for (int i = 0; i < n; i++) {
+        const float s = m_sampleRing[(m_ringPos + i) % n];
+        const float window = 0.5f * (1.0f - std::cos(2.0f * M_PI * i / (n - 1)));
+        m_fftInput[i] = s * window;
     }
-    
-    // Zero padding if needed
-    for (int i = m_waveform.size(); i < m_fftSize; i++) {
-        m_fftInput[i] = 0.0f;
-    }
-    
-    // Perform FFT
-    m_fftOutput.fill(0.0f);
-    fft(m_fftInput.data(), m_fftOutput.data(), m_fftSize);
-    
-    // Calculate magnitude spectrum with logarithmic frequency mapping
-    // This maps linear FFT bins to logarithmic frequency scale (like Shadertoy)
-    int numBins = m_fftSize / 2;
-    
+
+    // Waveform row / volume use the newest TEXTURE_WIDTH raw samples.
     for (int i = 0; i < TEXTURE_WIDTH; i++) {
-        // Logarithmic frequency mapping: map texture x [0-512] to frequency bins logarithmically
-        // This gives more resolution to bass frequencies (where most musical content is)
-        float t = static_cast<float>(i) / TEXTURE_WIDTH;
-        
-        // Use exponential mapping: low frequencies get more bins
-        // Map t from [0,1] to frequency bin index using log scale
-        float minFreq = 1.0f;  // Start from bin 1 (skip DC)
-        float maxFreq = static_cast<float>(numBins - 1);
-        float freqBin = minFreq * std::pow(maxFreq / minFreq, t);
-        
-        // Interpolate between adjacent bins for smoother result
-        int bin0 = static_cast<int>(freqBin);
-        int bin1 = qMin(bin0 + 1, numBins - 1);
-        float frac = freqBin - bin0;
-        
-        // Get magnitudes for both bins
-        float re0 = m_fftInput[bin0];
-        float im0 = m_fftOutput[bin0];
-        float mag0 = std::sqrt(re0 * re0 + im0 * im0);
-        
-        float re1 = m_fftInput[bin1];
-        float im1 = m_fftOutput[bin1];
-        float mag1 = std::sqrt(re1 * re1 + im1 * im1);
-        
-        // Interpolate magnitude
-        float magnitude = mag0 + frac * (mag1 - mag0);
-        
-        // Normalize by FFT size and apply scaling
-        // Use a gentler normalization similar to Shadertoy:
-        // - Scale magnitude to reasonable range (typically 0-1)
-        // - Apply soft compression to prevent clipping while preserving dynamics
-        magnitude /= (m_fftSize * 0.5f);  // Basic normalization
-        
-        // Apply soft compression (tanh-like curve) to keep values in 0-1 range
-        // while preserving dynamics - this is more like how Shadertoy handles it
-        // The multiplier controls sensitivity (lower = less sensitive)
-        float normalized = magnitude * static_cast<float>(m_sensitivity);
-        normalized = normalized / (1.0f + normalized);  // Soft clamp using 1/(1+x) curve
-        
+        m_waveform[i] = m_sampleRing[(m_ringPos + n - TEXTURE_WIDTH + i) % n];
+    }
+
+    m_fftOutput.fill(0.0f);
+    fft(m_fftInput.data(), m_fftOutput.data(), n);
+
+    // Shadertoy layout: texel i = FFT bin i, LINEAR in frequency — the
+    // first TEXTURE_WIDTH of n/2 bins (0..~11kHz at 2048/44.1kHz), exactly
+    // like the WebAudio analyser feeding Shadertoy's 512x2 audio texture.
+    // Amplitude follows getByteFrequencyData: dB in [-100,-30] -> [0,1].
+    const int numBins = n / 2;
+    // Hann coherent gain is 0.5 and the single-sided spectrum doubles, so
+    // a full-scale sine lands at amplitude ~1.0 with 4/n.
+    const float ampNorm = 4.0f / n;
+    // m_sensitivity acts as linear pre-gain; the default 40 is unity so
+    // existing configs keep their level.
+    const float gain = static_cast<float>(m_sensitivity) / 40.0f;
+
+    for (int i = 0; i < TEXTURE_WIDTH; i++) {
+        const int bin = qMin(i, numBins - 1);
+        const float re = m_fftInput[bin];
+        const float im = m_fftOutput[bin];
+        const float amp = std::sqrt(re * re + im * im) * ampNorm * gain;
+
+        const float db = 20.0f * std::log10(qMax(amp, 1e-6f));
+        const float normalized = qBound(0.0f, (db + 100.0f) / 70.0f, 1.0f);
+
         m_spectrum[i] = normalized;
-        
-        // Apply smoothing (temporal smoothing for visual appeal)
-        m_smoothedSpectrum[i] = m_smoothing * m_smoothedSpectrum[i] + 
+
+        // Temporal smoothing (WebAudio's smoothingTimeConstant analogue).
+        m_smoothedSpectrum[i] = m_smoothing * m_smoothedSpectrum[i] +
                                  (1.0f - m_smoothing) * normalized;
     }
 }
 
 void AudioCapture::updateBands()
 {
-    // Calculate frequency bands (bass, mid, treble)
-    // Assuming 44100 Hz sample rate:
-    // Bass: 20-250 Hz -> bins 0-2
-    // Mid: 250-4000 Hz -> bins 2-46
-    // Treble: 4000-20000 Hz -> bins 46-232
-    
-    int bassEnd = 3;
-    int midEnd = 47;
-    int trebleEnd = qMin(233, TEXTURE_WIDTH);
+    // Calculate frequency bands (bass, mid, treble). Spectrum texels map
+    // 1:1 to FFT bins (linear): bin width = sampleRate / fftSize
+    // (~21.5 Hz at 44100/2048).
+    // Bass: 20-250 Hz, Mid: 250-4000 Hz, Treble: 4000 Hz .. top of row.
+    const float binHz = static_cast<float>(m_sampleRate) / m_fftSize;
+    const int bassEnd = qMax(1, static_cast<int>(250.0f / binHz));
+    const int midEnd = qMin(TEXTURE_WIDTH - 1, static_cast<int>(4000.0f / binHz));
+    const int trebleEnd = TEXTURE_WIDTH;
 
     float bassSum = 0, midSum = 0, trebleSum = 0;
 
@@ -544,11 +533,14 @@ void AudioCapture::onProcess(void *data)
     
     if (samples && numSamples > 0) {
         QMutexLocker locker(&self->m_dataMutex);
-        
-        // Copy samples to waveform buffer
-        int copyCount = qMin(numSamples, TEXTURE_WIDTH);
-        for (int i = 0; i < copyCount; i++) {
-            self->m_waveform[i] = samples[i];
+
+        // Append to the ring so the analysis window spans the newest
+        // m_fftSize samples across quanta, instead of overwriting the first
+        // TEXTURE_WIDTH samples every callback.
+        const int n = self->m_sampleRing.size();
+        for (int i = 0; i < numSamples; i++) {
+            self->m_sampleRing[self->m_ringPos] = samples[i];
+            self->m_ringPos = (self->m_ringPos + 1) % n;
         }
     }
     
