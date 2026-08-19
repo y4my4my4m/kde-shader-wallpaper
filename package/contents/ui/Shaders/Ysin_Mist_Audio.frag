@@ -117,13 +117,26 @@ void mainImage(out vec4 C, in vec2 U){
     float treb = (aTap(.45)+aTap(.65))*.5;
     // integrator state from buffer A: six phases wrapped to 2pi (16F-safe),
     // advancing forward only, faster when the music is loud
-    vec4 sA = texture(iChannel1, vec2(.125, .5));
-    vec4 sB = texture(iChannel1, vec2(.375, .5));
+    vec4 sA = texture(iChannel1, vec2(1./12., .5));
+    vec4 sB = texture(iChannel1, vec2(3./12., .5));
     float Es = sB.b;
-    gDrive = texture(iChannel1, vec2(.625, .5)).y;   // smoothed braid drive
+    gDrive = texture(iChannel1, vec2(5./12., .5)).y;   // smoothed braid drive
     // percussion pulses: kick leads, snare/hats add a lighter tick
-    vec4 sD = texture(iChannel1, vec2(.875, .5));
+    vec4 sD = texture(iChannel1, vec2(7./12., .5));
+    vec4 sF = texture(iChannel1, vec2( 9./12., .5));   // band envelopes  lo/mid/hi
+    vec4 sM = texture(iChannel1, vec2(11./12., .5));   // their means; .w = drum pressure
+    // same expansion the Mix family measured as worth it: the raw deviation
+    // only ever used about a fifth of its range
+    vec4 bd = S(vec4(.30), vec4(.85), clamp((sF - sM)*2.6 + .38, 0., 1.));
+    float gateW = S(.03, .12, Es);
+    float lo = bd.x*gateW, md = bd.y*gateW, hi = bd.z*gateW;
+    float press = clamp(sM.w, 0., 1.);
     gPulse = clamp(sD.x + .55*sD.z, 0., 1.);
+    // The wave gets the pulse EXPANDED (x2.2, the Mix family's measured
+    // setting: the raw envelope reads .07-.16 between hits and ~.5 on strong
+    // ones, which is too small to see). Kept separate so the braid, which is
+    // not being changed here, keeps the response it already had.
+    float pulseW = clamp(gPulse * 2.2, 0., 1.);
 
     float angS = .35*sin(.03*t+2.);
     vec3 color = vec3(0.);
@@ -137,13 +150,29 @@ void mainImage(out vec4 C, in vec2 U){
     float env = S(1.5, .1, abs(p.x));
     // the wave group lives on integrated PHASES from buffer A: they only
     // ever advance, faster when the music is loud, settling in silence
-    float a1 = .42 + .26*sin(sA.y);
-    float a2 = .18*sin(sA.z + 2.);
-    float a3 = .11*sin(sA.w + 4.);
+    // Each harmonic's SIZE now follows the part of the spectrum it stands for
+    // (lows -> fundamental, mids -> second, highs -> third); the morph phase
+    // only decides how that size is spent, including its sign. Before this the
+    // shape cycled through its whole repertoire regardless of the music.
+    float a1 = (.26 + .34*lo) + .18*sin(sA.y)*(.35 + .65*lo);
+    float a2 = .18*sin(sA.z + 2.) * (.30 + .95*md);
+    float a3 = .11*sin(sA.w + 4.) * (.25 + 1.05*hi);
     float y = env*( a1*sin(k*p.x - sA.x)
                   + a2*sin(2.*k*p.x + sB.x)
                   + a3*sin(3.*k*p.x - sB.y + 1.) );
-    y = .82*tanh(y/.82);   // taller swing, soft-limited so the crest never leaves the screen
+    // How far the wave swings follows the drums: a busy passage opens it up, a
+    // drumless one keeps it low (.60 is its size with no percussion at all).
+    y *= .60 + .95*press;
+    // and a brief widening on each hit
+    y *= 1. + .20*pulseW;
+    // A QUARTER of the old swing, so the line runs inside the braid rather
+    // than arcing over it - the same scale the Mix family settled on.
+    y *= .25;
+    // The tremble, at HALF the Mix setting (.206 -> .103): here the flame is
+    // left as it was, so the wave does not have to hand the beat over to it.
+    // Not multiplied by env, so it runs the whole length of the line.
+    y += .103 * pulseW * sin(4.5*k*p.x - 7.0*t);
+    y = .82*tanh(y/.82);   // soft-limited so the crest never leaves the screen
     float d = abs(p.y - y);
     float w = (.75+.35*sin(.35*t - 2.)) * (.85+.40*sin(k*.8*p.x + .9*t));
     w = clamp(w, .25, 1.5);

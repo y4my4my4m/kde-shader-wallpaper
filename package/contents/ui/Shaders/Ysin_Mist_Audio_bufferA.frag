@@ -5,14 +5,20 @@
 //                            (.375,.5) travel2, travel3, smoothed E, raw E
 //                            (.625,.5) smoothed mids, braid DRIVE,
 //                                      the drive's slow mean and spread
-//                            (.875,.5) PERCUSSION: kick pulse + its reference,
+//                            (.583,.5) PERCUSSION: kick pulse + its reference,
 //                                      hat pulse + its reference
+//                            (.750,.5) low/mid/high band envelopes + the pulse
+//                            (.917,.5) their ~4 s means; .w = drum PRESSURE
+float aTap(float x){ return texture(iChannel0, vec2(x, .25)).r; }
+
 void mainImage(out vec4 C, in vec2 U)
 {
-    vec4 sA = texture(iChannel1, vec2(.125, .5));
-    vec4 sB = texture(iChannel1, vec2(.375, .5));
-    vec4 sC = texture(iChannel1, vec2(.625, .5));
-    vec4 sD = texture(iChannel1, vec2(.875, .5));
+    vec4 sA = texture(iChannel1, vec2(1./12., .5));
+    vec4 sB = texture(iChannel1, vec2(3./12., .5));
+    vec4 sC = texture(iChannel1, vec2(5./12., .5));
+    vec4 sD = texture(iChannel1, vec2(7./12., .5));
+    vec4 sF = texture(iChannel1, vec2(9./12., .5));    // band envelopes + pulse
+    vec4 sM = texture(iChannel1, vec2(11./12., .5));   // their slow means + drum pressure
 
     float E = 0.;
     for (int i = 0; i < 12; i++)
@@ -74,6 +80,23 @@ void mainImage(out vec4 C, in vec2 U)
     float kp = max(clamp((kb - kr - .015)*5., 0., 1.), sD.x*dec);
     float hp = max(clamp((hb - hr - .015)*5., 0., 1.), sD.z*dec);
 
+    // --- three bands for the MAIN wave's harmonics ---------------------------
+    // The wave's big swings used to be pure geometry: three morph phases that
+    // cycled through every shape whatever the music did. Bound now to the part
+    // of the spectrum each harmonic stands for - low, mid, high - through the
+    // same deviation-against-own-mean trick the braid uses, because the dB
+    // scale makes raw levels sit near the top and barely move.
+    float bLo = .25*( aTap(.0035) + aTap(.0065) + aTap(.0110) + aTap(.0180) );  //  39- 200 Hz
+    float bMd = .25*( aTap(.030)  + aTap(.055)  + aTap(.090)  + aTap(.140)  );  // 330-1540 Hz
+    float bHi = .25*( aTap(.22)   + aTap(.34)   + aTap(.50)   + aTap(.72)   );  // 2.4-7.9 kHz
+    // the expanded pulse rides in .w so its ~4 s mean below comes out as the
+    // drum PRESSURE, at no extra state cost
+    float pulseNow = clamp((kp + .55*hp) * 2.2, 0., 1.);
+    vec4 fNow = vec4(bLo, bMd, bHi, pulseNow);
+    vec4 aF   = mix(sF, fNow, mix(vec4(.12), vec4(.45), step(sF, fNow)));
+    bool  seedF = dot(sM, vec4(1.)) < 1e-4;
+    vec4 aM   = seedF ? aF : mix(sM, aF, clamp(dt/4., 0., 1.));
+
     float r  = (.35 + 5.0*Es) * dt * 3.;
     const float TAU = 6.2831853;
 
@@ -87,6 +110,7 @@ void mainImage(out vec4 C, in vec2 U)
     // third texel: level, SMOOTHED BRAID DRIVE, its slow mean, its spread
     vec4 Cst = vec4(Ms, Ds, Mm, Md);
     vec4 D   = vec4(kp, kr, hp, hr);
-    float fx = U.x / iResolution.x * 4.;
-    C = (fx < 1.) ? A : (fx < 2.) ? B : (fx < 3.) ? Cst : D;
+    float fx = U.x / iResolution.x * 6.;
+    C = (fx < 1.) ? A : (fx < 2.) ? B : (fx < 3.) ? Cst
+      : (fx < 4.) ? D : (fx < 5.) ? aF : aM;
 }
