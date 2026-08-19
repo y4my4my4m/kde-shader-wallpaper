@@ -583,7 +583,7 @@ private:
     }};
     
     // Audio texture
-    std::unique_ptr<QOpenGLTexture> m_audioTexture;
+    GLuint m_audioTexId = 0;   // raw GL: QOpenGLTexture's cached bind state desyncs against the raw glBindTexture calls used for buffer FBO textures
     std::vector<float> m_audioData;
     bool m_audioEnabled = false;
     int m_audioChannel = 0;
