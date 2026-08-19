@@ -61,12 +61,40 @@ float fnoise3(vec3 p){
     return mix(a.x, a.y, f.z);
 }
 
-float gMids = 0.;   // smoothed vocal band: set in mainImage, read by Line()
+// Braid drive from buffer A: the mids band's deviation from its own running
+// average, normalised by its own spread and smoothed to a swell (~0.2 s up,
+// ~0.5 s down). Set in mainImage, read by Line().
+//
+// It replaced the raw band LEVEL for one measured reason: the spectrum
+// texture is dB-mapped, a level therefore sits near the top on real music,
+// and the old factor (.40 + .45*level) moved between 0.81 and 0.82 - the
+// braid had, in practice, a constant size. This drive uses the full 0..1 on
+// any material, and it changes AMPLITUDE only; the shiver stays out of this
+// shader (that is what Ysin_Mist_Audio_Mix is for).
+float gDrive = 0.;
+
+// Percussion pulse from buffer A: onset envelopes of the kick and hat bands,
+// instant attack and ~0.18 s decay. It is the only fast term in this shader -
+// a flick on the beat, kept small on purpose, while gDrive above does the
+// slow swelling. Declared here because Line() reads it (a global used inside
+// a helper must be declared above that helper or the engine reports
+// "undefined variable" and retries the compile every frame).
+float gPulse = 0.;
+
+// Ceiling on how far a strand may travel from the axis: the screen is
+// uv.y in [-1,1] and the main wave stops at .82, so the braid must not
+// out-swing it. tanh bends only the peak, so the swelling stays visible.
+const float braidMax = .82;
 
 #define S smoothstep
 vec4 Line(vec2 uv, float speed, float height, vec3 col) {
-    // braid: swing up to the main wave's max amplitude, widest mid-screen
-    uv.y += (.25 + .75*S(1.6, 0., abs(uv.x))) * sin(iTime * speed + uv.x * height) * (.40 + .45*gMids);
+    // braid: swings widest mid-screen, and how wide is what the music decides
+    float mid = .25 + .75*S(1.6, 0., abs(uv.x));
+    float off = mid * sin(iTime * speed + uv.x * height) * (.18 + .80*gDrive);
+    // the drum flick: rides on top of the swell, inside the same limiter, so
+    // a loud beat can never push a strand off the screen
+    off += mid * .13 * gPulse * sin(iTime*(3.4*speed + 5.) + uv.x*(2.1*height));
+    uv.y += braidMax * tanh(off / braidMax);
     // junctions: early, gentle blur ramp + strong dissolve = subtle fade-out
     float blur = .008 + .12 * S(.75, 1.78, abs(uv.x));   // floor = anti-aliasing
     float melt = 1. - .75*S(1.15, 1.78, abs(uv.x));
@@ -83,18 +111,19 @@ void mainImage(out vec4 C, in vec2 U){
     float t=iTime;
 
     // pitch-black background; the shared axis still sways
-    // audio levels; all fall to 0 in silence / with capture off
-    float bass = (aTap(.02)+aTap(.05)+aTap(.08)+aTap(.12))*.25;
-    float mids = (aTap(.10)+aTap(.15)+aTap(.22)+aTap(.30))*.25;
+    // treble sparkle on the main wave's core; falls to 0 in silence / with
+    // capture off. Bass and mids are no longer read here - the braid takes
+    // its drive from buffer A, where it has a reference to compare against.
     float treb = (aTap(.45)+aTap(.65))*.5;
-    gMids = mids;
     // integrator state from buffer A: six phases wrapped to 2pi (16F-safe),
     // advancing forward only, faster when the music is loud
-    vec4 sA = texture(iChannel1, vec2(.17, .5));
-    vec4 sB = texture(iChannel1, vec2(.50, .5));
+    vec4 sA = texture(iChannel1, vec2(.125, .5));
+    vec4 sB = texture(iChannel1, vec2(.375, .5));
     float Es = sB.b;
-    float Ms = texture(iChannel1, vec2(.83, .5)).x;   // smoothed vocal band
-    gMids = Ms;
+    gDrive = texture(iChannel1, vec2(.625, .5)).y;   // smoothed braid drive
+    // percussion pulses: kick leads, snare/hats add a lighter tick
+    vec4 sD = texture(iChannel1, vec2(.875, .5));
+    gPulse = clamp(sD.x + .55*sD.z, 0., 1.);
 
     float angS = .35*sin(.03*t+2.);
     vec3 color = vec3(0.);
@@ -138,7 +167,7 @@ void mainImage(out vec4 C, in vec2 U){
     // Discoteq companion lines: original speeds AND original color sweep
     for (float i=0.; i<=5.; i+=1.){
         float ti = i/5.;
-        color += Line(p, 1.+ti, 4.+ti, vec3(.2+ti*.7, .2+ti*.4, .3)).rgb * (.25 + 1.5*gMids);
+        color += Line(p, 1.+ti, 4.+ti, vec3(.2+ti*.7, .2+ti*.4, .3)).rgb * (.22 + 1.5*gDrive + .30*gPulse);
     }
 
     C = vec4(color, 1.);
