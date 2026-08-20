@@ -1,4 +1,4 @@
-// Audio integrator for Ysin_Mist_Audio (16F-safe: stores PHASES wrapped to
+// Audio integrator for Ysin_Ember (16F-safe: stores PHASES wrapped to
 // 2pi, never a growing time value - half-float precision dies past ~6.0).
 // iChannel0 = audio FFT, iChannel1 = self (previous frame).
 // State texels (x quarters): (.125,.5) phases travel1, morph1/2/3
@@ -11,14 +11,29 @@
 //                            (.917,.5) their ~4 s means; .w = drum PRESSURE
 float aTap(float x){ return texture(iChannel0, vec2(x, .25)).r; }
 
+// mean of four taps spread across one region (the braid's six bands)
+float qband(float lo, float hi){
+    return .25*( aTap(mix(lo, hi, .125)) + aTap(mix(lo, hi, .375))
+               + aTap(mix(lo, hi, .625)) + aTap(mix(lo, hi, .875)) );
+}
+
 void mainImage(out vec4 C, in vec2 U)
 {
-    vec4 sA = texture(iChannel1, vec2(1./12., .5));
-    vec4 sB = texture(iChannel1, vec2(3./12., .5));
-    vec4 sC = texture(iChannel1, vec2(5./12., .5));
-    vec4 sD = texture(iChannel1, vec2(7./12., .5));
-    vec4 sF = texture(iChannel1, vec2(9./12., .5));    // band envelopes + pulse
-    vec4 sM = texture(iChannel1, vec2(11./12., .5));   // their slow means + drum pressure
+    vec4 sA = texture(iChannel1, vec2(1./28., .5));
+    vec4 sB = texture(iChannel1, vec2(3./28., .5));
+    vec4 sC = texture(iChannel1, vec2(5./28., .5));
+    vec4 sD = texture(iChannel1, vec2(7./28., .5));
+    vec4 sF = texture(iChannel1, vec2(9./28., .5));    // band envelopes + pulse
+    vec4 sM = texture(iChannel1, vec2(11./28., .5));   // their slow means + drum pressure
+    // --- the Wave_03 braid's state (added when the braid moved to regions) --
+    vec4 sR0 = texture(iChannel1, vec2(13./28., .5));   // region envelopes 0..3
+    vec4 sR1 = texture(iChannel1, vec2(15./28., .5));   // region envelopes 4,5
+    vec4 sN0 = texture(iChannel1, vec2(17./28., .5));   // their slow means 0..3
+    vec4 sN1 = texture(iChannel1, vec2(19./28., .5));   // their slow means 4,5
+    vec4 sG0 = texture(iChannel1, vec2(21./28., .5));   // smoothed drives 0..3
+    vec4 sG1 = texture(iChannel1, vec2(23./28., .5));   // smoothed drives 4,5
+    vec4 sP0 = texture(iChannel1, vec2(25./28., .5));   // braid phases 0..3
+    vec4 sP1 = texture(iChannel1, vec2(27./28., .5));   // braid phases 4,5
 
     float E = 0.;
     for (int i = 0; i < 12; i++)
@@ -97,8 +112,64 @@ void mainImage(out vec4 C, in vec2 U)
     bool  seedF = dot(sM, vec4(1.)) < 1e-4;
     vec4 aM   = seedF ? aF : mix(sM, aF, clamp(dt/4., 0., 1.));
 
+    // --- THE BRAID, rebuilt from Wave_03 -----------------------------------
+    // The braid used to run off a single mids drive (Cst.y, still computed
+    // above and still stored - the main wave's block is untouched) with a
+    // fast drum flick on top. Both are gone from the braid here: six regions,
+    // one per strand, and no beat term at all.
+    //
+    // Regions tile the spectrum edge to edge, centres 55/140/360/900/2300/
+    // 5800 Hz, half-width +-0.675 octave. x = frequency / 11025.
+    float q0 = qband(.0031, .0080);   //   34 -   88 Hz
+    float q1 = qband(.0080, .0203);   //   88 -  224 Hz
+    float q2 = qband(.0204, .0521);   //  225 -  575 Hz
+    float q3 = qband(.0511, .1304);   //  564 - 1437 Hz
+    float q4 = qband(.1306, .3332);   // 1440 - 3673 Hz
+    float q5 = qband(.3294, .8401);   // 3632 - 9263 Hz
+
+    // fast envelope, then a 4 s mean per region: each strand is judged against
+    // its OWN average, which is what lets a treble strand on a quartet move as
+    // much as a bass strand on techno. Absolute levels are useless here - the
+    // texture is dB-mapped and a level sits near the top, spanning about one
+    // percent. Seeded, or every region reads as far above average for the
+    // first seconds and the whole braid pins open.
+    vec4 g0 = vec4(q0, q1, q2, q3), g1 = vec4(q4, q5, 0., 1.);
+    vec4 aR0 = mix(sR0, g0, mix(vec4(.12), vec4(.45), step(sR0, g0)));
+    vec4 aR1 = mix(sR1, g1, mix(vec4(.12), vec4(.45), step(sR1, g1)));
+    float qm = clamp(dt/4., 0., 1.);
+    bool  seedQ = dot(sN0, vec4(1.)) + dot(sN1, vec4(1.)) < 1e-4;
+    vec4 aN0 = seedQ ? g0 : mix(sN0, g0, qm);
+    vec4 aN1 = seedQ ? g1 : mix(sN1, g1, qm);
+
+    // deviation -> EXPAND -> SMOOTH, in that order. The raw deviation uses
+    // about a fifth of its range, so the smoothstep nearly doubles the visible
+    // motion; expansion also multiplies frame-to-frame noise, so the smoothing
+    // after it is not optional. Asymmetric and slow on purpose - swells in
+    // ~0.2 s, settles in ~0.5 s, which is what makes a strand breathe rather
+    // than react.
+    vec4 rq0 = clamp((aR0 - aN0)*2.6 + .38, 0., 1.);
+    vec4 rq1 = clamp((aR1 - aN1)*2.6 + .38, 0., 1.);
+    vec4 eq0 = smoothstep(vec4(.30), vec4(.85), rq0);
+    vec4 eq1 = smoothstep(vec4(.30), vec4(.85), rq1);
+    vec4 aG0 = mix(sG0, eq0, mix(vec4(.035), vec4(.08), step(sG0, eq0)));
+    vec4 aG1 = mix(sG1, eq1, mix(vec4(.035), vec4(.08), step(sG1, eq1)));
+
     float r  = (.35 + 5.0*Es) * dt * 3.;
     const float TAU = 6.2831853;
+
+    // Travel on the music's clock, at Wave_03's rate: .109*r, a third of the
+    // pace that held the median at the original 1.0-2.0 rad/s. Measured, that
+    // is 0.084-0.134 screen units per second - one crossing every 27 to 43 s.
+    // Six separate wrapped phases, not one shared clock scaled six ways: this
+    // is an RGBA16F buffer, a shared clock must be wrapped, and a wrap shifts
+    // each strand by a different non-2pi amount.
+    float rb = .109 * r;
+    vec4 P0 = vec4( mod(sP0.x + 1.0*rb, TAU),
+                    mod(sP0.y + 1.2*rb, TAU),
+                    mod(sP0.z + 1.4*rb, TAU),
+                    mod(sP0.w + 1.6*rb, TAU) );
+    vec4 P1 = vec4( mod(sP1.x + 1.8*rb, TAU),
+                    mod(sP1.y + 2.0*rb, TAU), 0., 1. );
 
     vec4 A = vec4( mod(sA.x + 1.2*r, TAU),
                    mod(sA.y + .23*r, TAU),
@@ -110,7 +181,10 @@ void mainImage(out vec4 C, in vec2 U)
     // third texel: level, SMOOTHED BRAID DRIVE, its slow mean, its spread
     vec4 Cst = vec4(Ms, Ds, Mm, Md);
     vec4 D   = vec4(kp, kr, hp, hr);
-    float fx = U.x / iResolution.x * 6.;
+    float fx = U.x / iResolution.x * 14.;
     C = (fx < 1.) ? A : (fx < 2.) ? B : (fx < 3.) ? Cst
-      : (fx < 4.) ? D : (fx < 5.) ? aF : aM;
+      : (fx < 4.) ? D : (fx < 5.) ? aF : (fx < 6.) ? aM
+      : (fx < 7.) ? aR0 : (fx < 8.) ? aR1 : (fx < 9.) ? aN0
+      : (fx < 10.) ? aN1 : (fx < 11.) ? aG0 : (fx < 12.) ? aG1
+      : (fx < 13.) ? P0 : P1;
 }

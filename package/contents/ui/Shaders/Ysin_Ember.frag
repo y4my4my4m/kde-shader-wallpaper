@@ -1,10 +1,10 @@
-// Ysin_Mist_Audio - Ysin_Mist_03 coupled to the audio FFT (iChannel0)
+// Ysin_Ember - Ysin_Ember_NoAudio coupled to the audio FFT (iChannel0)
 #define A(v) mat2(cos(m.v+radians(vec4(0, -90, 90, 0))))  // rotate
 #define W(v) length(vec3(p.yz-v(p.x+vec2(0, pi_2)+t), 0))-lt  // wave
 //#define W(v) length(p-vec3(round(p.x*pi)/pi, v(t+p.x), v(t+pi_2+p.x)))-lt  // alt wave
 #define P(v) length(p-vec3(0, v(t), v(t+pi_2)))-pt  // point
 
-// Ysin_Mist_03 — Mist5 + Discoteq companion lines; amplitude morphs the shape, no zoom
+// Ysin_Ember_NoAudio — Mist5 + Discoteq companion lines; amplitude morphs the shape, no zoom
 // (mist ported from the blue rectangles shadertoy: fbm + ripple + reciprocal
 //  coloring; the flow frame rotates and meanders so directions keep changing)
 
@@ -69,16 +69,21 @@ float fnoise3(vec3 p){
 // texture is dB-mapped, a level therefore sits near the top on real music,
 // and the old factor (.40 + .45*level) moved between 0.81 and 0.82 - the
 // braid had, in practice, a constant size. This drive uses the full 0..1 on
-// any material, and it changes AMPLITUDE only; the shiver stays out of this
-// shader (that is what Ysin_Mist_Audio_Mix is for).
+// any material, and it changes AMPLITUDE only.
+//
+// RETIRED as the braid's driver. The braid now takes six regions and its own
+// phases from the buffer (the Wave_03 machinery, softened) - see Line() and
+// the strand loop. This value is still computed and stored, because it costs
+// nothing and the buffer layout stays comparable with the older versions, but
+// nothing reads it any more.
 float gDrive = 0.;
 
 // Percussion pulse from buffer A: onset envelopes of the kick and hat bands,
-// instant attack and ~0.18 s decay. It is the only fast term in this shader -
-// a flick on the beat, kept small on purpose, while gDrive above does the
-// slow swelling. Declared here because Line() reads it (a global used inside
-// a helper must be declared above that helper or the engine reports
-// "undefined variable" and retries the compile every frame).
+// instant attack and ~0.18 s decay. It reaches THE MAIN WAVE ONLY now - the
+// braid's copy of it (a per-strand flick at 3.4x the strand's own rate) was
+// removed when the braid moved to regions, which is the whole point of that
+// change: the beat still shapes the line, and the strands only breathe.
+// Declared up here because the wave block below reads it before it is set.
 float gPulse = 0.;
 
 // Ceiling on how far a strand may travel from the axis: the screen is
@@ -87,13 +92,23 @@ float gPulse = 0.;
 const float braidMax = .82;
 
 #define S smoothstep
-vec4 Line(vec2 uv, float speed, float height, vec3 col) {
+vec4 Line(vec2 uv, float height, vec3 col, float band, float amp, float ph) {
     // braid: swings widest mid-screen, and how wide is what the music decides
     float mid = .25 + .75*S(1.6, 0., abs(uv.x));
-    float off = mid * sin(iTime * speed + uv.x * height) * (.18 + .80*gDrive);
-    // the drum flick: rides on top of the swell, inside the same limiter, so
-    // a loud beat can never push a strand off the screen
-    off += mid * .13 * gPulse * sin(iTime*(3.4*speed + 5.) + uv.x*(2.1*height));
+    // Wave_03's braid, softened. Three differences from the version this
+    // replaced: the phase arrives from the buffer (music-driven travel, not
+    // iTime), the drive is THIS strand's own frequency region rather than one
+    // shared mids signal, and the drum flick that used to ride on top is gone
+    // entirely - the beat reaches the braid only through 'amp', as a ~4 s
+    // pressure average.
+    //
+    // (.13 + .55*band) against Wave_03's (.18 + .80*band): about 70% of the
+    // swing, and the ampG factor is applied on top, which the old braid here
+    // did not have at all. On ordinary material that works out near 200 px of
+    // strand travel where the old mids-driven braid reached about 420 - which
+    // is the "smaller, gentler" this was asked for, with the region behaviour
+    // kept intact.
+    float off = mid * sin(ph + uv.x * height) * (.13 + .55*band) * amp;
     uv.y += braidMax * tanh(off / braidMax);
     // junctions: early, gentle blur ramp + strong dissolve = subtle fade-out
     float blur = .008 + .12 * S(.75, 1.78, abs(uv.x));   // floor = anti-aliasing
@@ -117,14 +132,18 @@ void mainImage(out vec4 C, in vec2 U){
     float treb = (aTap(.45)+aTap(.65))*.5;
     // integrator state from buffer A: six phases wrapped to 2pi (16F-safe),
     // advancing forward only, faster when the music is loud
-    vec4 sA = texture(iChannel1, vec2(1./12., .5));
-    vec4 sB = texture(iChannel1, vec2(3./12., .5));
+    vec4 sA = texture(iChannel1, vec2(1./28., .5));
+    vec4 sB = texture(iChannel1, vec2(3./28., .5));
     float Es = sB.b;
-    gDrive = texture(iChannel1, vec2(5./12., .5)).y;   // smoothed braid drive
+    gDrive = texture(iChannel1, vec2(5./28., .5)).y;   // smoothed braid drive
     // percussion pulses: kick leads, snare/hats add a lighter tick
-    vec4 sD = texture(iChannel1, vec2(7./12., .5));
-    vec4 sF = texture(iChannel1, vec2( 9./12., .5));   // band envelopes  lo/mid/hi
-    vec4 sM = texture(iChannel1, vec2(11./12., .5));   // their means; .w = drum pressure
+    vec4 sD = texture(iChannel1, vec2(7./28., .5));
+    vec4 sF = texture(iChannel1, vec2( 9./28., .5));   // band envelopes  lo/mid/hi
+    vec4 sM = texture(iChannel1, vec2(11./28., .5));   // their means; .w = drum pressure
+    vec4 sG0 = texture(iChannel1, vec2(21./28., .5));  // braid drives, regions 0..3
+    vec4 sG1 = texture(iChannel1, vec2(23./28., .5));  // braid drives, regions 4,5
+    vec4 sP0 = texture(iChannel1, vec2(25./28., .5));  // braid phases 0..3
+    vec4 sP1 = texture(iChannel1, vec2(27./28., .5));  // braid phases 4,5
     // same expansion the Mix family measured as worth it: the raw deviation
     // only ever used about a fifth of its range
     vec4 bd = S(vec4(.30), vec4(.85), clamp((sF - sM)*2.6 + .38, 0., 1.));
@@ -132,6 +151,17 @@ void mainImage(out vec4 C, in vec2 U){
     float lo = bd.x*gateW, md = bd.y*gateW, hi = bd.z*gateW;
     float press = clamp(sM.w, 0., 1.);
     gPulse = clamp(sD.x + .55*sD.z, 0., 1.);
+    // --- the braid's own signals (Wave_03 machinery, softened) --------------
+    // Silence still stops it: the gate rides the full-band fill, so a quiet
+    // desktop leaves the strands at rest instead of chasing noise.
+    float bGate = S(.03, .12, Es);
+    vec4 bd0 = sG0 * bGate;
+    vec4 bd1 = sG1 * bGate;
+    // The braid as one body: breathing with the mix, then opened slowly by how
+    // present the drums are. sM.w is a ~4 s average, so this is a swell over
+    // seconds - the ONLY route the beat still has into the braid, now that the
+    // per-strand flick is gone.
+    float bAmp = (.45 + .55*Es) * (.85 + .30*clamp(sM.w, 0., 1.));
     // The wave gets the pulse EXPANDED (x2.2, the Mix family's measured
     // setting: the raw envelope reads .07-.16 between hits and ~.5 on strong
     // ones, which is too small to see). Kept separate so the braid, which is
@@ -196,7 +226,12 @@ void mainImage(out vec4 C, in vec2 U){
     // Discoteq companion lines: original speeds AND original color sweep
     for (float i=0.; i<=5.; i+=1.){
         float ti = i/5.;
-        color += Line(p, 1.+ti, 4.+ti, vec3(.2+ti*.7, .2+ti*.4, .3)).rgb * (.22 + 1.5*gDrive + .30*gPulse);
+        float b  = (i == 0.) ? bd0.x : (i == 1.) ? bd0.y : (i == 2.) ? bd0.z
+                 : (i == 3.) ? bd0.w : (i == 4.) ? bd1.x : bd1.y;
+        float ph = (i == 0.) ? sP0.x : (i == 1.) ? sP0.y : (i == 2.) ? sP0.z
+                 : (i == 3.) ? sP0.w : (i == 4.) ? sP1.x : sP1.y;
+        color += Line(p, 4.+ti, vec3(.2+ti*.7, .2+ti*.4, .3), b, bAmp, ph).rgb
+               * (.20 + 1.4*b);
     }
 
     C = vec4(color, 1.);

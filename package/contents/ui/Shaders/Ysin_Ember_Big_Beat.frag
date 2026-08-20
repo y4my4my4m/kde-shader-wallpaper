@@ -1,19 +1,122 @@
-// Ysin_Mist_Audio_Mix - the audio-reactive Ysin with the braid spread across
-// the spectrum: each of the six strands follows its own frequency band (low
-// to high, bass on the darkest strand), the whole braid breathes with the
-// mix, and the main wave answers the drums. The paired
-// Ysin_Mist_Audio_Mix_bufferA.frag holds the bands, their AGC and all the
-// per-frame state; the engine finds it BY NAME, so a copy must rename both.
+// Ysin_Ember_Big_Beat - _08 with every rate recomputed instead of guessed.
+// Same shapes, same audio work, same braid on the music; what changed is the
+// set of numbers that decide how fast things move and how they line up.
 //
-// Where it differs from Ysin_Mist_Audio: that one keeps a single mids-driven
-// braid and its original yellow flame; this one splits the braid six ways,
-// lets the flame answer the beat as well, and carries the attention wave that
-// walks activity along the strands.
+// Two yardsticks were used, because "smooth" and "choreographed" are not the
+// same question.
+//
+// FLUIDITY - angular velocity. Converting screen units to degrees for a 27"
+// 1440p panel at arm's length (46 deg of horizontal field, 13.0 deg per p.x
+// unit) turned the guesswork into arithmetic. _08 read like this:
+//
+//     wave fundamental   29.7 deg/s     braid strands   1.6-2.6 deg/s
+//     wave 2nd harmonic   8.7           braid shiver    9.1
+//     wave 3rd harmonic   4.1           flame sweep     7.1
+//
+// One element was racing at three times comfortable pursuit speed and 11-18x
+// everything around it. That is the whole of what made the scene feel busy.
+// _09 brings the wave to 11.6 deg/s and leaves the braid where it already was
+// (1.7-2.8), so the spread across the frame is 4-7x instead of 11-18x.
+//
+// CHOREOGRAPHY - a common grid. The measured tempo of the material this was
+// tuned on is 120.0 BPM (onset autocorrelation, r=0.69, peak at exactly
+// 0.500 s), so one bar is 2 s. Every period in the scene is now a power of
+// two of that bar at median loudness:
+//
+//     wave crossing        2 bars      attention sweep     8 bars
+//     morph phase 1        8 bars      attention lag       1 bar per strand
+//     morph phase 2       16 bars      flame sweep         4 bars
+//     morph phase 3       32 bars      drum ripple         1/2 bar
+//
+// Nothing tracks the beat - the flow follows loudness, not tempo - so this is
+// a NOMINAL lock, exact near 120 BPM and drifting either side of it. It still
+// does the work: the ratios between elements are simple, which is what reads
+// as deliberate rather than accidental. Real beat tracking would mean
+// estimating the period from the onset detector in the buffer; that is a
+// bigger change and is not attempted here.
+//
+// The last free-running traveller, the flame's sweep, moved onto the music
+// clock as well. Only the frame rotation (.03*t, one meander per ~105 bars)
+// and the braid's shiver are still on iTime, both on purpose.
+//
+// The two things that travel across the screen turn out to be driven by two
+// unrelated mechanisms, and they were never the same speed:
+//
+//   the MAIN WAVE flows on phases accumulated in the buffer at a rate the
+//   music set - 3.07 rad per unit of r on ordinary material, which worked out
+//   at 4.57 screen units per second, or one crossing every 0.78 s;
+//   the BRAID runs straight off iTime at a fixed rate, 1..2 rad/s against a
+//   spatial frequency of 4..5, i.e. 0.25-0.40 units/s - one crossing every
+//   9-14 s. Nothing about it ever depended on the audio.
+//
+// So the wave was travelling 11 to 18 times faster than the braid it sits in,
+// and only one of the two answered the music. _07 halves both: wave 2.28
+// units/s at the median (1.56 s per crossing), braid 0.125-0.20 (18-28 s).
+// The ratio between them is unchanged - halving both preserves it - so the
+// braid still drifts far more slowly than the wave; it is the absolute pace
+// that drops.
+//
+// The wave's music coupling is KEPT, halved rather than removed. It was
+// measured first: on a real track it gives a 1.50x spread in flow rate, and
+// the speed departs from its own 2 s average by more than 20% on 15% of
+// frames - a visible ebb and flow, so replacing it with a constant would have
+// cost something for nothing. The buffer's header carries the numbers and the
+// alternative tuning if the silence-to-music jump (8.8x) is the part that
+// grates rather than the pace.
+//
+// The braid's TREMBLE keeps its original frequency on purpose: it is a shiver,
+// not a drift, and halving it as well made the strands look sluggish rather
+// than calm. Same for the flame's sweep (.55*t) and the frame rotation
+// (.03*t), both untouched.
+//
+// Otherwise identical to _06: the flame bound to the low bass. Everything else is the Mix as it stands: six strands over six
+// bands, the braid breathing with the mix, the main wave answering the drums.
+// The paired Ysin_Ember_Big_Beat_bufferA.frag holds the bands, their AGC
+// and all the per-frame state; the engine finds it BY NAME, so a copy must
+// rename both.
+//
+// What _06 changes, and only this:
+//   * the buffer grows a tenth column carrying a detector for 35-78 Hz alone
+//     - the kick's fundamental and the sub under it, with the 100-200 Hz
+//     region (bass guitar, low toms) deliberately left out;
+//   * the flame's HEIGHT is that detector and nothing else. It rests at .55
+//     of the Mix's height and reaches 2.25 on an ordinary hit - 3.15 on a
+//     deep one, because the gain is weighted by the spectral tilt across the
+//     bass region (see 'deepness' in the buffer). A bass note does not
+//     brighten the fire, it grows it. Between hits the flame is not merely
+//     smaller: the turbulence bite in 'fire' is divided by the height, so a
+//     low flame also breaks into embers, and a hit fuses it into one tongue.
+//   * brightness stays on the full-kit pulse on purpose - snare and hats
+//     still tick, they just no longer lift the fire.
+// Every constant behind that detector was measured; the arithmetic is in the
+// buffer's header, the visible half in the TUNING block below.
+//
+// TRIED AND REJECTED: the two drivers swapped, i.e. the main line's tremble on
+// the bass and the flame on the whole kit. Two things came out of it, both
+// worth not repeating:
+//   * the kit pulse is far more material-dependent than this detector. On a
+//     loud, compressed track with a soft kick it fired 3.9 times a minute
+//     against the bass detector's 37.5, which left the flame frozen near its
+//     resting height; on a bass-heavy track it was fine (103/min). The bass
+//     detector normalises against its own deviation and has no such swing.
+//   * a driver tuned for the FLAME does not transfer to the tremble. With
+//     knee .40 and a .18 s decay the detector is below .05 on only 4% of
+//     frames - continuous, which is what the flame's height wants and exactly
+//     what a per-hit ripple must not have: the line turned into a permanently
+//     open sine. Sharpening it (knee .70, decay .09) fixed the line and would
+//     have made the flame twitch instead of breathe.
 //
 // ===========================================================================
 // TUNING - what to turn, and what it does. Everything here is safe to nudge;
 // the numbers in the main-wave block below are not (that half is shared with
-// Ysin_Mist_Audio and kept identical on purpose).
+// Ysin_Ember and kept identical on purpose).
+//
+//   braid speed           Lives in the buffer now (the .109 next to 'rb'):
+//                         the braid and the wave share one music-driven rate
+//                         and differ only by their coefficients. .109 holds
+//                         the median at _07's pace; raise it for a faster
+//                         braid, and expect the music spread to scale with it
+//                         since it multiplies r.
 //
 //   braidMax = .82        Ceiling on how far a strand leaves the axis. The
 //                         screen is uv.y in [-1,1] and the main wave stops at
@@ -31,8 +134,24 @@
 //
 //   tremble = .30*band    The fast shiver - what used to be the vocal-driven
 //                         wobble, now per band. Raise for nervier strands.
-//   tremble rate (3.1*speed + 2.2)  and  (1.9*height)
-//                         How fast the shiver runs in time and along x.
+//   tremble rate (2.5*speed + 1.75)  and  (1.9*height)
+//                         How fast the shiver runs in time and along x. This
+//                         is the one rate still read off iTime rather than
+//                         the music clock, deliberately: it is texture, not
+//                         choreography.
+//
+//   flame height (.55 + 1.7*bass)
+//                         _06's knob. .55 = the flame's height with no bass
+//                         at all (0 would put it out between notes; below
+//                         ~.35 the ember stage stops reading as fire), 1.7 =
+//                         how far a hit stretches it. Measured on a loud
+//                         track the multiplier sits at .71 half the time and
+//                         passes 1.5 on 8% of frames; on the same track 24 dB
+//                         quieter, .95 and 20%. Raise 1.7 for a taller
+//                         column, raise .55 for a steadier one - they trade
+//                         against each other and their sum is the peak.
+//                         The four knobs that decide WHEN it fires (band,
+//                         reference, knee/span, decay) live in the buffer.
 //
 //   ampG = .45 + .55*Es   The braid as a body breathing with the mix: .45 is
 //                         its size in silence, .55 how much loudness inflates
@@ -57,7 +176,7 @@
 //                         Swap the colour line to re-map the spectrum look.
 // ===========================================================================
 
-// Ysin_Mist_03 - Mist5 + Discoteq companion lines; amplitude morphs the shape, no zoom
+// Ysin_Ember_NoAudio - Mist5 + Discoteq companion lines; amplitude morphs the shape, no zoom
 // (mist ported from the blue rectangles shadertoy: fbm + ripple + reciprocal
 //  coloring; the flow frame rotates and meanders so directions keep changing)
 
@@ -101,10 +220,26 @@ float fnoise3(vec3 p){
 // their differences and only the peaks are held back.
 const float braidMax = .82;
 
-vec4 Line(vec2 uv, float speed, float height, vec3 col, float band, float amp) {
+// _07's braid knob, RETIRED in _08: the drift is no longer computed from
+// iTime here, it arrives as a phase the buffer accumulates. Its replacement is
+// the .109 coefficient next to 'rb' in the buffer, which was chosen so the
+// median braid speed matches exactly what this .5 produced.
+
+vec4 Line(vec2 uv, float speed, float height, vec3 col, float band, float amp, float ph) {
     float mid = .25 + .75*S(1.6, 0., abs(uv.x));   // widest mid-screen
-    float swing   = sin(iTime*speed + uv.x*height) * (.18 + .75*band) * amp;
-    float tremble = .30 * band * sin(iTime*(3.1*speed + 2.2) + uv.x*(1.9*height));
+    // _08: the drift phase arrives from the buffer, where it was advanced at
+    // a music-driven rate (see 'rb' there) instead of read off iTime. Same
+    // term otherwise - same sign, so the strand travels the way it always did.
+    // The tremble below still reads iTime: it is a shiver, not a drift, and
+    // it keeps the frequency it has had since _06.
+    float swing   = sin(ph + uv.x*height) * (.18 + .75*band) * amp;
+    // 2.5/1.75 = _08's 3.1/2.2 scaled by .8. The shiver stays on iTime and
+    // stays the fastest thing in the braid - that is what makes it read as
+    // texture rather than drift - but at 9.1 deg/s it was also the fastest
+    // thing on screen after the wave, which is a lot of attention for a
+    // detail. 7.3 deg/s keeps the character and gives the eye somewhere else
+    // to look.
+    float tremble = .30 * band * sin(iTime*(2.5*speed + 1.75) + uv.x*(1.9*height));
     uv.y += braidMax * tanh(mid * (swing + tremble) / braidMax);
     // junctions: early, gentle blur ramp + strong dissolve = subtle fade-out
     float blur = .008 + .12 * S(.75, 1.78, abs(uv.x));   // floor = anti-aliasing
@@ -123,16 +258,21 @@ void mainImage(out vec4 C, in vec2 U){
     float treb = (aTap(.45)+aTap(.65))*.5;   // main-wave sparkle, unchanged
 
     // integrator state from buffer A (six columns; see that file)
-    vec4 sA  = texture(iChannel1, vec2( 1./18., .5));
-    vec4 sB  = texture(iChannel1, vec2( 3./18., .5));
-    vec4 m1  = texture(iChannel1, vec2(11./18., .5));   // slow means b4,b5
+    // Thirteen columns since _08 (sub-bass state, deepness, braid phases).
+    vec4 sA  = texture(iChannel1, vec2( 1./26., .5));
+    vec4 sB  = texture(iChannel1, vec2( 3./26., .5));
+    vec4 m1  = texture(iChannel1, vec2(11./26., .5));   // slow means b4,b5
     // The drive is finished in the buffer now (expanded, then smoothed);
     // reading it here keeps the main pass free of per-frame state.
-    vec4 sd0 = texture(iChannel1, vec2(15./18., .5));   // drives b0..b3
-    vec4 sd1 = texture(iChannel1, vec2(17./18., .5));   // drives b4,b5
+    vec4 sd0 = texture(iChannel1, vec2(15./26., .5));   // drives b0..b3
+    vec4 sd1 = texture(iChannel1, vec2(17./26., .5));   // drives b4,b5
     float Es = sB.b;
     // percussion pulses: kick leads, snare/hats add a lighter tick
-    vec4 sP = texture(iChannel1, vec2(13./18., .5));
+    vec4 sP = texture(iChannel1, vec2(13./26., .5));
+    vec4 sQ = texture(iChannel1, vec2(19./26., .5));   // low-bass onset (_06)
+    vec4 sR = texture(iChannel1, vec2(21./26., .5));   // its deepness (_06)
+    vec4 sS0 = texture(iChannel1, vec2(23./26., .5));  // braid phases 0..3 (_08)
+    vec4 sS1 = texture(iChannel1, vec2(25./26., .5));  // braid phases 4,5  (_08)
     // Expanded before use. The raw envelope was MEASURED on the running
     // desktop (a debug bar whose length was the pulse): it reads ~0.07-0.16
     // between hits and reaches ~0.5 on strong ones. At that scale the first
@@ -150,6 +290,13 @@ void mainImage(out vec4 C, in vec2 U){
     // absolute level, which is what makes this work on any material. Silence
     // still stops everything - the gate rides the full-band fill.
     float gate = S(.03, .12, Es);
+    // The flame's driver. Gated with the braid so a silent desktop is still,
+    // and clamped because the buffer's AGC can overshoot on a first hit after
+    // a quiet passage.
+    float bass = clamp(sQ.x, 0., 1.) * gate;
+    // 0 = the hit sat mostly above 80 Hz, 1 = it had real sub weight under it.
+    // Latched at the onset in the buffer, so it holds for the whole flare.
+    float deep = clamp(sR.x, 0., 1.);
     float swp = sd1.z;          // attention-wave phase, read BEFORE the gate
     vec4 d0 = sd0 * gate;
     vec4 d1 = sd1 * gate;
@@ -158,7 +305,7 @@ void mainImage(out vec4 C, in vec2 U){
     float angS = .35*sin(.03*t+2.);
     vec3 color = vec3(0.);
 
-    // --- main wave: identical to Ysin_Mist_Audio ---------------------------
+    // --- main wave: identical to Ysin_Ember ---------------------------
     vec2 p = rotate2d(angS)*uv;
     float k = 6.28318/2.6;
     float env = S(1.5, .1, abs(p.x));
@@ -220,12 +367,19 @@ void mainImage(out vec4 C, in vec2 U){
     // does the line actually cross the braid, because the x.25 scale keeps it
     // low; if the line should be more present, that scale is the knob, not
     // this one.
-    y += .155 * pulse * sin(4.5*k*p.x - 7.0*t);
+    // 6.283 rather than 7.0: exactly 1 Hz, i.e. one cycle per half-bar at the
+    // nominal tempo, so the drum ripple lands on the grid like everything
+    // else. A 10% change, made only because it was free.
+    y += .155 * pulse * sin(4.5*k*p.x - 6.283*t);
     y = .82*tanh(y/.82);   // taller swing, soft-limited so the crest never leaves the screen
     // the flame packet's geometry is needed BEFORE the core is drawn: the core
     // colour depends on whether the fire is passing over it
     float dy = p.y - y;                              // height above the curve
-    float xc = -2.2 + mod(.55*t, 4.4);               // sweep position
+    // Sweep position from the buffer's phase instead of from iTime, so the
+    // flame's travel follows the music with everything else. The phase is
+    // wrapped to 2pi, and mapping it onto the 4.4-wide track reproduces the
+    // old sawtooth exactly - same path, same direction, musical pace.
+    float xc = -2.2 + 4.4 * sS1.z / 6.2831853;       // sweep position
     float sweep = exp(-pow((p.x - xc)*1.1, 2.));
 
     float d = abs(p.y - y);
@@ -245,7 +399,18 @@ void mainImage(out vec4 C, in vec2 U){
     // The flame is what answers the drums now: its height still follows the
     // smoothed band fill (the slow part), and the pulse doubles it on a hit -
     // so where the wave used to shake, the fire shoots instead.
-    float fh = (.30*sweep + .04)*(.35 + 2.8*Es)*(1. + 1.0*pulse);
+    // HEIGHT FROM THE LOW BASS - the one line _06 is about. The Mix had
+    // (1. + 1.0*pulse) here: full height at rest, doubled by any drum. Now the
+    // rest height is .55 and only a 35-78 Hz hit lifts it, up to 2.25. Same
+    // sweep and same fill term, so where the flame travels and how much fuel
+    // the mix gives it are unchanged; what it does when the bass lands is not.
+    // The gain itself follows HOW DEEP the hit was: 1.7 for one that lives
+    // above 80 Hz, 2.6 for one with real sub under it. Measured on a
+    // bass-heavy track that puts the flame's visible tip at .44 of the screen
+    // half the time and 1.12 at the 99th percentile - so the deepest hits do
+    // lick past the top edge, on about 3% of frames, which is the point of
+    // letting depth buy height. Drop .9 to 0 for a flat response.
+    float fh = (.30*sweep + .04)*(.35 + 2.8*Es)*(.55 + (1.7 + .9*deep)*bass);
     float fire = clamp((fh - dy - .12*turb)/fh, 0., 1.);
     // The base is the WEAKEST part, but not empty: fading it to zero left a
     // black band between the line and the flame body. The ramp therefore runs
@@ -285,8 +450,10 @@ void mainImage(out vec4 C, in vec2 U){
         // hitting all six at once. This is the "one after another" look, and
         // it is choreography, not data - the bands themselves carry no such
         // ordering (see the buffer's header for the measurements).
-        b *= max(0., .72 + .28*sin(swp - float(i)*1.15));
-        color += Line(p, 1.+ti, 4.+ti, vec3(.2+ti*.7, .2+ti*.4, .3), b, ampG).rgb
+        b *= max(0., .72 + .28*sin(swp - float(i)*.785));
+        float ph = (i == 0) ? sS0.x : (i == 1) ? sS0.y : (i == 2) ? sS0.z
+                 : (i == 3) ? sS0.w : (i == 4) ? sS1.x : sS1.y;
+        color += Line(p, 1.+ti, 4.+ti, vec3(.2+ti*.7, .2+ti*.4, .3), b, ampG, ph).rgb
                * (.18 + 1.7*b);
     }
 

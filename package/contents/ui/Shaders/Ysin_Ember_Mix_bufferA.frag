@@ -1,4 +1,4 @@
-// Audio integrator for Ysin_Mist_Audio_Mix: six band drives for the braid,
+// Audio integrator for Ysin_Ember_Mix: six band drives for the braid,
 // a percussion onset detector, and the phases the wave flows on.
 //
 // ===========================================================================
@@ -99,7 +99,7 @@ void mainImage(out vec4 C, in vec2 U)
     // 44-121 Hz for the kick, 3.9-9.4 kHz for snare/hats. The reference
     // tracks at ~0.25 s and a small threshold keeps ordinary wobble out;
     // instant attack, ~0.13 s decay. These are the constants measured for
-    // Ysin_Mist_Audio: above .25 about a fifth of the time, ~180 hits/min.
+    // Ysin_Ember: above .25 about a fifth of the time, ~180 hits/min.
     float kb = .25*( aTap(.0045) + aTap(.0065) + aTap(.0085) + aTap(.0105) );
     float hb = .25*( aTap(.38) + aTap(.50) + aTap(.65) + aTap(.80) );
     float kr = mix(sP.y, kb, clamp(dt/.25, 0., 1.));

@@ -3,7 +3,7 @@
 //#define W(v) length(p-vec3(round(p.x*pi)/pi, v(t+p.x), v(t+pi_2+p.x)))-lt  // alt wave
 #define P(v) length(p-vec3(0, v(t), v(t+pi_2)))-pt  // point
 
-// Ysin_Mist6 — Mist5 + Discoteq companion lines; amplitude morphs the shape, no zoom
+// Ysin_Mist — Mist5 + Discoteq companion lines; amplitude morphs the shape, no zoom
 // (mist ported from the blue rectangles shadertoy: fbm + ripple + reciprocal
 //  coloring; the flow frame rotates and meanders so directions keep changing)
 
@@ -51,10 +51,12 @@ vec3 bg(vec2 uv){
 
 #define S smoothstep
 vec4 Line(vec2 uv, float speed, float height, vec3 col) {
-    // braid: widest swing mid-screen (Discoteq style), small floor at borders
-    uv.y += (.25 + .75*S(1.6, 0., abs(uv.x))) * sin(iTime * speed + uv.x * height) * .32;
-    // hairline over most of the width, fattening only at the very ends
-    return vec4(S(.05 * S(1.15, 1.75, abs(uv.x)), 0., abs(uv.y) - .004) * col * .6, 1.0);
+    // braid: swing up to the main wave's max amplitude, widest mid-screen
+    uv.y += (.25 + .75*S(1.6, 0., abs(uv.x))) * sin(iTime * speed + uv.x * height) * .6;
+    // junctions: early, gentle blur ramp + strong dissolve = subtle fade-out
+    float blur = .12 * S(.75, 1.78, abs(uv.x));
+    float melt = 1. - .75*S(1.15, 1.78, abs(uv.x));
+    return vec4(S(blur, 0., abs(uv.y) - .004) * col * .6 * melt, 1.0);
 }
 
 void mainImage(out vec4 C, in vec2 U){
