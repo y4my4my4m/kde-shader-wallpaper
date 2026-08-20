@@ -33,7 +33,42 @@ void mainImage(out vec4 C, in vec2 U)
     vec4 sG0 = texture(iChannel1, vec2(21./28., .5));   // smoothed drives 0..3
     vec4 sG1 = texture(iChannel1, vec2(23./28., .5));   // smoothed drives 4,5
     vec4 sP0 = texture(iChannel1, vec2(25./28., .5));   // braid phases 0..3
-    vec4 sP1 = texture(iChannel1, vec2(27./28., .5));   // braid phases 4,5
+    vec4 sP1 = texture(iChannel1, vec2(27./28., .5));
+
+    // --- POISON GUARD: recover from a non-finite state --------------------
+    // The engine NEVER clears this buffer once created: ensureBufferFBOs()
+    // returns early unless the size changed, and the glClear lives only in the
+    // creation branch. So the state survives a shader switch, a recompile,
+    // everything short of a resize or a plasmashell restart.
+    //
+    // That turns any single NaN/Inf into a PERMANENT black wallpaper: mix()
+    // and mod() propagate it, and every seed test here is a COMPARISON, which
+    // is false for NaN - so the buffer can never re-seed itself and the next
+    // shader you load inherits the poison too.
+    //
+    // Cheapest total check: sum the whole state into one float. If that is not
+    // finite (or has run away), zero every state vector - the existing seed
+    // tests below then fire on their own and rebuild it in one frame.
+    float poison = dot((sA + sB + sC + sD + sF + sM + sR0 + sR1 + sN0 + sN1 + sG0 + sG1 + sP0 + sP1), vec4(1.));
+    // legit state sums to at most a few hundred (phases wrap at 2pi), so
+    // 1e5 catches a runaway that is still technically finite
+    if (isnan(poison) || isinf(poison) || abs(poison) > 1e5) {
+        sA = vec4(0.);
+        sB = vec4(0.);
+        sC = vec4(0.);
+        sD = vec4(0.);
+        sF = vec4(0.);
+        sM = vec4(0.);
+        sR0 = vec4(0.);
+        sR1 = vec4(0.);
+        sN0 = vec4(0.);
+        sN1 = vec4(0.);
+        sG0 = vec4(0.);
+        sG1 = vec4(0.);
+        sP0 = vec4(0.);
+        sP1 = vec4(0.);
+    }
+   // braid phases 4,5
 
     float E = 0.;
     for (int i = 0; i < 12; i++)

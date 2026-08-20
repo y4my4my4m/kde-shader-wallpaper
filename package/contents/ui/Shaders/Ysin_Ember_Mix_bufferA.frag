@@ -61,7 +61,37 @@ void mainImage(out vec4 C, in vec2 U)
     vec4 sM1 = texture(iChannel1, vec2(11./18., .5));
     vec4 sP  = texture(iChannel1, vec2(13./18., .5));   // percussion state
     vec4 sD0 = texture(iChannel1, vec2(15./18., .5));   // smoothed drives 0..3
-    vec4 sD1 = texture(iChannel1, vec2(17./18., .5));   // smoothed drives 4,5
+    vec4 sD1 = texture(iChannel1, vec2(17./18., .5));
+
+    // --- POISON GUARD: recover from a non-finite state --------------------
+    // The engine NEVER clears this buffer once created: ensureBufferFBOs()
+    // returns early unless the size changed, and the glClear lives only in the
+    // creation branch. So the state survives a shader switch, a recompile,
+    // everything short of a resize or a plasmashell restart.
+    //
+    // That turns any single NaN/Inf into a PERMANENT black wallpaper: mix()
+    // and mod() propagate it, and every seed test here is a COMPARISON, which
+    // is false for NaN - so the buffer can never re-seed itself and the next
+    // shader you load inherits the poison too.
+    //
+    // Cheapest total check: sum the whole state into one float. If that is not
+    // finite (or has run away), zero every state vector - the existing seed
+    // tests below then fire on their own and rebuild it in one frame.
+    float poison = dot((sA + sB + sF0 + sF1 + sM0 + sM1 + sP + sD0 + sD1), vec4(1.));
+    // legit state sums to at most a few hundred (phases wrap at 2pi), so
+    // 1e5 catches a runaway that is still technically finite
+    if (isnan(poison) || isinf(poison) || abs(poison) > 1e5) {
+        sA = vec4(0.);
+        sB = vec4(0.);
+        sF0 = vec4(0.);
+        sF1 = vec4(0.);
+        sM0 = vec4(0.);
+        sM1 = vec4(0.);
+        sP = vec4(0.);
+        sD0 = vec4(0.);
+        sD1 = vec4(0.);
+    }
+   // smoothed drives 4,5
 
     // full-band fill: unchanged, still drives the flame and the flow speed
     float E = 0.;

@@ -563,6 +563,16 @@ private:
     std::array<std::unique_ptr<QOpenGLFramebufferObject>, 4> m_bufferFBOsBack; // Ping-pong
     std::array<bool, 4> m_useBuffers = {false, false, false, false};
     std::array<QString, 4> m_bufferCodes;
+    // A buffer pass feeds its own previous frame, so its FBO is state, not a
+    // scratch surface. ensureBufferFBOs() only clears on CREATION, which means
+    // that state used to survive a shader switch: load a new shader and it
+    // inherited whatever the old one left behind. Harmless for most shaders,
+    // fatal for one NaN/Inf - it propagates through mix()/mod() forever, and a
+    // shader's own "is this the first frame" test is a comparison, which is
+    // false for NaN, so the buffer can never re-seed itself. The result is a
+    // permanently black wallpaper that survives switching shaders.
+    // Set when the code behind a buffer changes; honoured in renderBuffer().
+    std::array<bool, 4> m_bufferNeedsClear = {false, false, false, false};
     
     // Channel textures
     std::array<std::unique_ptr<QOpenGLTexture>, 4> m_channelTextures;

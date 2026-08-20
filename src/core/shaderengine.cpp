@@ -1581,6 +1581,22 @@ void ShaderEngineRenderer::renderBuffer(int bufferIndex)
     
     // Always ensure FBOs exist for enabled buffers
     ensureBufferFBOs(bufferIndex);
+
+    // Discard state left by a previous shader. Both surfaces, because the pass
+    // reads the one it is not writing; clearing only the target would leave
+    // the stale half to be read back on the very next frame.
+    if (m_bufferNeedsClear[bufferIndex]) {
+        m_bufferNeedsClear[bufferIndex] = false;
+        for (QOpenGLFramebufferObject *b : {m_bufferFBOs[bufferIndex].get(),
+                                            m_bufferFBOsBack[bufferIndex].get()}) {
+            if (b && b->isValid()) {
+                b->bind();
+                f->glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+                f->glClear(GL_COLOR_BUFFER_BIT);
+                b->release();
+            }
+        }
+    }
     
     // Get the correct FBO (ping-pong)
     auto &fbo = m_pingPong ? m_bufferFBOs[bufferIndex] : m_bufferFBOsBack[bufferIndex];
@@ -1954,6 +1970,8 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
         if (newCode != m_currentShaderCode) {
             qDebug() << "Main shader code CHANGED, need recompile";
             needsCompile = true;
+            // A different shader package: every buffer's state is now stale.
+            m_bufferNeedsClear.fill(true);
         } else if (commonCodeChanged) {
             qDebug() << "Common code changed, need recompile main shader";
             needsCompile = true;
@@ -1989,6 +2007,9 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
                 if (bufferCodes[i] != m_bufferCodes[i] || commonCodeChanged) {
                     qDebug() << "Buffer" << i << "code changed, recompiling. Length:" << bufferCodes[i].length();
                     compileBufferShader(i, bufferCodes[i]);
+                    // New code, so the accumulated state belongs to the old
+                    // shader - discard it rather than hand it over.
+                    m_bufferNeedsClear[i] = true;
                 }
             } else {
                 static bool warned[4] = {false, false, false, false};

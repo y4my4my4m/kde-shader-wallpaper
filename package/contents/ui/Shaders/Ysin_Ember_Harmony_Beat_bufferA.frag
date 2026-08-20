@@ -88,7 +88,42 @@ void mainImage(out vec4 C, in vec2 U)
     vec4 sR  = texture(iChannel1, vec2(21./28., .5));   // latched deepness (_06)
     vec4 sS0 = texture(iChannel1, vec2(23./28., .5));   // braid phases 0..3 (_08)
     vec4 sS1 = texture(iChannel1, vec2(25./28., .5));   // braid phases 4,5  (_08)
-    vec4 sT  = texture(iChannel1, vec2(27./28., .5));   // beat tracker (_10)
+    vec4 sT  = texture(iChannel1, vec2(27./28., .5));
+
+    // --- POISON GUARD: recover from a non-finite state --------------------
+    // The engine NEVER clears this buffer once created: ensureBufferFBOs()
+    // returns early unless the size changed, and the glClear lives only in the
+    // creation branch. So the state survives a shader switch, a recompile,
+    // everything short of a resize or a plasmashell restart.
+    //
+    // That turns any single NaN/Inf into a PERMANENT black wallpaper: mix()
+    // and mod() propagate it, and every seed test here is a COMPARISON, which
+    // is false for NaN - so the buffer can never re-seed itself and the next
+    // shader you load inherits the poison too.
+    //
+    // Cheapest total check: sum the whole state into one float. If that is not
+    // finite (or has run away), zero every state vector - the existing seed
+    // tests below then fire on their own and rebuild it in one frame.
+    float poison = dot((sA + sB + sF0 + sF1 + sM0 + sM1 + sP + sD0 + sD1 + sQ + sR + sS0 + sS1 + sT), vec4(1.));
+    // legit state sums to at most a few hundred (phases wrap at 2pi), so
+    // 1e5 catches a runaway that is still technically finite
+    if (isnan(poison) || isinf(poison) || abs(poison) > 1e5) {
+        sA = vec4(0.);
+        sB = vec4(0.);
+        sF0 = vec4(0.);
+        sF1 = vec4(0.);
+        sM0 = vec4(0.);
+        sM1 = vec4(0.);
+        sP = vec4(0.);
+        sD0 = vec4(0.);
+        sD1 = vec4(0.);
+        sQ = vec4(0.);
+        sR = vec4(0.);
+        sS0 = vec4(0.);
+        sS1 = vec4(0.);
+        sT = vec4(0.);
+    }
+   // beat tracker (_10)
 
     // full-band fill: unchanged, still drives the flame and the flow speed
     float E = 0.;

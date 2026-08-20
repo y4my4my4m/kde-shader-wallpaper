@@ -53,6 +53,38 @@ void mainImage(out vec4 C, in vec2 U)
     vec4 sP0 = texture(iChannel1, vec2(19./22., .5));
     vec4 sP1 = texture(iChannel1, vec2(21./22., .5));
 
+    // --- POISON GUARD: recover from a non-finite state --------------------
+    // The engine NEVER clears this buffer once created: ensureBufferFBOs()
+    // returns early unless the size changed, and the glClear lives only in the
+    // creation branch. So the state survives a shader switch, a recompile,
+    // everything short of a resize or a plasmashell restart.
+    //
+    // That turns any single NaN/Inf into a PERMANENT black wallpaper: mix()
+    // and mod() propagate it, and every seed test here is a COMPARISON, which
+    // is false for NaN - so the buffer can never re-seed itself and the next
+    // shader you load inherits the poison too.
+    //
+    // Cheapest total check: sum the whole state into one float. If that is not
+    // finite (or has run away), zero every state vector - the existing seed
+    // tests below then fire on their own and rebuild it in one frame.
+    float poison = dot((sA + sB + sD + sF0 + sF1 + sM0 + sM1 + sG0 + sG1 + sP0 + sP1), vec4(1.));
+    // legit state sums to at most a few hundred (phases wrap at 2pi), so
+    // 1e5 catches a runaway that is still technically finite
+    if (isnan(poison) || isinf(poison) || abs(poison) > 1e5) {
+        sA = vec4(0.);
+        sB = vec4(0.);
+        sD = vec4(0.);
+        sF0 = vec4(0.);
+        sF1 = vec4(0.);
+        sM0 = vec4(0.);
+        sM1 = vec4(0.);
+        sG0 = vec4(0.);
+        sG1 = vec4(0.);
+        sP0 = vec4(0.);
+        sP1 = vec4(0.);
+    }
+
+
     float dt = clamp(iTimeDelta, 0., .05);
 
     // full-band fill: unchanged from Wave_01, still the flow rate and the
