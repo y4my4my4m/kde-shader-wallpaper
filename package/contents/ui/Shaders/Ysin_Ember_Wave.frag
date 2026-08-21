@@ -161,8 +161,9 @@ vec4 Line(vec2 uv, float height, vec3 col, float band, float amp, float ph) {
 }
 
 
-// --- audio (iChannel0: 512x2, spectrum row y=.25, waveform row y=.75) ------
-float aTap(float x){ return texture(iChannel0, vec2(x, .25)).r; }
+// --- audio: NONE here - the buffer exports treb (main-wave sparkle, its
+// only image-side use) in a spare state component, so on Shadertoy the
+// music is bound ONCE, on Buffer A. iChannel1 = Buffer A.
 
 void mainImage(out vec4 C, in vec2 U){
     vec2 R=iResolution.xy;
@@ -173,7 +174,7 @@ void mainImage(out vec4 C, in vec2 U){
     // treble sparkle on the main wave's core; falls to 0 in silence / with
     // capture off. Bass and mids are no longer read here - the braid takes
     // its drive from buffer A, where it has a reference to compare against.
-    float treb = (aTap(.45)+aTap(.65))*.5;
+    float treb = texture(iChannel1, vec2(21./22., .5)).z;
     // integrator state from buffer A: six phases wrapped to 2pi (16F-safe),
     // advancing forward only, faster when the music is loud
     // Eleven columns since Wave_02 - see the buffer's header for the layout.

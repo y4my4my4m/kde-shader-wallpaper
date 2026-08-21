@@ -336,7 +336,7 @@ void mainImage(out vec4 C, in vec2 U)
     // its neighbour by exactly one bar. The rate is unchanged in character -
     // still the slow common modulation that measured 24% less jitter.
     float swp = mod(sD1.z + .219*r, TAU);
-    aD1 = vec4(aD1.x, aD1.y, swp, 1.);
+    aD1 = vec4(aD1.x, aD1.y, swp, (aTap(.45)+aTap(.65))*.5);  // w = treb export
     // The three morph phases, rounded onto the bar grid: 8, 16 and 32 bars.
     // .11 was already exactly 16 bars at the new rate and did not move.
     vec4 A = vec4( mod(sA.x + 1.2*r, TAU),

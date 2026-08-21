@@ -249,15 +249,16 @@ vec4 Line(vec2 uv, float speed, float height, vec3 col, float band, float amp, f
     return vec4(S(blur, 0., abs(uv.y) - .006) * col * .6 * melt, 1.0);
 }
 
-// --- audio (iChannel0: 512x2, spectrum row y=.25, waveform row y=.75) ------
-float aTap(float x){ return texture(iChannel0, vec2(x, .25)).r; }
+// --- audio: NONE here - the buffer exports treb (main-wave sparkle, its
+// only image-side use) in a spare state component, so on Shadertoy the
+// music is bound ONCE, on Buffer A. iChannel1 = Buffer A.
 
 void mainImage(out vec4 C, in vec2 U){
     vec2 R=iResolution.xy;
     vec2 uv = U/R*2.-1.; uv.x *= R.x/R.y;
     float t=iTime;
 
-    float treb = (aTap(.45)+aTap(.65))*.5;   // main-wave sparkle, unchanged
+    float treb = texture(iChannel1, vec2(17./26., .5)).w;   // main-wave sparkle, unchanged
 
     // integrator state from buffer A (six columns; see that file)
     // Thirteen columns since _08 (sub-bass state, deepness, braid phases).

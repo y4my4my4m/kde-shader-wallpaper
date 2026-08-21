@@ -209,7 +209,7 @@ void mainImage(out vec4 C, in vec2 U)
     // (2.35 -> 1.79) because a slow common modulation damps the fast common
     // motion. Swing is unchanged.
     float swp = mod(sD1.z + .18*r, TAU);
-    aD1 = vec4(aD1.x, aD1.y, swp, 1.);
+    aD1 = vec4(aD1.x, aD1.y, swp, (aTap(.45)+aTap(.65))*.5);  // w = treb export
     vec4 A = vec4( mod(sA.x + 1.2*r, TAU),
                    mod(sA.y + .23*r, TAU),
                    mod(sA.z + .11*r, TAU),

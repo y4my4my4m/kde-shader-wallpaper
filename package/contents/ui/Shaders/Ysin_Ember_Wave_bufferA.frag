@@ -195,7 +195,8 @@ void mainImage(out vec4 C, in vec2 U)
                     mod(sP0.z + 1.4*rb, TAU),
                     mod(sP0.w + 1.6*rb, TAU) );
     vec4 P1 = vec4( mod(sP1.x + 1.8*rb, TAU),
-                    mod(sP1.y + 2.0*rb, TAU), 0., 1. );
+                    mod(sP1.y + 2.0*rb, TAU),
+                    (aTap(.45)+aTap(.65))*.5, 1. );  // z = treb export
 
     vec4 A = vec4( mod(sA.x + 1.2*r, TAU),
                    mod(sA.y + .23*r, TAU),
