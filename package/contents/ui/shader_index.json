@@ -4338,6 +4338,24 @@
    "tags": [],
    "thumbnailPath": "thumbnails/22593411-2fd1-4cae-aa07-620ed5977a93.png",
    "views": 0
+  },
+  {
+   "author": "",
+   "category": "Nature",
+   "description": "",
+   "favorite": false,
+   "hasBuffers": true,
+   "id": "4f3e8b77-1c29-4c4a-82a9-d8410a8084c4",
+   "likes": 0,
+   "name": "Ysin Ring Spectrum",
+   "needsAudio": true,
+   "needsTextures": true,
+   "shaderPath": "Shaders/Ysin_Ring_Spectrum.frag",
+   "source": "local",
+   "sourceId": "",
+   "tags": [],
+   "thumbnailPath": "thumbnails/50686c0a-edc3-43c5-8c73-74e5ac7329a5.png",
+   "views": 0
   }
  ],
  "version": 1
