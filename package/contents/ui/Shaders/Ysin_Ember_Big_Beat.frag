@@ -2,6 +2,8 @@
 // Same shapes, same audio work, same braid on the music; what changed is the
 // set of numbers that decide how fast things move and how they line up.
 //
+// Shadertoy port: https://www.shadertoy.com/view/sftSDB
+//
 // Two yardsticks were used, because "smooth" and "choreographed" are not the
 // same question.
 //

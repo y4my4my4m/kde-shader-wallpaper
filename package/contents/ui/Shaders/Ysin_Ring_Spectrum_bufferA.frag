@@ -1,6 +1,8 @@
 // Phase integrator for Ysin_Ring_Spectrum. The engine finds this BY NAME
 // (<name>_bufferA.frag) - a copy must rename both files of the pair.
 //
+// Shadertoy port (Buffer A tab there): https://www.shadertoy.com/view/7c3SWj
+//
 // Why a buffer at all: the rings' spin follows the music the way the main
 // line's flow does in Ysin_Ember - speed scales with LOUDNESS. A stateless
 // shader cannot do that: angle = w(t)*t jumps position whenever w changes.

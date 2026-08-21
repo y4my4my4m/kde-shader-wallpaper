@@ -4,6 +4,8 @@
 // directions; both thickness and luminance walk the depth-to-flame
 // gradient outward.
 //
+// Shadertoy port: https://www.shadertoy.com/view/7c3SWj
+//
 // PAIRED with Ysin_Ring_Spectrum_bufferA.frag - the engine finds it BY
 // NAME, so a copy must rename both. The buffer holds what a stateless
 // pass cannot: the integrated ring phases (spin SPEED follows loudness,
