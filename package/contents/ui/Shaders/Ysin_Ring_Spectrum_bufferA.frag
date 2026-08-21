@@ -21,7 +21,8 @@
 //
 // Layout (read at y=.5):
 //   x<.25       phases of rings 0-3
-//   .25<=x<.5   xy = phases of rings 4,5, z = smoothed press, w = 1
+//   .25<=x<.5   xy = phases of rings 4,5, z = smoothed press,
+//               w = master-clock FINE accumulator (see below)
 //   .5<=x<.75   x = kick envelope, y = previous gate (edge memory),
 //               zw = shockwave phases (0 at birth, >1 = done)
 //   x>=.75      x = spark-field envelope (instant attack, ~1.4 s release -
@@ -95,16 +96,36 @@ void mainImage(out vec4 C, in vec2 U){
     float tGate    = punch * smoothstep(.30,.65, max(band(.196),band(.493)));
     float treFlash = max(s3.y*exp(-dt/.12), tGate);
 
-    // sp spans .30 (near silence: a calm drift) to ~1.8 (pounding);
-    // at mid press it passes ~1.05, i.e. the old fixed speed
-    float sp = .30 + 1.5*press;
+    // Calmer carousel (ladder .22+.14*i, outer/inner 4.2x, sp .27..~1.5)
+    // integrated PRECISION-SAFE. The naive ph += w*sp*dt stalls in half-
+    // float state: near 2pi the ULP is ~.004 while a quiet-music step is
+    // ~.001, so the addition rounds to nothing and rings froze one by one,
+    // thawing whenever louder music raised the step - exactly the observed
+    // instability. Split master clock instead: a FINE accumulator stays
+    // below 1 (ULP .0002 - every dt registers), and on each whole unit the
+    // per-ring phases advance by w_i in one COARSE step (>= .22, two
+    // orders above any phase ULP). The image adds w_i*fine at read time,
+    // so motion stays smooth; the wrap is exact for integer k.
+    // v37: ONE angular speed for all rings - ring 2's (.50), the reference.
+    // The speed ladder made the rim race even through calm music, drowning
+    // the actual musical signal, which is sp: with a uniform base the only
+    // thing that changes the spin IS the music. Directions still alternate
+    // (applied in the image), and the arc counts (k=3..8) keep the rings
+    // visually distinct in pattern, so uniform w does not read as lockstep.
+    float sp = .27 + 1.2*press;
     const float TAU = 6.28318530718;
-    s0    = mod(s0    + vec4(.25,.47,.69,.91)*sp*dt, TAU);
-    s1.xy = mod(s1.xy + vec2(1.13,1.35)      *sp*dt, TAU);
+    vec4 w03 = vec4(.50);
+    vec2 w45 = vec2(.50);
+    float fine = s1.w + sp*dt;
+    if (fine >= 1.){
+        fine -= 1.;
+        s0    = mod(s0    + w03, TAU);
+        s1.xy = mod(s1.xy + w45, TAU);
+    }
 
     float fx = U.x/iResolution.x;
     C = (fx < .25) ? s0
-      : (fx < .5)  ? vec4(s1.xy, press, 1.)
+      : (fx < .5)  ? vec4(s1.xy, press, fine)
       : (fx < .75) ? vec4(kickEnv, gate, shp)
       :              vec4(treEnv, treFlash, sst);
 }

@@ -78,7 +78,12 @@ void mainImage(out vec4 C, in vec2 U){
     // six in proportion. With no buffer bound these read 0 and the rings
     // stand still - if that happens, check the pair got installed together.
     vec4 ph03 = texture(iChannel1, vec2(.125,.5));
-    vec2 ph45 = texture(iChannel1, vec2(.375,.5)).xy;
+    vec4 st1  = texture(iChannel1, vec2(.375,.5));
+    vec2 ph45 = st1.xy;
+    // master-clock fine accumulator: coarse phases advance only on whole
+    // units (half-float ULP safety - see the buffer header), the smooth
+    // in-between motion is reconstructed here as w_i * fine
+    float fine = st1.w;
 
     // kick from the buffer: an onset ENVELOPE (instant attack, ~150 ms
     // decay) computed once per frame there, replacing the per-frame
@@ -114,8 +119,9 @@ void mainImage(out vec4 C, in vec2 U){
         // breathing and width even when the average is glued to the ceiling.
         if (i==0) e = min(1., e*(.55 + .45*kick));
         float dir = (mod(fi,2.)<1.) ? 1. : -1.;
-        float ph = (i==0)?ph03.x:(i==1)?ph03.y:(i==2)?ph03.z
-                 : (i==3)?ph03.w:(i==4)?ph45.x:ph45.y;
+        float wb = .50;                            // = the buffer's uniform w
+        float ph = ((i==0)?ph03.x:(i==1)?ph03.y:(i==2)?ph03.z
+                 : (i==3)?ph03.w:(i==4)?ph45.x:ph45.y) + wb*fine;
         float k  = 3. + fi;                        // arc count
         float rad = (.14 + .068*fi) * (1. + .06*e)   // ring breathes OUT with its band
                   + .014*e*sin(k*a + 2.*t*dir);      // wobble only when loud
