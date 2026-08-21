@@ -54,22 +54,21 @@ vec3 applyFog(vec3 col, vec2 uv, float t){
     return col;
 }
 
-// --- audio (iChannel0: 512x2, spectrum row y=.25) --------------------------
-float band(float x){
-    return ( texture(iChannel0, vec2(x*.72, .25)).r
-           + texture(iChannel0, vec2(x,     .25)).r
-           + texture(iChannel0, vec2(x*1.38,.25)).r ) / 3.;
-}
+// --- audio: NONE here. The buffer is the shader's only audio consumer and
+// exports the six band values in its last two texels - so on Shadertoy the
+// music is bound ONCE (Buffer A, iChannel0) instead of playing twice, and
+// this pass saves 18 texture taps per pixel. iChannel1 = Buffer A.
 
 void mainImage(out vec4 C, in vec2 U){
     vec2 R=iResolution.xy; vec2 uv=(U-.5*R)/R.y; float t=iTime;
     uv += fogWarp(uv, t);
     float r=length(uv), a=atan(uv.y,uv.x);
 
-    // six bands, low to high, plus their mix mean for spatial contrast
-    float b0=band(.0047), b1=band(.0119), b2=band(.0306),
-          b3=band(.0765), b4=band(.196),  b5=band(.493);
-    float m=(b0+b1+b2+b3+b4+b5)/6.;
+    // six bands, low to high, plus their mix mean - from the buffer
+    vec4 bA = texture(iChannel1, vec2(.75,  .5));
+    vec4 bB = texture(iChannel1, vec2(.9167,.5));
+    float b0=bA.x, b1=bA.y, b2=bA.z, b3=bA.w, b4=bB.x, b5=bB.y;
+    float m=bB.w;
 
     // ring phases from the buffer (iChannel1): integrated there so the spin
     // SPEED can follow the music without the position jumping - the same
@@ -77,8 +76,8 @@ void mainImage(out vec4 C, in vec2 U){
     // ladder and directions are unchanged; one loudness factor scales all
     // six in proportion. With no buffer bound these read 0 and the rings
     // stand still - if that happens, check the pair got installed together.
-    vec4 ph03 = texture(iChannel1, vec2(.125,.5));
-    vec4 st1  = texture(iChannel1, vec2(.375,.5));
+    vec4 ph03 = texture(iChannel1, vec2(.0833,.5));
+    vec4 st1  = texture(iChannel1, vec2(.25,  .5));
     vec2 ph45 = st1.xy;
     // master-clock fine accumulator: coarse phases advance only on whole
     // units (half-float ULP safety - see the buffer header), the smooth
@@ -89,7 +88,7 @@ void mainImage(out vec4 C, in vec2 U){
     // decay) computed once per frame there, replacing the per-frame
     // waveform product that flickered when a 30 ms hit straddled frames.
     // zw carry the two shockwave phases, born on the onset edge.
-    vec4 kb = texture(iChannel1, vec2(.625,.5));
+    vec4 kb = texture(iChannel1, vec2(.4167,.5));
     float kick = kb.x;
 
     vec3 col=vec3(0.);
@@ -204,7 +203,7 @@ void mainImage(out vec4 C, in vec2 U){
     // treble FLASH - a ~120 ms transient envelope that pops the whole
     // field on every hat, the strong reaction the smoothed density gate
     // could never show.
-    vec4 tb = texture(iChannel1, vec2(.875,.5));
+    vec4 tb = texture(iChannel1, vec2(.5833,.5));
     float treE = tb.x;
     if (tre > .005 || treE > .005){
         vec2  g   = uv*30.;

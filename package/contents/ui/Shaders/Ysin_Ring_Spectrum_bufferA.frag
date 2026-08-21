@@ -19,17 +19,17 @@
 // the onset edge - fronts genuinely born at the hit, which the stateless
 // versions could only fake with an eternal clock behind a level gate.
 //
-// Layout (read at y=.5):
-//   x<.25       phases of rings 0-3
-//   .25<=x<.5   xy = phases of rings 4,5, z = smoothed press,
-//               w = master-clock FINE accumulator (see below)
-//   .5<=x<.75   x = kick envelope, y = previous gate (edge memory),
-//               zw = shockwave phases (0 at birth, >1 = done)
-//   x>=.75      x = spark-field envelope (instant attack, ~1.4 s release -
-//               the field lingers and dies down after the treble stops),
-//               y = treble FLASH (raw transient gated by the high bands,
-//               ~120 ms decay - every hat pops the whole field),
-//               zw = shockwave birth STRENGTHS (gate value at launch)
+// Layout, six columns (read at y=.5, centers x=(k+.5)/6):
+//   0: phases of rings 0-3
+//   1: xy = phases of rings 4,5, z = smoothed press,
+//      w = master-clock FINE accumulator (see below)
+//   2: x = kick envelope, y = previous gate (edge memory),
+//      zw = shockwave phases (0 at birth, >1 = done)
+//   3: x = spark-field envelope (instant attack, ~1.4 s release),
+//      y = treble FLASH (~120 ms decay - every hat pops the field),
+//      zw = shockwave birth STRENGTHS (gate value at launch)
+//   4: the six ring bands b0-b3  } exported so the image needs NO audio
+//   5: b4, b5, punch, mix mean   } channel - one music binding, ever
 
 float band(float x){
     return ( texture(iChannel0, vec2(x*.72, .25)).r
@@ -47,16 +47,22 @@ float waveAmp(){
 }
 
 void mainImage(out vec4 C, in vec2 U){
-    vec4 s0 = texture(iChannel1, vec2(.125,.5));   // phases 0-3
-    vec4 s1 = texture(iChannel1, vec2(.375,.5));   // ph4, ph5, press, mark
-    vec4 s2 = texture(iChannel1, vec2(.625,.5));   // kickEnv, prevGate, shocks
-    vec4 s3 = texture(iChannel1, vec2(.875,.5));   // spark envelopes
+    vec4 s0 = texture(iChannel1, vec2(.0833,.5));  // phases 0-3
+    vec4 s1 = texture(iChannel1, vec2(.25,  .5));  // ph4, ph5, press, fine
+    vec4 s2 = texture(iChannel1, vec2(.4167,.5));  // kickEnv, prevGate, shocks
+    vec4 s3 = texture(iChannel1, vec2(.5833,.5));  // spark envelopes
     float dt = clamp(iTimeDelta, .001, .1);
+
+    // the six ring bands, computed ONCE here and exported to the image in
+    // the last two texels: the buffer is the shader's only audio consumer.
+    // (On Shadertoy, binding the same music to two tabs creates two
+    // parallel players - and our image pass saves 18 taps per pixel.)
+    float b0=band(.0047), b1=band(.0119), b2=band(.0306),
+          b3=band(.0765), b4=band(.196),  b5=band(.493);
 
     // loudness, Ember-style: the mean of the six ring bands, smoothed ~.6 s
     // so the carousel accelerates into a loud passage instead of twitching
-    float m = ( band(.0047)+band(.0119)+band(.0306)
-              + band(.0765)+band(.196) +band(.493) )/6.;
+    float m = (b0+b1+b2+b3+b4+b5)/6.;
     float loud  = smoothstep(.35,.80,m);
     float press = mix(s1.z, loud, 1.-exp(-dt/.60));
 
@@ -124,8 +130,10 @@ void mainImage(out vec4 C, in vec2 U){
     }
 
     float fx = U.x/iResolution.x;
-    C = (fx < .25) ? s0
-      : (fx < .5)  ? vec4(s1.xy, press, fine)
-      : (fx < .75) ? vec4(kickEnv, gate, shp)
-      :              vec4(treEnv, treFlash, sst);
+    C = (fx < .1667) ? s0
+      : (fx < .3333) ? vec4(s1.xy, press, fine)
+      : (fx < .5)    ? vec4(kickEnv, gate, shp)
+      : (fx < .6667) ? vec4(treEnv, treFlash, sst)
+      : (fx < .8333) ? vec4(b0, b1, b2, b3)
+      :                vec4(b4, b5, punch, m);
 }
