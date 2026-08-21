@@ -1,5 +1,7 @@
 // Audio integrator for Ysin_Ember_Wave.
 //
+// Shadertoy port (Buffer A tab there): https://www.shadertoy.com/view/7fdXWB
+//
 // Wave_01's integrator with the braid rebuilt: six frequency REGIONS instead
 // of one mids band, and the braid's travel moved onto the same music-driven
 // clock the main wave has always used. 16F-safe throughout - every phase is

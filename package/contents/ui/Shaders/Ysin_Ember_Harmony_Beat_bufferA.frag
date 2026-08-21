@@ -2,6 +2,8 @@
 // a percussion onset detector, a SUB-BASS onset detector that drives the
 // flame's height, and the phases the wave flows on.
 //
+// Shadertoy port (Buffer A tab there): https://www.shadertoy.com/view/7cdXWB
+//
 // ===========================================================================
 // TUNING - the audio half. The visual knobs are in the main file.
 //

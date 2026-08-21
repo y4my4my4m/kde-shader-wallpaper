@@ -2,6 +2,8 @@
 // and put on the music's clock. The main line is untouched: still the pure
 // spectrum shape, still no beat in it.
 //
+// Shadertoy port: https://www.shadertoy.com/view/7fdXWB
+//
 // Two changes, both in the braid:
 //
 //   REGIONS. Each of the six strands now follows its own frequency band

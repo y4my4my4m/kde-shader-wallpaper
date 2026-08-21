@@ -5,6 +5,8 @@
 // Ysin_Ember_Mix_bufferA.frag holds the bands, their AGC and all the
 // per-frame state; the engine finds it BY NAME, so a copy must rename both.
 //
+// Shadertoy port: https://www.shadertoy.com/view/7ctSDB
+//
 // Where it differs from Ysin_Ember: that one keeps a single mids-driven
 // braid and its original yellow flame; this one splits the braid six ways,
 // lets the flame answer the beat as well, and carries the attention wave that

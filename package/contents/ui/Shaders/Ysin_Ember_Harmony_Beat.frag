@@ -2,6 +2,8 @@
 // the line rides slightly higher when there is bass, and that height breathes
 // on the beat. Everything else is _09 exactly.
 //
+// Shadertoy port: https://www.shadertoy.com/view/7cdXWB
+//
 // _09's header called real beat tracking "a _10, not a coefficient change",
 // and this is it. The tracker is an inter-onset-interval estimator in the
 // buffer (four floats, no history buffer needed); on a 120.0 BPM track it
