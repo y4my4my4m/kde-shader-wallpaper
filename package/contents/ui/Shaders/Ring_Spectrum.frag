@@ -1,4 +1,4 @@
-// Ysin_Ring_Spectrum - Ysin_Ring split into six rotating rings, one per
+// Ring_Spectrum (formerly Ysin_Ring_Spectrum) - Ysin_Ring split into six rotating rings, one per
 // frequency band: bass innermost (slow, thick, deep indigo), highs
 // outermost (fast, thin, yellow). Neighbouring rings spin in opposite
 // directions; both thickness and luminance walk the depth-to-flame
@@ -6,7 +6,7 @@
 //
 // Shadertoy port: https://www.shadertoy.com/view/7c3SWj
 //
-// PAIRED with Ysin_Ring_Spectrum_bufferA.frag - the engine finds it BY
+// PAIRED with Ring_Spectrum_bufferA.frag - the engine finds it BY
 // NAME, so a copy must rename both. The buffer holds what a stateless
 // pass cannot: the integrated ring phases (spin SPEED follows loudness,
 // Ember-style, without the position jumping), the kick onset envelope,
