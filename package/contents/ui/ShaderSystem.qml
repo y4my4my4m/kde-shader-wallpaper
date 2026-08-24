@@ -37,7 +37,8 @@ Item {
     WindowModel {
         id: windowModel
         config: shaderSystem.wallpaperConfig
-        screenGeometry: shaderSystem.parent?.parent?.screenGeometry ?? Qt.rect(0, 0, 1920, 1080)
+        screenGeometry: Qt.rect(Screen.virtualX, Screen.virtualY,
+                                Screen.width, Screen.height)
     }
 
     // Cursor tracker for global mouse position. We explicitly bind
@@ -118,8 +119,8 @@ Item {
     QtObject {
         id: screenInfo
         property var screens: Qt.application.screens
-        property rect myGeom: shaderSystem.parent?.parent?.screenGeometry
-                              ?? Qt.rect(0, 0, 1920, 1080)
+        property rect myGeom: Qt.rect(Screen.virtualX, Screen.virtualY,
+                                      Screen.width, Screen.height)
         property real virtualX0: {
             var x = Number.POSITIVE_INFINITY;
             for (var i = 0; i < screens.length; i++)
