@@ -1104,12 +1104,19 @@ void ShaderEngineRenderer::initializeGL()
     createQuadVAO();
     
     // Create audio texture (512x2, RGBA float)
-    m_audioTexture = std::make_unique<QOpenGLTexture>(QOpenGLTexture::Target2D);
-    m_audioTexture->setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Linear);
-    m_audioTexture->setWrapMode(QOpenGLTexture::ClampToEdge);
-    m_audioTexture->setSize(512, 2);
-    m_audioTexture->setFormat(QOpenGLTexture::RGBA32F);
-    m_audioTexture->allocateStorage();
+    {
+        auto *ff = QOpenGLContext::currentContext()->functions();
+        ff->glGenTextures(1, &m_audioTexId);
+        ff->glActiveTexture(GL_TEXTURE0);
+        ff->glBindTexture(GL_TEXTURE_2D, m_audioTexId);
+        ff->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        ff->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        ff->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        ff->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        ff->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 512, 2, 0,
+                         GL_RGBA, GL_FLOAT, nullptr);
+        ff->glBindTexture(GL_TEXTURE_2D, 0);
+    }
     
     // Only create default shader if we don't already have a valid one
     // (synchronize() may have already compiled the custom shader)
@@ -1484,9 +1491,9 @@ void ShaderEngineRenderer::bindChannelInput(int channelSlot, int inputType, int 
                 qWarning() << "Buffer" << bufferIdx << "FBO is null or invalid for channel" << channelSlot;
             }
         }
-    } else if (inputType == 20 && m_audioEnabled && m_audioTexture) {
-        // Audio input
-        m_audioTexture->bind();
+    } else if (inputType == 20 && m_audioEnabled && m_audioTexId) {
+        // Audio input (raw bind on the already-active unit)
+        f->glBindTexture(GL_TEXTURE_2D, m_audioTexId);
     }
     // inputType == -1: None, don't bind anything
 }
@@ -1574,6 +1581,22 @@ void ShaderEngineRenderer::renderBuffer(int bufferIndex)
     
     // Always ensure FBOs exist for enabled buffers
     ensureBufferFBOs(bufferIndex);
+
+    // Discard state left by a previous shader. Both surfaces, because the pass
+    // reads the one it is not writing; clearing only the target would leave
+    // the stale half to be read back on the very next frame.
+    if (m_bufferNeedsClear[bufferIndex]) {
+        m_bufferNeedsClear[bufferIndex] = false;
+        for (QOpenGLFramebufferObject *b : {m_bufferFBOs[bufferIndex].get(),
+                                            m_bufferFBOsBack[bufferIndex].get()}) {
+            if (b && b->isValid()) {
+                b->bind();
+                f->glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+                f->glClear(GL_COLOR_BUFFER_BIT);
+                b->release();
+            }
+        }
+    }
     
     // Get the correct FBO (ping-pong)
     auto &fbo = m_pingPong ? m_bufferFBOs[bufferIndex] : m_bufferFBOsBack[bufferIndex];
@@ -1678,9 +1701,9 @@ void ShaderEngineRenderer::renderMainPass()
     // active texture unit, so the audio channel's unit must be selected
     // first or the upload clobbers whichever unit the channel loop left
     // active.
-    if (m_audioEnabled && m_audioTexture) {
+    if (m_audioEnabled && m_audioTexId) {
         f->glActiveTexture(GL_TEXTURE0 + m_audioChannel);
-        m_audioTexture->bind();
+        f->glBindTexture(GL_TEXTURE_2D, m_audioTexId);
         // Expected format: 512x2 RGBA (4096 floats total)
         // Row 0: FFT spectrum, Row 1: waveform
         if (m_audioData.size() >= 512 * 2 * 4) {
@@ -1951,6 +1974,8 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
         if (newCode != m_currentShaderCode) {
             qDebug() << "Main shader code CHANGED, need recompile";
             needsCompile = true;
+            // A different shader package: every buffer's state is now stale.
+            m_bufferNeedsClear.fill(true);
         } else if (commonCodeChanged) {
             qDebug() << "Common code changed, need recompile main shader";
             needsCompile = true;
@@ -1986,6 +2011,9 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
                 if (bufferCodes[i] != m_bufferCodes[i] || commonCodeChanged) {
                     qDebug() << "Buffer" << i << "code changed, recompiling. Length:" << bufferCodes[i].length();
                     compileBufferShader(i, bufferCodes[i]);
+                    // New code, so the accumulated state belongs to the old
+                    // shader - discard it rather than hand it over.
+                    m_bufferNeedsClear[i] = true;
                 }
             } else {
                 static bool warned[4] = {false, false, false, false};
