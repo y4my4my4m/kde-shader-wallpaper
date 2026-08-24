@@ -45,15 +45,22 @@ Item {
     // `screen` so the Y-flip uses THIS wallpaper's screen height (not
     // QGuiApplication::primaryScreen — which on multi-monitor setups
     // with different heights would put the impulse off-cursor).
+    // Guard `window.screen` and not just `window`: the window exists before it
+    // is mapped to a screen, so on the first evaluation `screen` is undefined.
+    // Assigning that to a QScreen* property is an error, and reading
+    // `.devicePixelRatio` off it throws. Both bindings re-evaluate once the
+    // window has a screen.
     CursorTracker {
         id: cursorTracker
         enabled: shaderSystem._allowMouse && shaderEngine.running
         sensitivity: (wallpaperConfig && wallpaperConfig.mouseBias) || 1.0
-        screen: shaderSystem.Window.window ? shaderSystem.Window.window.screen : null
+        screen: (shaderSystem.Window.window && shaderSystem.Window.window.screen)
+                    ? shaderSystem.Window.window.screen
+                    : null
         // Same pixel space as fragCoord / iResolution (ShaderEngine FBO).
         referenceWidth: shaderEngine.width
         referenceHeight: shaderEngine.height
-        devicePixelRatio: shaderSystem.Window.window
+        devicePixelRatio: (shaderSystem.Window.window && shaderSystem.Window.window.screen)
                             ? shaderSystem.Window.window.screen.devicePixelRatio
                             : 1.0
 
