@@ -1875,9 +1875,13 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
     m_iFrame = engine->iFrame();
     // Snapshot mouse: previous render-frame position vs current.
     // mouseBias scales pixel-space coords (Shadertoy iMouse convention).
-    const qreal mouseBias = engine->mouseBias();
+    const qreal mouseBias = engine->mouseBias() * engine->resolutionScale();
     QVector4D engineMouse = engine->iMouse();
-    if (!qFuzzyCompare(mouseBias, 1.0)) {
+    if (!engine->mouseEnabled()) {
+        const float centerX = 0.5f * float(engine->width()) * engine->resolutionScale();
+        const float centerY = 0.5f * float(engine->height()) * engine->resolutionScale();
+        engineMouse = QVector4D(centerX, centerY, 0.0f, 0.0f);
+    } else if (!qFuzzyCompare(mouseBias, 1.0)) {
         engineMouse = QVector4D(engineMouse.x() * mouseBias,
                                 engineMouse.y() * mouseBias,
                                 engineMouse.z() * mouseBias,
