@@ -1300,7 +1300,11 @@ void ShaderEngineRenderer::loadTexture(int channel, const QUrl &url)
         return;
     }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
     m_channelTextures[channel] = std::make_unique<QOpenGLTexture>(image.flipped(Qt::Vertical));
+#else
+    m_channelTextures[channel] = std::make_unique<QOpenGLTexture>(image.mirrored(false, true));
+#endif
     m_channelTextures[channel]->setWrapMode(QOpenGLTexture::Repeat);
     m_channelTextures[channel]->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
     m_channelTextures[channel]->setMagnificationFilter(QOpenGLTexture::Linear);
