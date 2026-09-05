@@ -1,4 +1,5 @@
 // Phase integrator for Ring_Spectrum. The engine finds this BY NAME
+// @channels audio, bufferA
 // (<name>_bufferA.frag) - a copy must rename both files of the pair.
 //
 // Shadertoy port (Buffer A tab there): https://www.shadertoy.com/view/7c3SWj

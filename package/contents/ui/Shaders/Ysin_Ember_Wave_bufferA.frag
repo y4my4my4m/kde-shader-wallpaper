@@ -1,4 +1,5 @@
 // Audio integrator for Ysin_Ember_Wave.
+// @channels audio, bufferA
 //
 // Shadertoy port (Buffer A tab there): https://www.shadertoy.com/view/7fdXWB
 //

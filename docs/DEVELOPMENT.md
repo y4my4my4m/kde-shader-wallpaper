@@ -148,6 +148,27 @@ Configure in settings which inputs each pass reads:
 - `10-13` = Buffer A-D outputs
 - `20` = Audio data
 
+### Channel Directive (recommended)
+
+Instead of relying on the settings UI, a shader can declare its own routing
+in a header comment. When the shader is picked (gallery, file dialog, presets
+excluded) the routing below is written to the config and audio capture is
+switched on or off to match:
+
+```glsl
+// Ring_Spectrum - six rotating rings driven by the FFT
+// @channels audio, bufferA
+```
+
+One token per `iChannel0..3`, in order: `audio` (FFT texture), `bufferA`..`bufferD`
+(or `A`..`D`), `self` (the pass's own buffer, inside a `_bufferX.frag`),
+`tex0`..`tex3` (static texture slots), `none`. Missing trailing tokens keep the
+defaults. The line in the main file also applies to every buffer pass that
+carries no directive of its own; a buffer file may state a different one.
+
+Without a directive the generic default applies: Buffer A feeds channel 0 of
+both passes, which is wrong for the usual "audio on 0, feedback on 1" layout.
+
 ## Audio Reactive Shaders
 
 ### Enabling Audio

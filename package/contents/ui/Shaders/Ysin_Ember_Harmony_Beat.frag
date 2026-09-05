@@ -1,4 +1,5 @@
 // Ysin_Ember_Harmony_Beat - _09 plus a BEAT TRACKER, used for one thing only:
+// @channels audio, bufferA
 // the line rides slightly higher when there is bass, and that height breathes
 // on the beat. Everything else is _09 exactly.
 //

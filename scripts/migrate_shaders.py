@@ -43,8 +43,15 @@ def detect_category(code: str) -> str:
 
 def detect_features(code: str) -> dict:
     """Detect shader features from code."""
+    # A "// @channels audio, bufferA" header line (see ChannelDirective.js)
+    # is the author's own declaration - trust it over the wording heuristic.
+    directive = re.search(r'^[ \t]*//[ \t]*@channels?[ \t]*:?[ \t]*([^\r\n]*)', code, re.I | re.M)
+    if directive:
+        needs_audio = bool(re.search(r'\b(audio|fft|music)\b', directive.group(1), re.I))
+    else:
+        needs_audio = bool(re.search(r'iChannel.*audio|music|sound', code, re.I))
     return {
-        'needsAudio': bool(re.search(r'iChannel.*audio|music|sound', code, re.I)),
+        'needsAudio': needs_audio,
         'needsTextures': 'iChannel' in code and 'texture' in code.lower(),
         'hasBuffers': bool(re.search(r'Buffer[ABCD]', code)),
         'usesTime': 'iTime' in code,

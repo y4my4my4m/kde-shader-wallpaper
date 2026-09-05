@@ -1,4 +1,5 @@
 // Hive_Spectrum buffer — 6-band state + hive dynamics + BEE TABLE (v24 layout).
+// @channels audio, bufferA
 // iChannel0 = audio, iChannel1 = self. 60 columns, read row y=.5:
 //   c0: b0-b3 | c1: b4,b5,press,centroidSm | c2: kick,prevGate,treFlash,treSpread
 //   c3: fillFine [0,1), ripplePhase, fillCoarse (64ths), MAGIC

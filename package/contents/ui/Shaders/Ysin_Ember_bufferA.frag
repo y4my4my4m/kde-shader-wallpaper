@@ -1,4 +1,5 @@
 // Audio integrator for Ysin_Ember (16F-safe: stores PHASES wrapped to
+// @channels audio, bufferA
 // 2pi, never a growing time value - half-float precision dies past ~6.0).
 // iChannel0 = audio FFT, iChannel1 = self (previous frame).
 // State texels (x quarters): (.125,.5) phases travel1, morph1/2/3
