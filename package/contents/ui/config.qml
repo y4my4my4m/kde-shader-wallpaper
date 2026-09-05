@@ -106,7 +106,10 @@ ColumnLayout {
     property double cfg_resolutionScale: wallpaperConfiguration ? (wallpaperConfiguration.resolutionScale || 1.0) : 1.0
     property int    cfg_pauseMode: wallpaperConfiguration ? (wallpaperConfiguration.pauseMode ?? 0) : 0
     property bool   cfg_checkActiveScreen: wallpaperConfiguration ? (wallpaperConfiguration.checkActiveScreen ?? true) : true
-    property var    cfg_excludeWindows: wallpaperConfiguration ? (wallpaperConfiguration.excludeWindows ?? []) : []
+    // List-typed keys are NOT bound to wallpaperConfiguration (see _syncListKey):
+    // a binding hands out a fresh JS array on every re-evaluation, so it can
+    // never compare equal to the previous value.
+    property var    cfg_excludeWindows: []
 
     // — Mouse
     property bool   cfg_mouseEnabled: wallpaperConfiguration ? (wallpaperConfiguration.mouseEnabled ?? false) : false
@@ -174,7 +177,7 @@ ColumnLayout {
 
     // — Playlist
     property bool cfg_playlistEnabled:         wallpaperConfiguration ? (wallpaperConfiguration.playlistEnabled ?? false) : false
-    property var  cfg_playlistShaders:         wallpaperConfiguration ? (wallpaperConfiguration.playlistShaders ?? []) : []
+    property var  cfg_playlistShaders:         []   // see _syncListKey
     property int  cfg_playlistIntervalMinutes: wallpaperConfiguration ? (wallpaperConfiguration.playlistIntervalMinutes || 10) : 10
     property bool cfg_playlistShuffle:         wallpaperConfiguration ? (wallpaperConfiguration.playlistShuffle ?? false) : false
 
@@ -255,8 +258,34 @@ ColumnLayout {
 
     function _pushToLiveConfig(key, value) {
         if (!wallpaperConfiguration) return
-        if (wallpaperConfiguration[key] === value) return
+        if (!_differs(wallpaperConfiguration[key], value)) return
         wallpaperConfiguration[key] = value
+    }
+
+    // ── list-typed keys (StringList in main.xml: excludeWindows, playlistShaders)
+    // The host KCM (plasma-workspace kcms/wallpaper, 6.7) connects EVERY
+    // cfg_*Changed signal of this root to a handler that rewrites ALL keys
+    // into kcm.configuration. With a list key bound to wallpaperConfiguration
+    // that rewrite re-evaluates the binding, yields a new JS array (=== is
+    // identity for arrays), fires cfg_*Changed again, the KCM rewrites again…
+    // until "RangeError: Maximum call stack size exceeded" on Apply — and
+    // whatever the KCM had not written yet (selectedShaderPath among it) was
+    // silently lost. Lists are therefore compared by content and synced
+    // imperatively from valueChanged instead of through a binding.
+    readonly property var _listKeys: ["excludeWindows", "playlistShaders"]
+    function _isList(v) { return v !== null && v !== undefined && typeof v === "object" && ("length" in v) }
+    function _differs(a, b) {
+        if (_isList(a) || _isList(b)) return JSON.stringify(a ?? []) !== JSON.stringify(b ?? [])
+        return a !== b
+    }
+    function _syncListKey(key) {
+        if (!wallpaperConfiguration) return
+        const v = wallpaperConfiguration[key] ?? []
+        if (_differs(v, configRoot["cfg_" + key])) configRoot["cfg_" + key] = Array.prototype.slice.call(v)
+    }
+    Connections {
+        target: wallpaperConfiguration
+        function onValueChanged(key, value) { if (configRoot._listKeys.indexOf(key) >= 0) configRoot._syncListKey(key) }
     }
 
     // Suppresses configurationChanged / live-preview side effects during the
@@ -268,6 +297,7 @@ ColumnLayout {
     property bool _suppressBroadcast: false
 
     Component.onCompleted: {
+        _listKeys.forEach(_syncListKey)
         // configRoot.cfg_<key>Changed → broadcast: KCM signal, live config, UI.
         let wired = 0
         let missing = []
@@ -282,7 +312,7 @@ ColumnLayout {
                 configRoot.configurationChanged()
                 _pushToLiveConfig(key.substring(4), configRoot[key])
                 const item = contentLoader.item
-                if (item && (key in item) && item[key] !== configRoot[key]) {
+                if (item && (key in item) && _differs(item[key], configRoot[key])) {
                     item[key] = configRoot[key]
                 }
             })
@@ -328,7 +358,7 @@ ColumnLayout {
             // changed.
             _suppressBroadcast = true
             _cfgKeys.forEach(function(key) {
-                if ((key in item) && item[key] !== configRoot[key]) {
+                if ((key in item) && _differs(item[key], configRoot[key])) {
                     item[key] = configRoot[key]
                 }
             })
@@ -353,7 +383,7 @@ ColumnLayout {
                 const sig = item[key + "Changed"]
                 if (!sig) return
                 sig.connect(function() {
-                    if (configRoot[key] !== item[key]) {
+                    if (_differs(configRoot[key], item[key])) {
                         configRoot[key] = item[key]
                     }
                 })
