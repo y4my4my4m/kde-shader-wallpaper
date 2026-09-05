@@ -1,4 +1,5 @@
 // Audio integrator for Ysin_Ember_Mix: six band drives for the braid,
+// @channels audio, bufferA
 // a percussion onset detector, and the phases the wave flows on.
 //
 // Shadertoy port (Buffer A tab there): https://www.shadertoy.com/view/7ctSDB

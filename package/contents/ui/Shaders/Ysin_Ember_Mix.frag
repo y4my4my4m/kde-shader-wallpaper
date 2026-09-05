@@ -1,4 +1,5 @@
 // Ysin_Ember_Mix - the audio-reactive Ysin with the braid spread across
+// @channels audio, bufferA
 // the spectrum: each of the six strands follows its own frequency band (low
 // to high, bass on the darkest strand), the whole braid breathes with the
 // mix, and the main wave answers the drums. The paired

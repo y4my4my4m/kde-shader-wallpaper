@@ -1,4 +1,5 @@
 // Ysin_Ember_Big_Beat - _08 with every rate recomputed instead of guessed.
+// @channels audio, bufferA
 // Same shapes, same audio work, same braid on the music; what changed is the
 // set of numbers that decide how fast things move and how they line up.
 //

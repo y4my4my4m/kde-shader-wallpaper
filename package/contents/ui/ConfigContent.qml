@@ -11,6 +11,7 @@ import org.kde.kirigamiaddons.formcard as FormCard
 import org.kde.plasma.core as PlasmaCore
 import QtCore
 import "shaderwallpaper"
+import "ChannelDirective.js" as ChannelDirective
 
 // onboarding state lives in QSettings, persisted across reinstalls
 
@@ -398,8 +399,23 @@ ColumnLayout {
     // Helper: apply a shader chosen from the gallery or a file dialog.
     // Writes only to cfg_* aliases so Plasma's Apply / dirty-tracking works.
     // ----------------------------------------------------------------------
+    property bool _applyingShader: false
     function applyShaderFromPath(path, displayName) {
         if (!path) return
+        if (_applyingShader) {
+            console.warn("applyShaderFromPath re-entered for", path, "- ignored:", new Error().stack)
+            return
+        }
+        _applyingShader = true
+        try {
+            _applyShaderFromPathImpl(path, displayName)
+        } catch (e) {
+            console.warn("applyShaderFromPath failed for", path, ":", e, e.stack)
+        } finally {
+            _applyingShader = false
+        }
+    }
+    function _applyShaderFromPathImpl(path, displayName) {
         // Save paths relative to the plugin's contents/ui/ so the same value
         // works on the desktop (~/.local) and the PLM greeter (/usr).
         // Absolute paths to files outside the plugin (user-picked custom
@@ -472,10 +488,45 @@ ColumnLayout {
             }
         }
 
+        // A "// @channels audio, bufferA" line in the shader header pins the
+        // routing the author designed for (see ChannelDirective.js). It wins
+        // over the generic buffer defaults above and over a manifest, and it
+        // is what makes an audio+feedback shader work on the first click:
+        // the default puts Buffer A on channel 0, the audio convention puts
+        // the FFT there and the buffer on channel 1, and a misrouted
+        // feedback channel looks exactly like a frozen shader.
+        var mainCode = ShaderLibrarySingleton.loadShaderCode(path) || ""
+        var directive = ChannelDirective.parse(mainCode, 10)
+        if (directive.found) {
+            var wantsAudio = directive.audio
+            for (var dc = 0; dc < 4; dc++) {
+                if (directive.channels[dc] !== null)
+                    configItem["cfg_imageChannel" + dc] = directive.channels[dc]
+            }
+            var bufNames = ["A", "B", "C", "D"]
+            var bufUsed  = [cfg_useBufferA, cfg_useBufferB, cfg_useBufferC, cfg_useBufferD]
+            var bufCode  = [cfg_bufferACode, cfg_bufferBCode, cfg_bufferCCode, cfg_bufferDCode]
+            for (var db = 0; db < 4; db++) {
+                if (!bufUsed[db]) continue
+                var bd = ChannelDirective.parse(bufCode[db], 10 + db)
+                if (!bd.found) bd = directive        // inherit the main file's line
+                for (var bc = 0; bc < 4; bc++) {
+                    if (bd.channels[bc] !== null)
+                        configItem["cfg_buffer" + bufNames[db] + "Channel" + bc] = bd.channels[bc]
+                }
+                if (bd.audio) wantsAudio = true
+            }
+            cfg_audioEnabled = wantsAudio
+            console.log("  Channel directive applied: image=" +
+                        [cfg_imageChannel0, cfg_imageChannel1, cfg_imageChannel2, cfg_imageChannel3].join(",") +
+                        (cfg_useBufferA ? " bufferA=" + [cfg_bufferAChannel0, cfg_bufferAChannel1, cfg_bufferAChannel2, cfg_bufferAChannel3].join(",") : "") +
+                        " audio=" + wantsAudio)
+        }
+
         // Auto-detect which engine features the shader actually uses so we
         // flip the matching toggle without the user having to find it.
         // Combine main + all buffer + common code for the scan.
-        var allCode = ShaderLibrarySingleton.loadShaderCode(path) || ""
+        var allCode = mainCode
         if (cfg_commonCode) allCode += "\n" + cfg_commonCode
         if (cfg_bufferACode) allCode += "\n" + cfg_bufferACode
         if (cfg_bufferBCode) allCode += "\n" + cfg_bufferBCode

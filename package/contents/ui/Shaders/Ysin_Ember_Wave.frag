@@ -1,4 +1,5 @@
 // Ysin_Ember_Wave - Wave_01 with the braid spread across the spectrum
+// @channels audio, bufferA
 // and put on the music's clock. The main line is untouched: still the pure
 // spectrum shape, still no beat in it.
 //

@@ -1,4 +1,5 @@
 // Ring_Spectrum (formerly Ysin_Ring_Spectrum) - Ysin_Ring split into six rotating rings, one per
+// @channels audio, bufferA
 // frequency band: bass innermost (slow, thick, deep indigo), highs
 // outermost (fast, thin, yellow). Neighbouring rings spin in opposite
 // directions; both thickness and luminance walk the depth-to-flame

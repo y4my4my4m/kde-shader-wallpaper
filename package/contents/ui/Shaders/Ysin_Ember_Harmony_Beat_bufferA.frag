@@ -1,4 +1,5 @@
 // Audio integrator for Ysin_Ember_Harmony_Beat: six band drives for the braid,
+// @channels audio, bufferA
 // a percussion onset detector, a SUB-BASS onset detector that drives the
 // flame's height, and the phases the wave flows on.
 //

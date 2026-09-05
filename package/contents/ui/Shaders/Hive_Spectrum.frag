@@ -1,4 +1,5 @@
 // Hive_Spectrum — hexagonal honeycomb where every cell listens to its own slice
+// @channels audio, bufferA
 // of the spectrum (the Audio3D per-element lesson, own implementation):
 // frequency grows with the hex ring distance from the center (bass core,
 // treble rim) and a per-cell hash jitter decorrelates neighbors so the comb

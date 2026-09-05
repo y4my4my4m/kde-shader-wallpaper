@@ -1,4 +1,5 @@
 // Ysin_Ember - Ysin_Ember_NoAudio coupled to the audio FFT (iChannel0)
+// @channels audio, bufferA
 #define A(v) mat2(cos(m.v+radians(vec4(0, -90, 90, 0))))  // rotate
 #define W(v) length(vec3(p.yz-v(p.x+vec2(0, pi_2)+t), 0))-lt  // wave
 //#define W(v) length(p-vec3(round(p.x*pi)/pi, v(t+p.x), v(t+pi_2+p.x)))-lt  // alt wave
