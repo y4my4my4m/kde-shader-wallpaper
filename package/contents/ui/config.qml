@@ -295,6 +295,7 @@ ColumnLayout {
     // values match, the second-direction handler's `!==` test is false and
     // nothing fires.
     property bool _suppressBroadcast: false
+    property var _listSnapshot: ({})
 
     Component.onCompleted: {
         _listKeys.forEach(_syncListKey)
@@ -309,7 +310,20 @@ ColumnLayout {
             }
             sig.connect(function() {
                 if (_suppressBroadcast) return
-                configRoot.configurationChanged()
+                // A list assigned by the host KCM (it pushes every key back
+                // after each Apply, when plasmashell reports wallpaperChanged)
+                // is a fresh array each time: same content, new identity, and
+                // the signal fires. Ignore it unless the content changed.
+                if (_isList(configRoot[key])) {
+                    const j = JSON.stringify(configRoot[key])
+                    if (_listSnapshot[key] === j) return
+                    _listSnapshot[key] = j
+                }
+                // configurationChanged() (= "mark the KCM dirty") is NOT emitted
+                // here: this handler also runs for the KCM's own push-back after
+                // Apply, which must not re-dirty the module. It is emitted from
+                // the item→configRoot mirror below, i.e. only for edits that
+                // originate in the UI.
                 _pushToLiveConfig(key.substring(4), configRoot[key])
                 const item = contentLoader.item
                 if (item && (key in item) && _differs(item[key], configRoot[key])) {
@@ -385,6 +399,7 @@ ColumnLayout {
                 sig.connect(function() {
                     if (_differs(configRoot[key], item[key])) {
                         configRoot[key] = item[key]
+                        configRoot.configurationChanged()   // a UI edit: dirty the KCM
                     }
                 })
                 wired++
