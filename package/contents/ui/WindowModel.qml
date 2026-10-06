@@ -63,6 +63,10 @@ Item {
         updateWindowsInfo();
     }
 
+    onActiveScreenOnlyChanged: {
+        updateWindowsInfo();
+    }
+
     function updateRun() {
         let shouldRun = true;
         switch (pauseMode) {

@@ -1739,6 +1739,13 @@ ColumnLayout {
                     currentIndex: cfg_pauseMode
                     onCurrentValueChanged: cfg_pauseMode = currentIndex
                 }
+
+                FormCard.FormSwitchDelegate {
+                    text: i18n("Only consider windows on this screen")
+                    description: i18n("Pause this wallpaper only when the matching window is on the same screen.")
+                    checked: cfg_checkActiveScreen
+                    onToggled: cfg_checkActiveScreen = checked
+                }
             }
 
             // ============================================================
