@@ -705,7 +705,10 @@ ColumnLayout {
         id: flick
         Layout.fillWidth: true
         Layout.fillHeight: true
-        contentWidth: width - flickScrollBar.width
+        // Plasma can polish the page before assigning its viewport size.
+        // A negative layout width leaves FormCard implicit sizes feeding back
+        // into their geometry and can keep the shell in a polish loop.
+        contentWidth: Math.max(0, width - flickScrollBar.width)
         contentHeight: mainColumn.implicitHeight
         clip: true
         flickableDirection: Flickable.VerticalFlick
@@ -742,7 +745,7 @@ ColumnLayout {
             // Bind directly to the Flickable's content area so cards
             // span the full available width and the scrollbar lives at
             // the real right edge of the panel.
-            width: flick.width - flickScrollBar.width
+            width: flick.contentWidth
             spacing: 0
 
             // ============================================================

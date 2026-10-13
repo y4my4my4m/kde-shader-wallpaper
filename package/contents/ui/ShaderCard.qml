@@ -424,13 +424,4 @@ Rectangle {
         onClicked: root.clicked()
         onDoubleClicked: root.doubleClicked()
     }
-    
-    // Hover animation
-    Behavior on color {
-        ColorAnimation { duration: 150 }
-    }
-    
-    Behavior on border.color {
-        ColorAnimation { duration: 150 }
-    }
 }
