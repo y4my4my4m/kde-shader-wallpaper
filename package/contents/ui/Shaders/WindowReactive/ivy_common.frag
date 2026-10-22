@@ -44,11 +44,8 @@
 // Buffer B, falling debris, one piece per cell (layout in ivy_bufferB.frag).
 // Buffer C, render hints per cell (layout in ivy_bufferC.frag).
 
-// Growth speed multiplier and the share of the visible desktop cells vines
-// may occupy. Fixed here: the tweak panel reads only ivy.frag, and these
-// drive the simulation passes.
-const float GROWTH   = 1.0;
-const float COVERAGE = 0.15;
+// GROWTH (growth speed multiplier) and COVERAGE (share of the visible
+// desktop cells vines may occupy) are @shared tweaks of ivy.frag.
 
 // Grid cells across the short screen side: 24.8 px cells at 1440p.
 const float CELLS_SHORT = 58.0;

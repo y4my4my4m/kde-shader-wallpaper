@@ -19,14 +19,19 @@
 // iChannel2  Buffer B: nearest ants per grid cell.
 // iChannel3  Buffer C: scent and walking-distance fields.
 //
-// Colony size, the food rate and whether ants sleep at night change the
-// simulation in every pass; they are set in ant_colony_common.frag.
+// Colony size, walking speed, the food rate and whether ants sleep at night
+// are shared with the buffer passes. The colony size is for a 16:9 screen
+// and scales with screen area, at most MAX_ANTS.
 
 const float ANT_SIZE    = 1.0;  // @range(0.5, 2.5, 0.05) @label("Ant size")
 const vec3  ANT_COLOUR  = vec3(0.11, 0.07, 0.05); // @color @label("Ant colour")
 const float TRAILS      = 0.35; // @range(0.0, 1.0, 0.05) @label("Trail visibility")
 const vec3  GROUND_TINT = vec3(0.80, 0.68, 0.50); // @color @label("Ground colour (no wallpaper)")
 const float MOONLIGHT   = 1.0;  // @range(0.0, 1.0, 0.05) @label("Moonlit night")
+const int   ANTS        = 480;  // @range(32, 1024, 16) @label("Ants") @shared
+const float ANT_SPEED   = 1.0;  // @range(0.25, 3.0, 0.05) @label("Ant speed") @shared
+const float FOOD_RATE   = 1.0;  // @range(0.0, 4.0, 0.05) @label("Food rate") @shared
+const float NIGHT       = 1.0;  // @range(0.0, 1.0, 1.0) @label("Ants sleep at night") @shared
 
 // ------------------------------------------------------------- utilities
 

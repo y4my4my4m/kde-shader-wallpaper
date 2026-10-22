@@ -33,11 +33,8 @@
 // Clump k belongs to segment k % NSEG of slot k / NSEG: a window's pile is
 // cut into NSEG segments that slide off independently.
 
-// Simulation constants. Buffer A reads them, and the tweak panel edits only
-// snowdrift.frag, so they are fixed here.
-const float SNOW_RATE    = 1.0;    // settling rate, x ACCUM in Buffer A
-const float DRIFT_HEIGHT = 0.11;   // U, scale of the ground drift cap
-const float MELT_RADIUS  = 0.032;  // U, cursor melt radius
+// SNOW_RATE (x ACCUM in Buffer A), DRIFT_HEIGHT (U, scale of the ground
+// drift cap) and MELT_RADIUS (U) are @shared tweaks of snowdrift.frag.
 
 const int ROW_GROUND = 0;
 const int ROW_PILE   = 1;

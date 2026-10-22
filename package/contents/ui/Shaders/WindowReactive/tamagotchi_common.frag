@@ -43,20 +43,19 @@ const float DOT_SIZE = 0.0147; // dot pitch, same units
 const float ICON_SIZE = 0.074; // icon side, same units
 const int   FLOOR    = 3;      // row the pet stands on
 
-// Local clock, hours.
-const float BEDTIME  = 22.0;
-const float WAKE_UP  = 7.5;
+// @shared tweaks of tamagotchi.frag: BEDTIME, WAKE_UP, BREAKFAST, LUNCH,
+// DINNER (local clock hours), CHILD_MINUTES, ADULT_MINUTES, and SPECIES
+// (adult species: 0 cat, 1 bunny, 2 chick, 3 frog, 4 bear; -1 picks one from
+// the date). Children come in two shapes, species modulo 2.
+
 const float CLOCK_SHIFT = 0.0; // hours added to the clock
-const float MEALS[3] = float[3](8.0, 12.5, 19.0); // mealtimes; each lasts 1.5 h
+const float MEALS[3] = float[3](BREAKFAST, LUNCH, DINNER); // each lasts 1.5 h
 
-// Session seconds at which the pet grows.
+// Session seconds at which the pet grows. Adulthood never precedes
+// childhood: the session clock caps at ADULT_SECONDS + 60.
 const float HATCH_SECONDS = 7.0;
-const float CHILD_SECONDS = 300.0;
-const float ADULT_SECONDS = 1800.0;
-
-// Adult species: 0 cat, 1 bunny, 2 chick, 3 frog, 4 bear; -1 picks one from
-// the date. Children come in two shapes, species modulo 2.
-const int SPECIES = -1;
+const float CHILD_SECONDS = CHILD_MINUTES * 60.0;
+const float ADULT_SECONDS = max(ADULT_MINUTES, CHILD_MINUTES) * 60.0;
 
 const int ST_EGG = 0;
 const int ST_BABY = 1;
@@ -174,6 +173,9 @@ bool nightAt(float h)
 {
     return BEDTIME > WAKE_UP ? (h >= BEDTIME || h < WAKE_UP) : (h >= BEDTIME && h < WAKE_UP);
 }
+
+// Hours awake, either order of BEDTIME and WAKE_UP.
+float dayHours() { return mod(BEDTIME - WAKE_UP + 24.0, 24.0); }
 
 // Hours since the current mealtime began, or -1 outside mealtimes.
 float mealWindow(float h)

@@ -14,9 +14,9 @@
 // Resting the cursor for SHOT_DELAY seconds fires the next colour; a colour
 // that already exists moves there. Clicking a portal closes it. Every texel
 // recomputes events from the previous step, so they agree within a substep.
-// iMouse and iWindowRects arrive scaled to this pass's grid.
+// iMouse and iWindowRects arrive scaled to this pass's grid. SHOT_DELAY
+// and PORTAL_SIZE are @shared tweaks of sciencelab.frag.
 
-const float SHOT_DELAY = 1.1;
 const float CLOSE_TIME = 0.35;
 
 bool insideWindow(vec2 p)
@@ -29,12 +29,12 @@ bool insideWindow(vec2 p)
     return false;
 }
 
-// Portal hit test with the image pass's base size (95/1000 of the height,
-// width 0.58 of the height) and a small margin.
+// Portal hit test with the image pass's size (95/1000 of the height times
+// PORTAL_SIZE, width 0.58 of the height) and a small margin.
 bool hitPortal(vec4 p, vec2 m)
 {
     if (p.w < 0.5 || p.w > 1.5) return false;
-    float h = 0.095 * iResolution.y * 1.15;
+    float h = 0.095 * PORTAL_SIZE * iResolution.y * 1.15;
     vec2 q = (m - p.xy * iResolution.xy) / vec2(h * 0.58, h);
     return dot(q, q) < 1.0;
 }

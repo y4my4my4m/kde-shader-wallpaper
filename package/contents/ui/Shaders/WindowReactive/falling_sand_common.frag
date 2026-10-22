@@ -31,11 +31,10 @@
 //   3  duration of the current event (seconds), events so far, kind of the
 //      latest event, 1
 
-// Simulation settings. The tweak panel rewrites only the image pass, which
-// Buffer A cannot see, so these are fixed here.
-const float POUR_RATE   = 1.0;   // pouring speed, multiplier
-const float AMBIENT     = 1.0;   // 1 ambient events (rain, sand, seeds, snow), 0 none
-const float EVAPORATION = 1.0;   // evaporation and drying speed, multiplier
+// @shared tweaks of falling_sand.frag:
+//   POUR_RATE    pouring speed, multiplier
+//   AMBIENT      1 ambient events (rain, sand, seeds, snow), 0 none
+//   EVAPORATION  evaporation and drying speed, multiplier
 
 const int M_EMPTY  = 0;
 const int M_SAND   = 1;

@@ -11,9 +11,9 @@
 //   0 angelfish, 1 panda corydoras, 2 cherry shrimp,
 //   3 .. 3 + TETRAS - 1 neon tetras,
 //   then pufferfish, koi angelfish, bronze corydoras, cherry shrimp.
-
-// The tweak panel reads the image pass only; this count is edited here.
-const int TETRAS = 24; // @range(0.0, 40.0, 1.0) @label("Neon tetras")
+//
+// TETRAS, SWIM_SPEED, CURIOSITY and FOLLOW_CLOCK are @shared tweaks of
+// aquarium.frag.
 
 const int NBACK = 3;
 const int NFRONT = 4;

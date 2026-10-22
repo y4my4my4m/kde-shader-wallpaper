@@ -21,14 +21,16 @@
 // iChannel2  Buffer B: falling leaves, petals and torn pieces.
 // iChannel3  Buffer C: render hints and leaf rustle.
 //
-// Growth speed and maximum coverage are fixed constants (GROWTH, COVERAGE)
-// in ivy_common.frag: the simulation passes read them.
+// Growth speed and maximum coverage (share of the visible desktop cells
+// vines may occupy) are shared with the buffer passes.
 // Lengths are in cells (see ivy_common.frag).
 
 const vec3  LEAF_COLOUR   = vec3(0.16, 0.34, 0.11); // @color @label("Leaf colour")
 const vec3  FLOWER_COLOUR = vec3(0.40, 0.47, 0.97); // @color @label("Morning glory colour")
 const float FLOWERS       = 1.0;  // @range(0.0, 1.0, 1.0) @label("Flowers")
 const float LEAF_SIZE     = 1.0;  // @range(0.6, 1.2, 0.05) @label("Leaf size")
+const float GROWTH        = 1.0;  // @range(0.2, 4.0, 0.05) @label("Growth speed") @shared
+const float COVERAGE      = 0.15; // @range(0.03, 0.5, 0.01) @label("Coverage") @shared
 
 // ------------------------------------------------------------- utilities
 

@@ -21,14 +21,17 @@
 //
 // Grain size follows the buffer height: @sim-max-height above, or the
 // simulation max height setting. Pouring speed, ambient events and
-// evaporation are fixed in falling_sand_common.frag: the tweaks below
-// reach only this pass.
+// evaporation are shared with Buffer A; the other tweaks reach only this
+// pass.
 
 const vec3  SAND_COLOUR  = vec3(0.89, 0.75, 0.50); // @color @label("Sand colour")
 const vec3  WATER_COLOUR = vec3(0.24, 0.55, 0.93); // @color @label("Water colour")
 const float LIGHTING     = 1.0;  // @range(0.0, 2.0, 0.05) @label("Soft light and shadows")
 const float GRAIN_RELIEF = 1.0;  // @range(0.0, 2.0, 0.05) @label("Grain relief")
 const float CLOCK_SKY    = 1.0;  // @range(0.0, 1.0, 1.0) @label("Sky follows the clock (no wallpaper)")
+const float POUR_RATE    = 1.0;  // @range(0.1, 4.0, 0.05) @label("Pouring speed") @shared
+const float AMBIENT      = 1.0;  // @range(0.0, 1.0, 1.0) @label("Rain, snow and seed showers") @shared
+const float EVAPORATION  = 1.0;  // @range(0.0, 5.0, 0.05) @label("Evaporation") @shared
 
 // Palette icons, 16 x 16, rows top first, 2 bits per pixel (bits 2x..2x+1 =
 // column x): 0 clear, 1 outline, 2 base, 3 accent. Order as T_*.

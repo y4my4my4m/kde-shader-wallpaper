@@ -291,6 +291,20 @@ ColumnLayout {
     // Empty code returns to the file.
     function setInlineCode(code) {
         cfg_configVersion = ShaderApply.CONFIG_VERSION
+        // The edited main file runs with the package's current buffer and
+        // common code, not the copy cached when the shader was picked: an
+        // update or a @shared tweak constant must not meet stale passes.
+        if (fileBacked && code.length > 0) {
+            const bd = ShaderLibrarySingleton.loadBufferCodes(
+                ShaderApply.toFileUrl(ShaderLibrarySingleton, cfg_selectedShaderPath)) || {}
+            if (cfg_commonCode !== (bd.commonCode || "")) cfg_commonCode = bd.commonCode || ""
+            for (const X of ["A", "B", "C", "D"]) {
+                const c = bd["buffer" + X + "Code"] || ""
+                if (configItem["cfg_buffer" + X + "Code"] !== c) configItem["cfg_buffer" + X + "Code"] = c
+                const u = !!bd["useBuffer" + X]
+                if (configItem["cfg_useBuffer" + X] !== u) configItem["cfg_useBuffer" + X] = u
+            }
+        }
         if (cfg_selectedShaderCode !== code) cfg_selectedShaderCode = code
     }
 

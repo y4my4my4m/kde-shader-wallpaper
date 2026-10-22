@@ -19,14 +19,18 @@
 //            cabin under a dusk-blue sky by day and a starry one at night,
 //            by the local clock.
 //
-// The tweaks below shape what is drawn. Settling rate, drift height and melt
-// radius drive Buffer A and are fixed in snowdrift_common.frag.
+// Snowfall, wind, flake size and sparkle shape what is drawn. Settling rate,
+// drift height and melt radius are shared with Buffer A; the last two are in
+// U (shorter screen side).
 
 const float SNOWFALL   = 1.0;  // @range(0.25, 3.0, 0.05) @label("Snowfall")
 const float WIND       = 1.0;  // @range(0.0, 3.0, 0.05) @label("Wind")
 const float FLAKE_SIZE = 1.0;  // @range(0.4, 2.5, 0.05) @label("Flake size")
 const float SPARKLE    = 1.0;  // @range(0.0, 2.0, 0.05) @label("Sparkle")
 const vec3  SNOW_TINT  = vec3(0.95, 0.97, 1.0); // @color @label("Snow tint")
+const float SNOW_RATE    = 1.0;    // @range(0.0, 4.0, 0.05) @label("Settling rate") @shared
+const float DRIFT_HEIGHT = 0.11;   // @range(0.02, 0.25, 0.01) @label("Drift height") @shared
+const float MELT_RADIUS  = 0.032;  // @range(0.0, 0.1, 0.002) @label("Melt radius") @shared
 
 struct Light {
     vec3 amb;   // sky light on snow

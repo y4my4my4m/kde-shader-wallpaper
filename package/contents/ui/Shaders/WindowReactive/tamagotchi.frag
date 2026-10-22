@@ -11,6 +11,11 @@
 // play, medicine on top; clean, status, love and attention (lit when the pet
 // needs something, click to ask what) below.
 //
+// The pet's schedule (bedtime, wake-up and mealtimes in local clock hours),
+// its growth times and a fixed species are tweaks shared with Buffer A.
+// Species: -1 picks one from the date, 0 cat, 1 bunny, 2 chick, 3 frog,
+// 4 bear.
+//
 // iChannel0  Buffer A: state and the dot matrix (see tamagotchi_common.frag).
 
 const vec3  SHELL_A    = vec3(0.98, 0.80, 0.86); // @color @label("Shell")
@@ -23,6 +28,14 @@ const float GRID       = 1.0;  // @range(0.0, 2.0, 0.05) @label("Pixel grid")
 const float SHADOW     = 1.0;  // @range(0.0, 2.0, 0.05) @label("Pixel shadow")
 const float PATTERN    = 1.0;  // @range(0.0, 1.0, 0.05) @label("Shell pattern")
 const float GLARE      = 1.0;  // @range(0.0, 2.0, 0.05) @label("Screen glare")
+const float BEDTIME    = 22.0; // @range(0.0, 24.0, 0.25) @label("Bedtime (hour)") @shared
+const float WAKE_UP    = 7.5;  // @range(0.0, 24.0, 0.25) @label("Wake-up (hour)") @shared
+const float BREAKFAST  = 8.0;  // @range(0.0, 22.5, 0.25) @label("Breakfast (hour)") @shared
+const float LUNCH      = 12.5; // @range(0.0, 22.5, 0.25) @label("Lunch (hour)") @shared
+const float DINNER     = 19.0; // @range(0.0, 22.5, 0.25) @label("Dinner (hour)") @shared
+const float CHILD_MINUTES = 5.0;  // @range(0.5, 60.0, 0.5) @label("Child after (minutes)") @shared
+const float ADULT_MINUTES = 30.0; // @range(1.0, 240.0, 1.0) @label("Adult after (minutes)") @shared
+const int   SPECIES    = -1;   // @range(-1, 4, 1) @label("Species (-1 = by date)") @shared
 
 // Icons, 16 x 16, rows top first, bit x = column x: food, light, play,
 // medicine, clean, status, love, attention.

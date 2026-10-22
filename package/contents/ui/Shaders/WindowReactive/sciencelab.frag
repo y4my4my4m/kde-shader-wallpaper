@@ -13,11 +13,13 @@
 // iChannel1  Wallpaper ("Image 2" in the settings). Without one a soft
 //            backdrop is drawn.
 //
-// Lengths are in units of u = one thousandth of the screen height.
+// Lengths are in units of u = one thousandth of the screen height. Portal
+// size and the resting time before a shot are shared with Buffer A.
 
 const vec3  PORTAL_BLUE   = vec3(0.10, 0.55, 1.00); // @color @label("Blue portal")
 const vec3  PORTAL_ORANGE = vec3(1.00, 0.48, 0.05); // @color @label("Orange portal")
-const float PORTAL_SIZE   = 1.0;  // @range(0.4, 2.5, 0.05) @label("Portal size")
+const float PORTAL_SIZE   = 1.0;  // @range(0.4, 2.5, 0.05) @label("Portal size") @shared
+const float SHOT_DELAY    = 1.1;  // @range(0.3, 5.0, 0.1) @label("Rest before a shot (s)") @shared
 const float LIGHT_SPILL   = 1.0;  // @range(0.0, 2.0, 0.05) @label("Portal light on the desktop")
 const float FLIP_VIEW     = 0.0;  // @range(0.0, 1.0, 1.0) @label("Mirror the view through a portal")
 const vec3  BACKDROP_TOP  = vec3(0.86, 0.89, 0.92); // @color @label("Backdrop top (no wallpaper)")

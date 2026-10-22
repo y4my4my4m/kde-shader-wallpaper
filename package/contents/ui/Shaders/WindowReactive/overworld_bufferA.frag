@@ -25,7 +25,7 @@ bool mobPresent(vec4 b) { return b.x > 0.5 && b.w <= 0.0; }
 // Creeper that reached the end of its fuse last step; the blast centre.
 bool findBlast(out vec2 centre)
 {
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < CREEPERS; i++) {
         vec4 b = mobB(i);
         if (mobPresent(b) && b.z >= FUSE_TIME) {
             centre = mobA(i).xy + vec2(0.0, 0.3);
@@ -137,8 +137,8 @@ int passiveKind(float seed)
 // Seconds until a mob that left (or died) comes back.
 float awayTime(int kind, float seed)
 {
-    if (kind == CREEPER) return clockNight() ? 8.0 + 10.0 * hash11(seed) : 35.0 + 40.0 * hash11(seed);
-    return 10.0 + 25.0 * hash11(seed);
+    if (kind == CREEPER) return RETURN_TIME * (clockNight() ? 8.0 + 10.0 * hash11(seed) : 35.0 + 40.0 * hash11(seed));
+    return RETURN_TIME * (10.0 + 25.0 * hash11(seed));
 }
 
 void updateMob(int i, out vec4 outA, out vec4 outB)
@@ -150,7 +150,7 @@ void updateMob(int i, out vec4 outA, out vec4 outB)
     vec4 b = mobB(i);
 
     if (b.x < 0.5) {
-        int kind = i < 2 ? CREEPER : passiveKind(float(i) * 5.7 + 1.3);
+        int kind = i < CREEPERS ? CREEPER : passiveKind(float(i) * 5.7 + 1.3);
         float x = (float(i) + 0.5) / float(NMOB) * float(cols - 4) + 2.0;
         float y = float(max(surfaceHeight(int(x)), SEA) + 1);
         outA = vec4(x, y, 0.0, 0.0);
@@ -179,7 +179,7 @@ void updateMob(int i, out vec4 outA, out vec4 outB)
             facing = fromLeft ? 1.0 : -1.0;
             timer = 0.0;
             away = 0.0;
-            if (i >= 2) kind = passiveKind(seed + 3.1);
+            if (i >= CREEPERS) kind = passiveKind(seed + 3.1);
         }
         outA = vec4(pos, vel);
         outB = vec4(float(kind + 1), facing, timer, away);
@@ -350,7 +350,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
         float changed = s.w;
 
         // Healing: changed blocks drift back to the generated world.
-        if (slowTick && (o == 1 || o == 2 || o == 3) && iTime - changed > HEAL_DELAY
+        if (slowTick && HEAL_DELAY > 0.0 && (o == 1 || o == 2 || o == 3) && iTime - changed > HEAL_DELAY
             && abs(z) < 0.5 && hash12(vec2(c, r) + slowStep * 0.37) < 0.08) {
             o = 0;
             changed = iTime;

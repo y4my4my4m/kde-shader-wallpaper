@@ -32,14 +32,17 @@
 //   * Biharmonic velocity filter removes grid-scale noise behind obstacles
 //     that outrun the wave speed.
 //   * Sparse rain keeps the surface alive when nothing moves.
+//
+// RAIN_AMOUNT, CURSOR_WAKE and RIPPLE_DAMPING are @shared tweaks of
+// water_ripple_windows_v2.frag, multipliers of the constants below.
 
 const float REF_FPS       = 240.0;  // substep rate the sim is tuned for
 
 const float CURSOR_R      = 12.0;   // finger radius, cells
-const float CURSOR_DEPTH  = 1.6;    // depth at a brisk drag
+const float CURSOR_DEPTH  = 1.6 * CURSOR_WAKE; // depth at a brisk drag
 const float CURSOR_RATE   = 0.35;   // constraint stiffness per step
 const float SPLASH_R      = 9.0;
-const float SPLASH_DEPTH  = 1.6;
+const float SPLASH_DEPTH  = 1.6 * CURSOR_WAKE;
 
 const float WIN_CORNER    = 10.0;   // window corner radius, cells
 const float WIN_BAND      = 18.0;   // bow/stern band width outside the hull
@@ -48,13 +51,13 @@ const float WIN_FULL_SPD  = 380.0;  // cells/s at which the wake saturates
 const float WIN_RATE      = 0.12;
 const float WALL_SOFT     = 3.0;    // wall ramp width inside the hull, cells
 
-const float RAIN_PER_SEC  = 0.45;   // drops per second per stream (2 streams)
+const float RAIN_PER_SEC  = 0.45 * RAIN_AMOUNT; // drops per second per stream (2 streams)
 const float RAIN_R        = 5.0;
 const float RAIN_DEPTH    = 0.55;
 
 const float SPRING        = 0.005;  // wdtyDH restoring term
-const float DAMP_VEL      = 0.0028; // per step; exp(-0.67)/s at 240 steps/s
-const float DAMP_HEIGHT   = 0.0012;
+const float DAMP_VEL      = 0.0028 * RIPPLE_DAMPING; // per step; exp(-0.67)/s at 240 steps/s and RIPPLE_DAMPING 1
+const float DAMP_HEIGHT   = 0.0012 * RIPPLE_DAMPING;
 // Stable while 64 * HYPERVISCOSITY + 8 * VISCOSITY <= 1 (velocity factor at
 // the Nyquist mode stays non-negative under the wave coupling).
 const float VISCOSITY      = 0.01;
@@ -235,7 +238,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     }
 
     // --- Rain ---------------------------------------------------------------
-    for (int stream = 0; stream < 2; stream++) {
+    for (int stream = 0; stream < 2 && RAIN_PER_SEC > 0.0; stream++) {
         float fs = float(stream);
         float slot = floor(iTime * RAIN_PER_SEC + fs * 0.37);
         float seed = slot * 1.618 + fs * 17.0;

@@ -11,6 +11,8 @@
 // animal and it hops around happily. Keep the cursor on the bare desktop near
 // a creeper and it comes after it — stay too long and it blows a crater.
 //
+// Peaceful mode, the number of animals, how long mobs stay away, the world's
+// healing delay and the fluid speed are tweaks shared with Buffer A.
 // World rules and the Buffer A layout are in overworld_common.frag.
 // Textures are 16x16 texels per block, like the real thing.
 
@@ -18,8 +20,13 @@ const float DAY_MINUTES   = 0.0;  // @range(0.0, 60.0, 1.0) @label("Day length i
 const float TIME_OFFSET   = 0.0;  // @range(0.0, 24.0, 0.5) @label("Hours added to the clock")
 const float NIGHT_LIGHT   = 0.22; // @range(0.05, 1.0, 0.01) @label("Brightness at night")
 const float CLOUDS        = 1.0;  // @range(0.0, 1.0, 1.0) @label("Clouds")
+const bool  PEACEFUL      = false; // @label("Peaceful (no creepers)") @shared
+const int   ANIMALS       = 5;     // @range(0, 24, 1) @label("Animals") @shared
+const float RETURN_TIME   = 1.0;   // @range(0.1, 4.0, 0.05) @label("Time mobs stay away") @shared
+const float HEAL_DELAY    = 300.0; // @range(0.0, 3600.0, 30.0) @label("World heals after (s, 0 = never)") @shared
+const float FLUID_SPEED   = 1.0;   // @range(0.25, 4.0, 0.05) @label("Fluid speed") @shared
 
-const float TEXELS = 16.0;
+const float TEXELS = 16.0; // texels per block edge, as in the 16x16 block textures @hidden
 
 // ------------------------------------------------------------- time of day
 

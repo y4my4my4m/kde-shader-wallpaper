@@ -16,7 +16,7 @@
 // ants descend the walking-distance field (path integration around the
 // windows) with the "to home" trail as a tie-break, and enter the nest.
 
-const float SPEED       = 0.04;   // U/s
+const float SPEED       = 0.04 * ANT_SPEED; // U/s
 const float STRIDE      = 0.0042; // U walked per gait cycle
 const float SENSE_DIST  = 0.012;  // U
 const float SENSE_ANG   = 0.62;

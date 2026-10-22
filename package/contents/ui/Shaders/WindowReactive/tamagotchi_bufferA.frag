@@ -1434,7 +1434,8 @@ void drawDecor(inout vec2 o, ivec2 c, Grid g, float hr, float t)
     }
     // Sun by day, moon and stars by night.
     bool night = nightAt(hr);
-    float ph = night ? fract((hr - BEDTIME + 24.0) / max(24.0 - BEDTIME + WAKE_UP, 1.0)) : clamp((hr - WAKE_UP) / max(BEDTIME - WAKE_UP, 1.0), 0.0, 1.0);
+    float ph = night ? clamp(mod(hr - BEDTIME + 24.0, 24.0) / max(24.0 - dayHours(), 1.0), 0.0, 1.0)
+                     : clamp(mod(hr - WAKE_UP + 24.0, 24.0) / max(dayHours(), 1.0), 0.0, 1.0);
     vec2 sky = vec2(mix(0.06, 0.94, ph) * cols, rows - 7.0 - (1.0 - sin(ph * 3.14159)) * rows * 0.3);
     vec2 l = sprAt(night ? SP_MOON : SP_SUN, c, ivec2(floor(sky + 0.5)) - ivec2(0, 4), false);
     if (l.x > 0.5) { o = vec2(0.32, 0.9); return; }

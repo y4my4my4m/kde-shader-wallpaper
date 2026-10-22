@@ -82,7 +82,7 @@ Inp readInputs()
     // The cursor counts as long still at load: no nibbling before it moves.
     I.still = I.init ? 1000.0 : (moved ? 0.0 : min(g0.y + I.dt, 1000.0));
     I.calm = I.init ? 0.0 : ((I.fast || !I.onDesk) ? 0.0 : min(g0.z + I.dt, 1000.0));
-    I.night = clockNight();
+    I.night = FOLLOW_CLOCK > 0.5 ? clockNight() : 0.0;
     I.clock = g4.x;
     return I;
 }
@@ -328,8 +328,8 @@ Fish updateFish(int i, Inp I, vec4 school)
     float sleep = F.S.z;
     float interest = F.S.w;
 
-    float cruise = sp == SP_TETRA ? 0.10 : (sp == SP_ANGEL ? 0.045 : (sp == SP_PUFFER ? 0.04 : (sp == SP_CORY ? 0.035 : 0.014)));
-    float vmax = sp == SP_TETRA ? 0.55 : (sp == SP_ANGEL ? 0.3 : (sp == SP_PUFFER ? 0.22 : (sp == SP_CORY ? 0.28 : 0.45)));
+    float cruise = SWIM_SPEED * (sp == SP_TETRA ? 0.10 : (sp == SP_ANGEL ? 0.045 : (sp == SP_PUFFER ? 0.04 : (sp == SP_CORY ? 0.035 : 0.014))));
+    float vmax = SWIM_SPEED * (sp == SP_TETRA ? 0.55 : (sp == SP_ANGEL ? 0.3 : (sp == SP_PUFFER ? 0.22 : (sp == SP_CORY ? 0.28 : 0.45))));
     float resp = sp == SP_TETRA ? 2.5 : (sp == SP_ANGEL ? 1.2 : (sp == SP_PUFFER ? 1.5 : 3.0));
     float clr = L * (sp == SP_ANGEL ? 0.55 : 0.45);
     float mx = 0.012 * A + 0.5 * L;
@@ -489,10 +489,12 @@ Fish updateFish(int i, Inp I, vec4 school)
         gw = 1.0;
     }
 
-    bool nibbler = sp == SP_PUFFER || sp == SP_ANGEL || (sp == SP_TETRA && h < 0.22);
+    // CURIOSITY scales the share of nibbling tetras and divides the wait
+    // before a fish joins; 0 leaves the cursor alone.
+    bool nibbler = CURIOSITY > 0.0 && (sp == SP_PUFFER || sp == SP_ANGEL || (sp == SP_TETRA && h < 0.22 * CURIOSITY));
     float want = 0.0;
     if (nibbler && I.onDesk && !I.held && fear < 0.2 && !hungry && sleep < 0.5) {
-        float join = 0.6 + 1.6 * h;
+        float join = (0.6 + 1.6 * h) / max(CURIOSITY, 0.01);
         float leave = 8.0 + 8.0 * fract(h * 7.3);
         if (I.calm > join && I.still < leave && distance(I.m1, pos) < 0.6) want = 1.0;
     }
@@ -537,12 +539,12 @@ Fish updateFish(int i, Inp I, vec4 school)
         float spd = cruise;
         if (hungry) {
             tx = food.x - (mouth.x - pos.x);
-            spd = sp == SP_CORY ? 0.12 : 0.05;
+            spd = SWIM_SPEED * (sp == SP_CORY ? 0.12 : 0.05);
         }
         if (fear > HIDE_FEAR) {
             float hx;
             tx = floorCover(pos.x, gy, L, A, hx) ? hx : pos.x + facingSign(pos.x - I.m1.x) * 0.3;
-            spd = sp == SP_CORY ? 0.22 : 0.08;
+            spd = SWIM_SPEED * (sp == SP_CORY ? 0.22 : 0.08);
         }
         if (sleep > 0.5) spd = 0.0;
         float dx = tx - pos.x;

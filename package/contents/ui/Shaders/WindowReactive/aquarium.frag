@@ -11,8 +11,8 @@
 // bare desktop to sprinkle food flakes, click the pufferfish to make it puff
 // up. A dragged window shoves the water and sheds bubbles. The tank light
 // follows the local clock: at night it dims to moonlight, the fish rest low
-// among the plants and the neon stripes glow. The school size is TETRAS in
-// aquarium_common.frag.
+// among the plants and the neon stripes glow. School size, swim speed and
+// curiosity are tweaks shared with the buffer passes.
 //
 // iChannel0  Buffer A: fish, flakes, bubbles and input state (see the file).
 // iChannel1  Wallpaper ("Image 2" in the settings) as the tank's back wall.
@@ -27,7 +27,10 @@ const float CAUSTICS     = 1.0;  // @range(0.0, 2.0, 0.05) @label("Caustics")
 const float LIGHT_RAYS   = 1.0;  // @range(0.0, 2.0, 0.05) @label("Light rays")
 const float PLANTS       = 1.0;  // @range(0.0, 1.5, 0.05) @label("Plants")
 const float FISH_SCALE   = 1.0;  // @range(0.6, 1.6, 0.05) @label("Fish size")
-const float FOLLOW_CLOCK = 1.0;  // @range(0.0, 1.0, 1.0) @label("Night by the clock")
+const float FOLLOW_CLOCK = 1.0;  // @range(0.0, 1.0, 1.0) @label("Night by the clock") @shared
+const int   TETRAS       = 24;   // @range(0, 40, 1) @label("Neon tetras") @shared
+const float SWIM_SPEED   = 1.0;  // @range(0.3, 2.0, 0.05) @label("Swim speed") @shared
+const float CURIOSITY    = 1.0;  // @range(0.0, 3.0, 0.05) @label("Curiosity") @shared
 
 float gA;      // aspect
 float gPx;     // one pixel, H

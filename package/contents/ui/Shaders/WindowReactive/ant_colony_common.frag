@@ -47,11 +47,12 @@
 //   z  walking distance to the nest around windows, grid cells
 //   w  1 once initialised
 
-// Simulation settings. Every pass must agree on them, and the tweak panel
-// reads only the main file, so they are edited here.
-const float ANTS      = 480.0; // colony size on a 16:9 screen; scales with area, max MAX_ANTS
-const float FOOD_RATE = 1.0;   // natural food: one item per 30-75 s at 1, at most 3 out; 0 = clicks only
-const float NIGHT     = 1.0;   // 1: most ants stay in the nest at night by the local clock
+// @shared tweaks of ant_colony.frag:
+//   ANTS       colony size on a 16:9 screen; scales with area, max MAX_ANTS
+//   ANT_SPEED  multiplier of SPEED in Buffer A
+//   FOOD_RATE  natural food: one item per 30-75 s at 1, at most 3 out;
+//              0 = clicks only
+//   NIGHT      1: most ants stay in the nest at night by the local clock
 
 const int MAX_ANTS   = 1024;
 const int ANT_COLS   = 32;      // ants per row of Buffer A
@@ -132,7 +133,7 @@ vec2 nestPos()
 int antCount()
 {
     vec2 ws = worldSize();
-    float n = ANTS * (ws.x * ws.y) / 1.7778;
+    float n = float(ANTS) * (ws.x * ws.y) / 1.7778;
     return int(clamp(n, 32.0, float(MAX_ANTS)));
 }
 

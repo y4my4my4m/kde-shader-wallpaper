@@ -23,9 +23,13 @@
 //   (3, EVENT_ROW)     last water tick, last lava tick, last slow tick
 //   (4, EVENT_ROW)     last mob lost to lava: position, age, 1
 
+// PEACEFUL, ANIMALS, RETURN_TIME, HEAL_DELAY and FLUID_SPEED are @shared
+// tweaks of overworld.frag.
+
 const int ROWS = 24;
 const int SEA = 9;
-const int NMOB = 7;
+const int CREEPERS = PEACEFUL ? 0 : 2; // mob slots 0 .. CREEPERS - 1
+const int NMOB = CREEPERS + ANIMALS;
 const int MOB_ROW = 28;
 const int EVENT_ROW = 31;
 
@@ -53,10 +57,9 @@ const int CHICKEN = 3;
 
 const float FUSE_TIME = 1.5;     // seconds next to the cursor before a creeper blows
 const float BLAST_RADIUS = 3.2;
-const float WATER_TICK = 0.25;   // seconds per flow step, as in the game
-const float LAVA_TICK = 1.0;
+const float WATER_TICK = 0.25 / FLUID_SPEED; // seconds per flow step; the game's rate at FLUID_SPEED 1
+const float LAVA_TICK = 1.0 / FLUID_SPEED;
 const float SLOW_TICK = 2.0;     // grass spread and world healing
-const float HEAL_DELAY = 300.0;  // seconds before a changed block may heal
 
 float blockSize() { return iResolution.y / float(ROWS); }
 int columns() { return int(ceil(iResolution.x / blockSize())); }
@@ -228,10 +231,10 @@ vec2 mobSize(int kind)
     return vec2(0.5, 0.62);
 }
 
-// Mob kind from its state texel; slots 0 and 1 are always creepers.
+// Mob kind from its state texel; slots below CREEPERS are always creepers.
 int mobKindOf(int i, vec4 b)
 {
-    if (i < 2) return CREEPER;
+    if (i < CREEPERS) return CREEPER;
     int k = int(b.x + 0.5) - 1;
     return (k >= PIG && k <= CHICKEN) ? k : PIG;
 }

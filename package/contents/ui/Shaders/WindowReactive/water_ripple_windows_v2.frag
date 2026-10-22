@@ -13,6 +13,7 @@
 //            is zero and a procedural lagoon floor is drawn instead.
 //
 // Units: p is in screen heights (y in [0, 1]); slope is dimensionless.
+// Rain, cursor wake strength and ripple damping are shared with Buffer A.
 
 const vec3  WATER_COLOR    = vec3(0.04, 0.62, 0.70); // @color @label("Water colour")
 const vec3  DEEP_COLOR     = vec3(0.00, 0.19, 0.33); // @color @label("Deep water colour")
@@ -25,11 +26,21 @@ const float AMBIENT_SWELL  = 1.0;  // @range(0.0, 3.0, 0.05) @label("Ambient swe
 const float WINDOW_SHADOW  = 0.45; // @range(0.0, 1.0, 0.01) @label("Window shadows")
 const float WALLPAPER_TINT = 0.0;  // @range(0.0, 1.0, 0.01) @label("Wallpaper water tint")
 
-const vec3  SUN_DIR        = vec3(-0.30, 0.36, 0.88); // towards the sun, z up
-const vec3  SUN_COLOR      = vec3(1.00, 0.95, 0.85);
-const float SLOPE_PER_CELL = 3.2;   // sim gradient -> surface slope
-const float WINDOW_LIFT    = 0.05;  // window height above the floor, screen heights
-const float SURFACE_RELIEF = 1.4;   // brightness change per unit slope towards the sun
+const float RAIN_AMOUNT    = 1.0;  // @range(0.0, 5.0, 0.05) @label("Raindrops") @shared
+const float CURSOR_WAKE    = 1.0;  // @range(0.0, 1.8, 0.05) @label("Cursor wake") @shared
+const float RIPPLE_DAMPING = 1.0;  // @range(0.0, 5.0, 0.05) @label("Ripple damping") @shared
+
+const vec3  SUN_DIR        = vec3(-0.30, 0.36, 0.88); // towards the sun, z up @range(-1.0, 1.0, 0.01) @label("Sun direction")
+const vec3  SUN_COLOR      = vec3(1.00, 0.95, 0.85); // @color @label("Sun colour")
+const float SLOPE_PER_CELL = 3.2;   // sim gradient -> surface slope @range(0.0, 8.0, 0.1) @label("Ripple relief")
+const float WINDOW_LIFT    = 0.05;  // window height above the floor, screen heights @range(0.0, 0.2, 0.005) @label("Window height")
+const float SURFACE_RELIEF = 1.4;   // brightness change per unit slope towards the sun @range(0.0, 4.0, 0.05) @label("Surface shading")
+
+// SUN_DIR held above the horizon and at least 20 degrees from the zenith;
+// nearer the zenith the broad glint lobe covers flat water.
+const float SUN_Z  = max(SUN_DIR.z, 0.05);
+const vec2  SUN_XY = length(SUN_DIR.xy) > 0.001 ? SUN_DIR.xy : vec2(-0.0006, 0.0008);
+const vec3  SUN    = vec3(SUN_XY * max(1.0, 0.36 * SUN_Z / length(SUN_XY)), SUN_Z);
 
 // ------------------------------------------------------------- noise
 
@@ -167,7 +178,7 @@ vec3 lagoonFloor(vec2 p, out float relief)
     // side through their derivative.
     float phase = dot(p, vec2(0.83, 0.55)) * 46.0 + fbm(p * 3.1, 2) * 9.0;
     float ridge = sin(phase);
-    float lit = cos(phase) * dot(normalize(vec2(0.83, 0.55)), normalize(SUN_DIR.xy));
+    float lit = cos(phase) * dot(normalize(vec2(0.83, 0.55)), normalize(SUN.xy));
     col *= 1.0 + 0.16 * lit * smoothstep(0.3, 0.7, large);
     relief = large + 0.05 * ridge;
 
@@ -191,7 +202,7 @@ float sdBox(vec2 p, vec2 center, vec2 halfSize, float r)
 float windowShadow(vec2 fc)
 {
     float px = iResolution.y;
-    vec2 offset = -SUN_DIR.xy / SUN_DIR.z * WINDOW_LIFT * px;
+    vec2 offset = -SUN.xy / SUN.z * WINDOW_LIFT * px;
     float soft = 0.035 * px;
     float occ = 0.0;
     for (int i = 0; i < iWindowCount && i < 16; i++) {
@@ -290,7 +301,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     // brightest there), sky reflection by Fresnel, a sharp and a broad sun
     // lobe for glints.
     vec3 V = vec3(0.0, 0.0, 1.0);
-    vec3 L = normalize(SUN_DIR);
+    vec3 L = normalize(SUN);
     float facing = dot(slope, normalize(L.xy));
     col *= 1.0 + SURFACE_RELIEF * clamp(facing, -0.4, 0.4);
     vec3 H = normalize(L + V);
