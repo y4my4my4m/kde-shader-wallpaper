@@ -1,6 +1,6 @@
 // https://www.shadertoy.com/view/tlySDV
+// @texture0 Shaders/Day_79_iChannel0.png
 
-// property Image iChannel0: Image { source: "./Shader_Day_79_iChannel0.png" }
 
 #define pmod(p,x) (mod(p,x) - 0.5*x)
 #define dmin(a,b) a.x < b.x ? a : b

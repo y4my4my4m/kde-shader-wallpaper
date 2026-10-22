@@ -30,7 +30,7 @@
 // lifts each band by .07 per ring before expansion - without it the two
 // outer rings barely light up on real music.
 
-// --- animated mist (Ysin_Ring's, unchanged) --------------------------------
+// --- animated mist (Ysin_Ring's noise and warp; own colour) --------------------------------
 float fhash(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
 float fnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
     float a=fhash(i), b=fhash(i+vec2(1,0)), c=fhash(i+vec2(0,1)), e=fhash(i+vec2(1,1));
@@ -52,8 +52,10 @@ vec3 applyFog(vec3 col, vec2 uv, float t){
     // for a swirl the mist's own motion already provides
     float den = smoothstep(.25,.85, fbm(p + 2.4*q, 5));
     den *= fogStrength(t);
-    col *= 1. - .8*den;
-    col += vec3(.85,.75,.55) * den * .12;
+    // cool nebula, brightest near the core; fills the long sides.
+    // Ysin_Ring darkens by .8 and adds a beige veil, which reads as smog
+    col *= 1. - .45*den;
+    col += vec3(.06,.09,.22) * den * (.40 + .35*exp(-dot(uv,uv)*3.));
     return col;
 }
 
@@ -63,7 +65,13 @@ vec3 applyFog(vec3 col, vec2 uv, float t){
 // this pass saves 18 texture taps per pixel. iChannel1 = Buffer A.
 
 void mainImage(out vec4 C, in vec2 U){
-    vec2 R=iResolution.xy; vec2 uv=(U-.5*R)/R.y; float t=iTime;
+    vec2 R=iResolution.xy; float t=iTime;
+    // zoom: the ring set (outer radius ~.48) spans the short side on a
+    // square screen and grows with the aspect to 1.38x at 16:9 and wider,
+    // so the rings fill the width and the outer two run off the long edges
+    float asp = max(R.x,R.y)/min(R.x,R.y);
+    float zoom = mix(1., 1.38, smoothstep(1., 1.75, asp));
+    vec2 uv=(U-.5*R)/(min(R.x,R.y)*zoom);
     uv += fogWarp(uv, t);
     float r=length(uv), a=atan(uv.y,uv.x);
 
@@ -186,8 +194,16 @@ void mainImage(out vec4 C, in vec2 U){
         // widens (the .012 bass ring lost 3x peak and nearly vanished -
         // camera-verified). With the peak held, the taper reads as
         // THICKNESS, not as a brightness gradient.
-        col += tint*(.005+.012*eL)*arc*(wd/.004)/(d+wd);
-        col += tint*.004*e/(d*d*160.+.06);         // halo on a strong band
+        // line: squared Lorentzian core (FWHM 1.29*wd) plus a short
+        // gaussian glow. A 1/(d+wd) profile holds ~10% of its peak ten
+        // widths out; six such tails sum to a haze over the whole disk and
+        // to radial wedges behind the dashes in silence
+        float q = d/wd;
+        float core = 1./(1.+q*q); core *= core;
+        col += tint*(.005+.012*eL)*arc*250.*(core + .12*exp(-d*d*2500.));
+        col += tint*.004*e*exp(-d*d*900.)/.06;     // halo on a strong band
+        // skeleton: every ring stays faintly drawn as a full circle
+        col += tint*.07*core;
     }
 
     // treble sparks: fast round EMBERS in the outer annulus - one dot per
@@ -242,13 +258,15 @@ void mainImage(out vec4 C, in vec2 U){
         float ph  = (j==0) ? kb.z : kb.w;
         float str = (j==0) ? tb.z : tb.w;
         if (ph >= 1. || str < .01) continue;
-        float dd  = abs(r - (.10 + .55*ph));
-        float sig = .026 + .024*str;               // harder hit = thicker
+        // front radius .10 -> .85, past the rim and off the 16:9 frame;
+        // crisp leading edge, soft wake
+        float dd  = r - (.10 + .75*ph);
+        float sig = (.026 + .024*str) * (dd > 0. ? .40 : 1.30);
         float mist = exp(-dd*dd/(2.*sig*sig))
                    * (.80 + .45*fnoise(uv*9. + vec2(0., -3.*ph)));
-        // sqrt(str) lifts the ordinary hits (gate rarely reaches 1), decay
-        // linear instead of squared, gain doubled: same veil shape, VISIBLE
-        col += vec3(.22,.48,.85) * sqrt(str)*(1.-ph) * 1.2 * mist;
+        // sqrt(str) lifts the ordinary hits (gate rarely reaches 1);
+        // linear decay
+        col += vec3(.22,.48,.85) * sqrt(str)*(1.-ph) * .90 * mist;
     }
 
 
@@ -263,8 +281,11 @@ void mainImage(out vec4 C, in vec2 U){
     // core pulse on the overall mix - COLD, matching the indigo depth it
     // sits in: the old fire-coloured glow was washing both inner blues into
     // a milky haze; a cool core lets the depth read as depth
+    // 1/(1+(r/.02)^2): the peak of 1/(r+.02) without its tail, which
+    // holds .13 at r=.2 and fills the inner rings with a milky disk
     float E=smoothstep(.35,.8,m);
-    col += vec3(.65,.75,1.)*(.002+.015*E+.012*kick)/(r+.02);
+    col += vec3(.65,.75,1.)*(.002+.015*E+.012*kick)
+         * (1.45/(1. + r*r*2500.) + .35*exp(-r*r*25.));
 
     col*=smoothstep(1.15,.45,r+.15);
     col = applyFog(col, uv, t);

@@ -1,5 +1,7 @@
 // url: https://www.shadertoy.com/view/flSBDV
 // credits: leon
+// @texture0 Resources/Shadertoy_Gray_Noise_Medium.png
+// @texture1 Resources/Shadertoy_RGBA_Noise_Small.png
 
 
 // Taste of Noise 15 by Leon Denise 2022/05/17

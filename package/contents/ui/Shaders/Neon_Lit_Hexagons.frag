@@ -1,3 +1,4 @@
+// @texture0 Resources/Shadertoy_Rusty_Metal.jpg
 /*
     Neon Lit Hexagons
     -----------------
@@ -42,7 +43,6 @@
 
 */
 
-// property Image iChannel0: Image { source: "./Shadertoy_Rusty_Metal.jpg" }
 
 
 // Hexagon: 0, Dodecahedron: 1, Circle: 2.

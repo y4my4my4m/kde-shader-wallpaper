@@ -116,6 +116,13 @@ ApplicationWindow {
         }
     }
 
+    // The engine reads the spectrum texture from this object directly.
+    AudioCapture {
+        id: audioCapture
+        enabled: persistent.audioEnabled && shaderEngine.running
+        sensitivity: persistent.audioSensitivity
+    }
+
     // ===== Main layout: shader fills, controls on the right =====
     SplitView {
         anchors.fill: parent
@@ -140,6 +147,7 @@ ApplicationWindow {
             mouseBias: persistent.mouseBias
             audioEnabled: persistent.audioEnabled
             audioChannel: persistent.audioChannel
+            audioSource: audioCapture
 
             iChannel0Enabled: persistent.iChannel0Enabled
             iChannel1Enabled: persistent.iChannel1Enabled
@@ -156,6 +164,7 @@ ApplicationWindow {
                 ? "file://" + persistent.iChannel3 : ""
 
             onHasErrorChanged: if (hasError) console.warn("[shader error]", errorMessage)
+            onCompileFailedChanged: if (compileFailed) console.warn("[compile error]", compileLog)
 
             FrameAnimation {
                 running: persistent.mouseEnabled && shaderEngine.running
@@ -395,11 +404,11 @@ ApplicationWindow {
                                     .arg(fmtNum(shaderEngine.maxFrameTime))
                             }
                             Label {
-                                visible: shaderEngine.hasError
+                                visible: shaderEngine.hasError || shaderEngine.compileFailed
                                 Layout.fillWidth: true
                                 wrapMode: Text.Wrap
                                 color: "tomato"
-                                text: shaderEngine.errorMessage
+                                text: shaderEngine.hasError ? shaderEngine.errorMessage : shaderEngine.compileLog
                             }
                             Button {
                                 Layout.fillWidth: true

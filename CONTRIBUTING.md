@@ -64,22 +64,37 @@ sudo apt install qt6-base-dev qt6-declarative-dev libplasma-dev \
 git clone https://github.com/YOUR_USERNAME/kde-shader-wallpaper.git
 cd kde-shader-wallpaper
 
-# Build
-./scripts/build.sh
-
-# Install for testing
-cd build && make install
+./scripts/build.sh deps      # dependency command for your distribution
+./scripts/build.sh build     # engine lands in package/contents/ui/shaderwallpaper/
+./scripts/build.sh install   # build, then install to ~/.local
 ```
+
+`scripts/build.sh` passes this checkout to `package/contents/scripts/build.sh`, the installer that KDE Store users run from the settings page. `./scripts/build.sh help` lists every command.
 
 ### Testing Changes
 
 ```bash
 # Restart plasmashell to see changes
-pkill plasmashell && plasmashell &
+./scripts/build.sh restart-plasma
 
 # Or use plasmoidviewer for isolated testing
 plasmoidviewer -a online.knowmad.shaderwallpaper
 ```
+
+To see the KDE Store first run, remove `package/contents/ui/shaderwallpaper/` from an installed copy: the desktop shows **Finish installing Shader Wallpaper** and the settings page shows the installer (`SetupWizard.qml`).
+
+### Releasing
+
+1. Set the same version in `package/metadata.json` (`Version`), `CMakeLists.txt` (`project(... VERSION)`), `packaging/arch/PKGBUILD` and `packaging/rpm/plasma-wallpaper-shader.spec`.
+2. Build and check the KDE Store archive:
+
+   ```bash
+   ./scripts/package-kde-store.sh --tracked-only --verify
+   ```
+
+   It writes `build/dist/shader-wallpaper-<version>.tar.gz`: the wallpaper package plus the engine sources in `contents/source/`.
+3. Push a `v<version>` tag. The *KDE Store archive* workflow builds the same archive, compiles the engine from it and attaches it to the GitHub release.
+4. Upload the archive to the KDE Store listing.
 
 ## Pull Request Process
 
@@ -145,14 +160,14 @@ Fixes #42
    // Source: URL (if from Shadertoy or elsewhere)
    // License: CC-BY or similar
    ```
-3. Compile with `python scripts/shader_compiler.py`
-4. Test that it works without errors
+3. Check it compiles: `python3 scripts/dev/render_shader.py --check package/contents/ui/Shaders`
+4. Render it headless (`python3 scripts/dev/render_shader.py <file> --at 2 --out /tmp/x.png`) or in the dev harness (`./scripts/dev.sh`) and confirm it looks right
 5. Submit a PR
 
 ### Shader Guidelines
 
 - **Performance**: Test on mid-range hardware
-- **Compatibility**: Must work with qsb compilation
+- **Compatibility**: Must compile with `scripts/dev/render_shader.py --check` on desktop GL and with `--gles`
 - **Attribution**: Always credit original authors
 - **License**: Prefer permissively licensed shaders
 

@@ -49,6 +49,13 @@ class ShaderMetadata : public QObject
     // Set by ShaderLibrary at scan time.
     Q_PROPERTY(bool greeterAvailable READ greeterAvailable WRITE setGreeterAvailable NOTIFY greeterAvailableChanged)
 
+    // Plugin release that first shipped this shader ("4.2.0"); empty for
+    // older and user shaders.
+    Q_PROPERTY(QString addedIn READ addedIn WRITE setAddedIn NOTIFY addedInChanged)
+    // Added in the installed release and not yet opened by the user. Set by
+    // ShaderLibrary; not persisted.
+    Q_PROPERTY(bool isNew READ isNew NOTIFY isNewChanged)
+
 public:
     explicit ShaderMetadata(QObject *parent = nullptr);
     explicit ShaderMetadata(const QJsonObject &json, QObject *parent = nullptr);
@@ -76,6 +83,8 @@ public:
     int estimatedPowerCost() const { return m_estimatedPowerCost; }
     QString lastMeasuredDate() const { return m_lastMeasuredDate; }
     bool greeterAvailable() const { return m_greeterAvailable; }
+    QString addedIn() const { return m_addedIn; }
+    bool isNew() const { return m_isNew; }
 
     // Property setters
     void setId(const QString &id);
@@ -99,6 +108,8 @@ public:
     void setEstimatedPowerCost(int cost);
     void setLastMeasuredDate(const QString &date);
     void setGreeterAvailable(bool available);
+    void setAddedIn(const QString &release);
+    void setIsNew(bool isNew);
 
     // Serialization
     Q_INVOKABLE QJsonObject toJson() const;
@@ -134,6 +145,8 @@ Q_SIGNALS:
     void needsTexturesChanged();
     void performanceChanged();
     void greeterAvailableChanged();
+    void addedInChanged();
+    void isNewChanged();
 
 private:
     QString m_id;
@@ -158,6 +171,8 @@ private:
     qreal m_averageFrameTime = 0.0;
     int m_estimatedPowerCost = 0;
     QString m_lastMeasuredDate;
+    QString m_addedIn;
+    bool m_isNew = false;
     bool m_greeterAvailable = true;  // assume yes until ShaderLibrary says otherwise
 };
 

@@ -1,6 +1,7 @@
 // Heartfelt - by Martijn Steinrucken aka BigWings - 2017
 // Email:countfrolic@gmail.com Twitter:@The_ArtOfCode
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+// @texture0 Resources/wallpaper.jpg
 
 // I revisited the rain effect I did for another shader. This one is better in multiple ways:
 // 1. The glass gets foggy.

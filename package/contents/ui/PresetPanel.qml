@@ -2,219 +2,184 @@
 // SPDX-FileCopyrightText: 2026 @y4my4my4m <y4my4m@protonmail.com>
 
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import QtQuick.Dialogs
 import org.kde.kirigami as Kirigami
 import "shaderwallpaper"
+import "ShaderApply.js" as ShaderApply
 
-/**
- * Panel for managing shader presets
- */
+// Saved shader setups: shader, buffers, routing, images, inputs, playback.
 ColumnLayout {
-    id: root
-    
-    property var currentConfig: ({})
-    
+    id: panel
+
+    // The settings page (ConfigContent); cfg_* are read and written on it.
+    required property var root
+
     signal presetLoaded(var config)
     signal presetSaved(string name)
-    
+
+    spacing: Kirigami.Units.smallSpacing
+
     PresetManager {
         id: presetManager
-        
-        onPresetLoaded: (name, config) => {
-            root.presetLoaded(config)
+        onPresetLoaded: function(name, config) {
+            panel.root.applyConfigMap(ShaderApply.configFromPreset(ShaderLibrarySingleton, config))
+            panel.presetLoaded(config)
         }
-        
-        onError: (message) => {
-            errorLabel.text = message
-            errorLabel.visible = true
-        }
-    }
-    
-    spacing: Kirigami.Units.smallSpacing
-    
-    // Header
-    RowLayout {
-        Layout.fillWidth: true
-        
-        Label {
-            text: i18n("Presets")
-            font.bold: true
-        }
-        
-        Item { Layout.fillWidth: true }
-        
-        Button {
-            icon.name: "list-add"
-            text: i18n("Save")
-            
-            onClicked: saveDialog.open()
+        onError: function(message) {
+            errorMessage.text = message
+            errorMessage.visible = true
         }
     }
-    
-    // Preset list
-    ScrollView {
+
+    QQC2.Label {
         Layout.fillWidth: true
-        Layout.preferredHeight: 150
-        
+        text: i18n("A preset stores the shader with its buffers, inputs, images and playback settings.")
+        wrapMode: Text.WordWrap
+        font: Kirigami.Theme.smallFont
+        color: Kirigami.Theme.disabledTextColor
+    }
+
+    QQC2.ScrollView {
+        Layout.fillWidth: true
+        Layout.preferredHeight: Math.min(Kirigami.Units.gridUnit * 9,
+                                         Math.max(Kirigami.Units.gridUnit * 3, presetList.contentHeight + 2))
         ListView {
             id: presetList
-            
+            clip: true
             model: presetManager.presetNames
-            
-            delegate: ItemDelegate {
-                width: presetList.width
-                
+            delegate: QQC2.ItemDelegate {
+                required property string modelData
+                width: ListView.view.width
+                highlighted: presetManager.currentPreset === modelData
+                text: modelData
+                onClicked: presetManager.loadPreset(modelData)
                 contentItem: RowLayout {
-                    Label {
+                    QQC2.Label {
                         Layout.fillWidth: true
                         text: modelData
                         elide: Text.ElideRight
                     }
-                    
-                    ToolButton {
-                        icon.name: "document-open"
-                        
-                        onClicked: presetManager.loadPreset(modelData)
-                        
-                        ToolTip.visible: hovered
-                        ToolTip.text: i18n("Load preset")
-                    }
-                    
-                    ToolButton {
+                    QQC2.ToolButton {
                         icon.name: "edit-delete"
-                        
+                        display: QQC2.AbstractButton.IconOnly
+                        text: i18n("Delete preset")
+                        QQC2.ToolTip.text: text
+                        QQC2.ToolTip.visible: hovered
                         onClicked: {
-                            deleteConfirmDialog.presetName = modelData
-                            deleteConfirmDialog.open()
+                            deletePrompt.presetName = modelData
+                            deletePrompt.open()
                         }
-                        
-                        ToolTip.visible: hovered
-                        ToolTip.text: i18n("Delete preset")
                     }
                 }
-                
-                highlighted: presetManager.currentPreset === modelData
-                
-                onClicked: presetManager.loadPreset(modelData)
             }
-            
-            // Empty state
-            Label {
+            Kirigami.PlaceholderMessage {
                 anchors.centerIn: parent
+                width: Math.max(0, parent.width - Kirigami.Units.largeSpacing * 2)
                 visible: presetList.count === 0
-                text: i18n("No presets saved yet")
-                opacity: 0.6
+                text: i18n("No presets yet")
             }
         }
     }
-    
-    // Current preset info
-    Label {
-        visible: presetManager.currentPreset.length > 0
-        text: i18n("Current: %1", presetManager.currentPreset)
-        font.italic: true
-        opacity: 0.7
-    }
-    
-    // Error message
+
     Kirigami.InlineMessage {
-        id: errorLabel
+        id: errorMessage
         Layout.fillWidth: true
         type: Kirigami.MessageType.Error
-        visible: false
         showCloseButton: true
+        visible: false
     }
-    
-    // Import/Export buttons
+
     RowLayout {
         Layout.fillWidth: true
-        
-        Button {
-            text: i18n("Import")
+        QQC2.Button {
+            icon.name: "list-add"
+            text: i18n("Save Current…")
+            onClicked: savePrompt.open()
+        }
+        Item { Layout.fillWidth: true }
+        QQC2.Button {
             icon.name: "document-import"
-            
+            text: i18n("Import…")
             onClicked: importFileDialog.open()
         }
-        
-        Button {
-            text: i18n("Export")
+        QQC2.Button {
             icon.name: "document-export"
+            text: i18n("Export…")
             enabled: presetManager.currentPreset.length > 0
-            
             onClicked: exportFileDialog.open()
         }
     }
-    
-    // Save preset dialog
-    Dialog {
-        id: saveDialog
+
+    Kirigami.PromptDialog {
+        id: savePrompt
+        parent: QQC2.Overlay.overlay
         title: i18n("Save Preset")
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        
-        ColumnLayout {
-            anchors.fill: parent
-            
-            Label {
-                text: i18n("Preset name:")
-            }
-            
-            TextField {
-                id: presetNameField
-                Layout.fillWidth: true
-                placeholderText: i18n("My Shader Preset")
-            }
+        standardButtons: Kirigami.Dialog.Cancel
+        onOpened: {
+            nameField.text = panel.root.currentShaderName
+            nameField.selectAll()
+            nameField.forceActiveFocus()
         }
-        
-        onAccepted: {
-            if (presetNameField.text.length > 0) {
-                presetManager.savePreset(presetNameField.text, root.currentConfig)
-                presetNameField.text = ""
-                root.presetSaved(presetNameField.text)
+        function save() {
+            const name = nameField.text.trim()
+            if (name.length === 0) return
+            presetManager.savePreset(name, ShaderApply.presetFromConfig(panel.root, "cfg_"))
+            presetManager.currentPreset = name
+            panel.presetSaved(name)
+            close()
+        }
+        customFooterActions: [
+            Kirigami.Action {
+                text: i18n("Save")
+                icon.name: "document-save"
+                enabled: nameField.text.trim().length > 0
+                onTriggered: savePrompt.save()
             }
+        ]
+        QQC2.TextField {
+            id: nameField
+            Layout.fillWidth: true
+            placeholderText: i18n("Preset name")
+            onAccepted: savePrompt.save()
         }
     }
-    
-    // Delete confirmation dialog
-    Dialog {
-        id: deleteConfirmDialog
+
+    Kirigami.PromptDialog {
+        id: deletePrompt
+        parent: QQC2.Overlay.overlay
+        property string presetName
         title: i18n("Delete Preset")
-        standardButtons: Dialog.Yes | Dialog.No
-        
-        property string presetName: ""
-        
-        Label {
-            text: i18n("Are you sure you want to delete '%1'?", deleteConfirmDialog.presetName)
-        }
-        
-        onAccepted: {
-            presetManager.deletePreset(presetName)
-        }
+        subtitle: i18n("Delete “%1”? This cannot be undone.", presetName)
+        standardButtons: Kirigami.Dialog.Cancel
+        customFooterActions: [
+            Kirigami.Action {
+                text: i18n("Delete")
+                icon.name: "edit-delete"
+                onTriggered: {
+                    presetManager.deletePreset(deletePrompt.presetName)
+                    deletePrompt.close()
+                }
+            }
+        ]
     }
-    
-    // File dialogs
+
     FileDialog {
         id: importFileDialog
         title: i18n("Import Preset")
-        nameFilters: ["Preset files (*.json)", "All files (*)"]
+        nameFilters: [i18n("Preset files (*.json)"), i18n("All files (*)")]
         fileMode: FileDialog.OpenFile
-        
-        onAccepted: {
-            presetManager.importPreset(selectedFile)
-        }
+        onAccepted: presetManager.importPreset(decodeURIComponent(selectedFile.toString().replace(/^file:\/\//, "")))
     }
-    
+
     FileDialog {
         id: exportFileDialog
         title: i18n("Export Preset")
-        nameFilters: ["Preset files (*.json)"]
+        nameFilters: [i18n("Preset files (*.json)")]
         fileMode: FileDialog.SaveFile
         defaultSuffix: "json"
-        
-        onAccepted: {
-            presetManager.exportPreset(presetManager.currentPreset, selectedFile)
-        }
+        onAccepted: presetManager.exportPreset(presetManager.currentPreset,
+                                               decodeURIComponent(selectedFile.toString().replace(/^file:\/\//, "")))
     }
 }
-

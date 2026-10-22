@@ -10,6 +10,14 @@
 #ifdef HAVE_PIPEWIRE
 #include <pipewire/pipewire.h>
 #include <spa/param/audio/format-utils.h>
+#include <spa/utils/hook.h>
+
+struct AudioCapturePipeWire
+{
+    static void onProcess(void *data);
+    static void onStreamStateChanged(void *data, enum pw_stream_state old,
+                                     enum pw_stream_state state, const char *error);
+};
 #endif
 
 // Simple FFT implementation (Cooley-Tukey radix-2)
@@ -120,9 +128,9 @@ void AudioCapture::setEnabled(bool enabled)
 
 void AudioCapture::setFftSize(int size)
 {
-    // Must be power of 2
-    int validSize = 1;
-    while (validSize < size && validSize < 4096) {
+    // Power of two in [MIN_FFT_SIZE, MAX_FFT_SIZE].
+    int validSize = MIN_FFT_SIZE;
+    while (validSize < size && validSize < MAX_FFT_SIZE) {
         validSize <<= 1;
     }
     
@@ -176,37 +184,41 @@ void AudioCapture::setSensitivity(qreal sensitivity)
 
 QVariantList AudioCapture::getTextureData()
 {
-    QMutexLocker locker(&m_dataMutex);
-    
-    // Create 512x2 RGBA texture data
-    // Shadertoy format:
-    //   Row 0 (y=0.25): FFT spectrum (frequency domain)
-    //   Row 1 (y=0.75): Waveform (time domain)
+    std::vector<float> texels;
+    copyTextureData(texels);
+
     QVariantList data;
-    data.reserve(TEXTURE_WIDTH * TEXTURE_HEIGHT * 4);
-    
-    // Row 0: Spectrum/FFT (frequency data) - sampled at y=0.25 in shaders
-    for (int i = 0; i < TEXTURE_WIDTH; i++) {
-        float freq = (i < m_smoothedSpectrum.size()) ? m_smoothedSpectrum[i] : 0.0f;
-        
-        data.append(freq); // R
-        data.append(freq); // G
-        data.append(freq); // B
-        data.append(1.0f); // A
+    data.reserve(int(texels.size()));
+    for (float v : texels) {
+        data.append(v);
     }
-    
-    // Row 1: Waveform (time domain) - sampled at y=0.75 in shaders
+    return data;
+}
+
+void AudioCapture::copyTextureData(std::vector<float> &out) const
+{
+    // 512x2 RGBA, Shadertoy format:
+    //   Row 0 (y=0.25): FFT spectrum (frequency domain)
+    //   Row 1 (y=0.75): Waveform (time domain), [-1,1] mapped to [0,1]
+    out.resize(TEXTURE_WIDTH * TEXTURE_HEIGHT * 4);
+    float *dst = out.data();
+
+    QMutexLocker locker(&m_dataMutex);
+    for (int i = 0; i < TEXTURE_WIDTH; i++) {
+        const float freq = (i < m_smoothedSpectrum.size()) ? m_smoothedSpectrum[i] : 0.0f;
+        *dst++ = freq;
+        *dst++ = freq;
+        *dst++ = freq;
+        *dst++ = 1.0f;
+    }
     for (int i = 0; i < TEXTURE_WIDTH; i++) {
         float sample = (i < m_waveform.size()) ? m_waveform[i] : 0.0f;
-        sample = (sample + 1.0f) * 0.5f; // Normalize from [-1,1] to [0,1]
-        
-        data.append(sample); // R
-        data.append(sample); // G
-        data.append(sample); // B
-        data.append(1.0f);   // A
+        sample = (sample + 1.0f) * 0.5f;
+        *dst++ = sample;
+        *dst++ = sample;
+        *dst++ = sample;
+        *dst++ = 1.0f;
     }
-    
-    return data;
 }
 
 QVector<float> AudioCapture::getWaveform()
@@ -284,8 +296,8 @@ bool AudioCapture::start()
     // Stream events
     static const struct pw_stream_events stream_events = {
         .version = PW_VERSION_STREAM_EVENTS,
-        .state_changed = onStreamStateChanged,
-        .process = onProcess,
+        .state_changed = AudioCapturePipeWire::onStreamStateChanged,
+        .process = AudioCapturePipeWire::onProcess,
     };
     
     // Create stream
@@ -303,8 +315,9 @@ bool AudioCapture::start()
         return false;
     }
     
-    spa_zero(m_streamListener);
-    pw_stream_add_listener(m_stream, &m_streamListener, &stream_events, this);
+    m_streamListener = std::make_unique<spa_hook>();
+    spa_zero(*m_streamListener);
+    pw_stream_add_listener(m_stream, m_streamListener.get(), &stream_events, this);
     
     // Setup audio format
     uint8_t buffer[1024];
@@ -330,7 +343,7 @@ bool AudioCapture::start()
     
     if (result < 0) {
         pw_thread_loop_lock(m_threadLoop);
-        spa_hook_remove(&m_streamListener);
+        spa_hook_remove(m_streamListener.get());
         pw_stream_destroy(m_stream);
         pw_core_disconnect(m_core);
         pw_thread_loop_unlock(m_threadLoop);
@@ -374,7 +387,9 @@ void AudioCapture::stop()
         pw_thread_loop_lock(m_threadLoop);
         
         // Remove listener before destroying stream
-        spa_hook_remove(&m_streamListener);
+        if (m_streamListener) {
+            spa_hook_remove(m_streamListener.get());
+        }
         
         if (m_stream) {
             pw_stream_destroy(m_stream);
@@ -515,7 +530,7 @@ void AudioCapture::updateBands()
 }
 
 #ifdef HAVE_PIPEWIRE
-void AudioCapture::onProcess(void *data)
+void AudioCapturePipeWire::onProcess(void *data)
 {
     AudioCapture *self = static_cast<AudioCapture*>(data);
     
@@ -547,19 +562,22 @@ void AudioCapture::onProcess(void *data)
     pw_stream_queue_buffer(self->m_stream, buf);
 }
 
-void AudioCapture::onStreamStateChanged(void *data, enum pw_stream_state old,
-                                         enum pw_stream_state state, const char *error)
+void AudioCapturePipeWire::onStreamStateChanged(void *data, enum pw_stream_state old,
+                                                 enum pw_stream_state state, const char *error)
 {
     Q_UNUSED(old)
     AudioCapture *self = static_cast<AudioCapture*>(data);
     
     switch (state) {
-        case PW_STREAM_STATE_ERROR:
-            qWarning() << "Audio stream error:" << (error ? error : "unknown");
-            QMetaObject::invokeMethod(self, [self, error]() {
-                Q_EMIT self->error(QStringLiteral("Stream error: %1").arg(error ? QLatin1String(error) : QStringLiteral("unknown")));
+        case PW_STREAM_STATE_ERROR: {
+            // `error` is owned by PipeWire and only valid during this call.
+            const QString message = error ? QString::fromUtf8(error) : QStringLiteral("unknown");
+            qWarning() << "Audio stream error:" << message;
+            QMetaObject::invokeMethod(self, [self, message]() {
+                Q_EMIT self->error(QStringLiteral("Stream error: %1").arg(message));
             }, Qt::QueuedConnection);
             break;
+        }
         case PW_STREAM_STATE_STREAMING:
             qDebug() << "Audio capture streaming started";
             break;

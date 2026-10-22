@@ -10,10 +10,12 @@
 #include "input/audiocapture.h"
 #include "input/windowtracker.h"
 #include "input/virtualdesktopwatcher.h"
+#include "input/screenlockwatcher.h"
 #include "import/shadertoyapi.h"
 #include "data/presetmanager.h"
 #include "data/shaderlibrary.h"
 #include "data/plmgreetersetup.h"
+#include "data/wallpapersync.h"
 #include "models/shaderlistmodel.h"
 #include "models/categorymodel.h"
 
@@ -31,6 +33,7 @@ void ShaderWallpaperPlugin::registerTypes(const char *uri)
     qmlRegisterType<AudioCapture>(uri, 1, 0, "AudioCapture");
     qmlRegisterType<WindowTracker>(uri, 1, 0, "WindowTracker");
     qmlRegisterType<VirtualDesktopWatcher>(uri, 1, 0, "VirtualDesktopWatcher");
+    qmlRegisterType<ScreenLockWatcher>(uri, 1, 0, "ScreenLockWatcher");
 
     // Shadertoy import
     qmlRegisterType<ShadertoyAPI>(uri, 1, 0, "ShadertoyAPI");
@@ -50,6 +53,14 @@ void ShaderWallpaperPlugin::registerTypes(const char *uri)
             Q_UNUSED(scriptEngine)
             static PlmGreeterSetup instance;
             return &instance;
+        });
+
+    // The engine owns the instance.
+    qmlRegisterSingletonType<WallpaperSync>(uri, 1, 0, "WallpaperSync",
+        [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
+            Q_UNUSED(engine)
+            Q_UNUSED(scriptEngine)
+            return new WallpaperSync();
         });
 
     // Register singletons

@@ -1,0 +1,47 @@
+# Maintainer: y4my4my4m <y4my4m@protonmail.com>
+#
+# Builds the tagged release. After bumping pkgver, run updpkgsums.
+
+pkgname=plasma6-wallpapers-shader
+pkgver=4.2.0
+pkgrel=1
+pkgdesc="Run GLSL shaders as your KDE Plasma 6 wallpaper"
+arch=('x86_64' 'aarch64')
+url="https://github.com/y4my4my4m/kde-shader-wallpaper"
+license=('GPL-3.0-or-later')
+depends=(
+    'gcc-libs'
+    'glibc'
+    'kconfig'
+    'ki18n'
+    'kpackage'
+    'libpipewire'
+    'libplasma'
+    'libxcb'
+    'plasma-workspace'
+    'qt6-base'
+    'qt6-declarative'
+    'wayland'
+)
+makedepends=(
+    'cmake'
+    'extra-cmake-modules'
+)
+optdepends=(
+    'pipewire: sound-reactive shaders'
+    'plasma-login-manager: shaders on the sign-in screen'
+)
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cmake -B build -S "kde-shader-wallpaper-$pkgver" \
+        -DCMAKE_BUILD_TYPE=None \
+        -DCMAKE_INSTALL_PREFIX=/usr
+    cmake --build build
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install build
+    install -Dm644 "kde-shader-wallpaper-$pkgver/LICENSE" -t "$pkgdir/usr/share/licenses/$pkgname/"
+}

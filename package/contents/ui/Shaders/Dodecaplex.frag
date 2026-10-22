@@ -1,5 +1,7 @@
 // url: https://www.shadertoy.com/view/NtBfDc
 // by afoksha
+// @texture0 Resources/Shadertoy_Rusty_Metal.jpg
+// @texture1 Resources/Shadertoy_Organic_2.jpg
 
 //==============================================================================================================================================================
 //  Created by Alexander Foksha

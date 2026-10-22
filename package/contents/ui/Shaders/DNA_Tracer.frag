@@ -1,11 +1,11 @@
 // https://www.shadertoy.com/view/WtfBzX
 // Credits to evvvil
+// @texture0 Shaders/DNA_Tracer_iChannel0.png
 
 // DNA tracer - Result of an improvised live coding session on Twitch
 // LIVE SHADER CODING, SHADER SHOWDOWN STYLE, EVERY TUESDAYS 20:00 Uk time:
 // https://www.twitch.tv/evvvvil_
 
-// property Image iChannel0: Image { source: "./Shader_DNA_Tracer_iChannel0.png" }
 
 vec2 z,v,e=vec2(.0035,-.0035);float t,tnoi,tt,b,bb,anim,animInv,g,gg;vec3 np,bp,pp,op,po,no,al,ld;
 float bo(vec3 p,vec3 r){p=abs(p)-r; return max(max(p.x,p.y),p.z);}

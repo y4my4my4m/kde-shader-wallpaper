@@ -6,8 +6,10 @@
 
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Window
 import org.kde.plasma.plasmoid
 import "shaderwallpaper"
+import "ShaderApply.js" as ShaderApply
 
 Item {
     id: shaderSystem
@@ -15,7 +17,7 @@ Item {
     clip: true  // ShaderEngine overscans during parallax — clip to screen
 
     // ────────────────────────────────────────────────────────────────────────
-    // Host plumbing (set by main.qml Loader.onLoaded).
+    // Host plumbing (initial properties from main.qml, Bindings afterwards).
     //
     // wallpaperConfig — KConfigPropertyMap from whichever host loaded us.
     // lockScreenMode / loginScreenMode — restrict inputs on non-desktop
@@ -33,6 +35,35 @@ Item {
     readonly property bool _allowExperimentalScreens:  !restrictedMode && (wallpaperConfig ? (wallpaperConfig.experimentalScreenUniforms || false) : false)
     readonly property bool _allowWatchSource: !restrictedMode && (wallpaperConfig ? (wallpaperConfig.watchSourceFile || false) : false)
 
+    // Shader identity and inline override. A non-empty selectedShaderCode
+    // replaces the file (tweaks, code editor, imports); selectedShaderPath
+    // keeps naming the library entry for thumbnails, playlist and gallery.
+    readonly property string _shaderPath: wallpaperConfig ? String(wallpaperConfig.selectedShaderPath || "") : ""
+    // configVersion 1 ran the file whenever a path was set; its leftover
+    // code is ignored until _migrateConfig() clears it.
+    readonly property bool _legacyConfig: wallpaperConfig ? (wallpaperConfig.configVersion || 1) < 2 : false
+    readonly property string _inlineCode: wallpaperConfig && !(_legacyConfig && _shaderPath.length > 0)
+        ? String(wallpaperConfig.selectedShaderCode || "") : ""
+    readonly property bool _inlineActive: _inlineCode.length > 0
+
+    function _migrateConfig() {
+        if (!wallpaperConfig || !_legacyConfig) return
+        try {
+            if (_shaderPath.length > 0 && String(wallpaperConfig.selectedShaderCode || "").length > 0) {
+                wallpaperConfig.selectedShaderCode = ""
+                wallpaperConfig.commonCode = ""
+                wallpaperConfig.bufferACode = ""
+                wallpaperConfig.bufferBCode = ""
+                wallpaperConfig.bufferCCode = ""
+                wallpaperConfig.bufferDCode = ""
+            }
+            wallpaperConfig.configVersion = ShaderApply.CONFIG_VERSION
+        } catch (e) {
+            console.warn("Shader Wallpaper: config migration failed:", e)
+        }
+    }
+    onWallpaperConfigChanged: _migrateConfig()
+
     // Window model for pause detection
     WindowModel {
         id: windowModel
@@ -41,21 +72,25 @@ Item {
                                 Screen.width, Screen.height)
     }
 
-    // Cursor tracker for global mouse position. We explicitly bind
-    // `screen` so the Y-flip uses THIS wallpaper's screen height (not
-    // QGuiApplication::primaryScreen — which on multi-monitor setups
-    // with different heights would put the impulse off-cursor).
+    // Cursor tracker for global mouse position. `screen` is this wallpaper's
+    // QScreen* (plasmashell's DesktopView is a C++ QQuickWindow), so the Y
+    // flip follows this screen. It is undefined until the window is mapped,
+    // and a QML Window host (dev harness) exposes a QQuickScreenInfo, which
+    // has no `geometry`; in both cases the tracker uses the primary screen.
     CursorTracker {
         id: cursorTracker
         enabled: shaderSystem._allowMouse && shaderEngine.running
         sensitivity: (wallpaperConfig && wallpaperConfig.mouseBias) || 1.0
-        screen: shaderSystem.Window.window ? shaderSystem.Window.window.screen : null
+        screen: {
+            const w = shaderSystem.Window.window
+            return (w && w.screen && w.screen.geometry !== undefined) ? w.screen : null
+        }
         // Same pixel space as fragCoord / iResolution (ShaderEngine FBO).
         referenceWidth: shaderEngine.width
         referenceHeight: shaderEngine.height
-        devicePixelRatio: shaderSystem.Window.window
-                            ? shaderSystem.Window.window.screen.devicePixelRatio
-                            : 1.0
+        // Item-attached Screen: valid before the item has a window.
+        devicePixelRatio: shaderSystem.Screen.devicePixelRatio > 0
+                            ? shaderSystem.Screen.devicePixelRatio : 1.0
 
         onIMouseChanged: {
             shaderEngine.iMouse = iMouse
@@ -63,14 +98,12 @@ Item {
     }
 
     // Audio capture for audio-reactive shaders
+    // The engine reads the spectrum texture from this object directly
+    // (ShaderEngine.audioSource).
     AudioCapture {
         id: audioCapture
         enabled: shaderSystem._allowAudio && shaderEngine.running
         sensitivity: (wallpaperConfig && wallpaperConfig.audioSensitivity) || 40.0
-        
-        onAudioDataReady: {
-            shaderEngine.audioData = audioCapture.getTextureData()
-        }
     }
     
     // Window tracking for window-reactive effects
@@ -78,21 +111,22 @@ Item {
         id: windowTracker
         enabled: shaderSystem._allowWindows && shaderEngine.running
         // Poll at the shader's render cadence: a fixed 30Hz reads as visible
-        // steps when dragging windows on high-refresh displays. Idle polls
-        // are nearly free (the tracker skips all X traffic without events),
-        // so the only cost is during actual window motion.
+        // steps when dragging windows on high-refresh displays. The tracker
+        // polls only after X reports window activity, so the cost is during
+        // actual window motion.
         pollInterval: Math.max(4, Math.round(1000 / (shaderEngine.targetFps || 60)))
         referenceWidth: shaderEngine.width
         referenceHeight: shaderEngine.height
         devicePixelRatio: cursorTracker.devicePixelRatio
         screenVirtualX: screenInfo.myGeom ? screenInfo.myGeom.x : 0
         screenVirtualY: screenInfo.myGeom ? screenInfo.myGeom.y : 0
-        
-        onWindowsChanged: {
-            shaderEngine.windowCount = windowTracker.windowCount
-            shaderEngine.windowRects = windowTracker.windowRectsFlat()
-            shaderEngine.windowVelocities = windowTracker.windowVelocitiesFlat()
-        }
+    }
+
+    // Session lock (issue #100). The desktop wallpaper is hidden behind the
+    // lock screen, which draws its own instance (restrictedMode).
+    ScreenLockWatcher {
+        id: screenLock
+        enabled: !shaderSystem.restrictedMode
     }
 
     // ------------------------------------------------------------------
@@ -115,12 +149,17 @@ Item {
     // as one continuous canvas. Each Plasma wallpaper instance runs
     // per-screen — they all see the same Qt.application.screens list but
     // each one is positioned at its own screen origin.
+    //
+    // Screen is read through shaderSystem (an Item). Attached to the
+    // QtObject itself it resolves to the primary screen, which put every
+    // secondary-screen wallpaper at the primary's offset (WindowTracker
+    // origin, iScreenOffset, iScreenIndex).
     // ------------------------------------------------------------------
     QtObject {
         id: screenInfo
         property var screens: Qt.application.screens
-        property rect myGeom: Qt.rect(Screen.virtualX, Screen.virtualY,
-                                      Screen.width, Screen.height)
+        property rect myGeom: Qt.rect(shaderSystem.Screen.virtualX, shaderSystem.Screen.virtualY,
+                                      shaderSystem.Screen.width, shaderSystem.Screen.height)
         property real virtualX0: {
             var x = Number.POSITIVE_INFINITY;
             for (var i = 0; i < screens.length; i++)
@@ -133,10 +172,27 @@ Item {
                 y = Math.min(y, screens[i].virtualY);
             return isFinite(y) ? y : 0;
         }
+        property real virtualX1: {
+            var x = Number.NEGATIVE_INFINITY;
+            for (var i = 0; i < screens.length; i++)
+                x = Math.max(x, screens[i].virtualX + screens[i].width);
+            return isFinite(x) ? x : myGeom.width;
+        }
+        property real virtualY1: {
+            var y = Number.NEGATIVE_INFINITY;
+            for (var i = 0; i < screens.length; i++)
+                y = Math.max(y, screens[i].virtualY + screens[i].height);
+            return isFinite(y) ? y : myGeom.height;
+        }
+        // Left to right, then top to bottom: independent of the order Qt
+        // lists screens in.
         property int myIndex: {
-            for (var i = 0; i < screens.length; i++) {
-                if (screens[i].virtualX === myGeom.x
-                 && screens[i].virtualY === myGeom.y) return i;
+            var order = [];
+            for (var i = 0; i < screens.length; i++) order.push(screens[i]);
+            order.sort(function(a, b) { return (a.virtualX - b.virtualX) || (a.virtualY - b.virtualY) });
+            for (var j = 0; j < order.length; j++) {
+                if (order[j].virtualX === myGeom.x
+                 && order[j].virtualY === myGeom.y) return j;
             }
             return 0;
         }
@@ -145,17 +201,26 @@ Item {
         target: screenInfo
         function onMyGeomChanged() { _pushScreenUniforms() }
         function onMyIndexChanged() { _pushScreenUniforms() }
+        function onVirtualX1Changed() { _pushScreenUniforms() }
+        function onVirtualY1Changed() { _pushScreenUniforms() }
     }
     function _pushScreenUniforms() {
         if (!shaderSystem._allowExperimentalScreens) {
             shaderEngine.screenOffset = Qt.vector2d(0, 0)
+            shaderEngine.desktopResolution = Qt.vector2d(0, 0)
             shaderEngine.screenIndex  = 0
             shaderEngine.screenCount  = 1
             return
         }
+        // Logical screen geometry to output pixels, GL origin (Y up).
+        const dpr = shaderSystem.Screen.devicePixelRatio || 1
+        const g = screenInfo.myGeom
         shaderEngine.screenOffset = Qt.vector2d(
-            screenInfo.myGeom.x - screenInfo.virtualX0,
-            screenInfo.myGeom.y - screenInfo.virtualY0)
+            (g.x - screenInfo.virtualX0) * dpr,
+            (screenInfo.virtualY1 - (g.y + g.height)) * dpr)
+        shaderEngine.desktopResolution = Qt.vector2d(
+            (screenInfo.virtualX1 - screenInfo.virtualX0) * dpr,
+            (screenInfo.virtualY1 - screenInfo.virtualY0) * dpr)
         shaderEngine.screenIndex = screenInfo.myIndex
         shaderEngine.screenCount = screenInfo.screens.length
     }
@@ -170,10 +235,8 @@ Item {
     //
     // The ShaderEngine is rendered at (1 + 2*strength) times the
     // viewport width and shifted horizontally based on the current
-    // virtual desktop. Overscan is necessary so the panned shader
-    // doesn't leave black bars on the edges. We only overscan when the
-    // feature is on, so single-desktop / parallax-off users pay zero
-    // overhead.
+    // virtual desktop; the overscan keeps the edges covered while panning.
+    // No overscan while the feature is off.
     // ------------------------------------------------------------------
     property real _parallaxStrength: shaderSystem._allowExperimentalParallax
                                    ? Math.max(0, Math.min(1, wallpaperConfig.experimentalParallaxStrength || 0.25))
@@ -196,38 +259,31 @@ Item {
         height: shaderSystem.height
         Behavior on x { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
 
-        // Three operating modes:
-        //   1. selectedShaderPath set       → load that file from disk.
-        //   2. selectedShaderPath empty,
-        //      selectedShaderCode set       → run that GLSL inline.
-        //                                     (Used by the Shader Tweaks
-        //                                     panel and ImportDialog.)
-        //   3. both empty                   → fall back to the bundled
-        //                                     default so the desktop is
-        //                                     never blank.
+        // Operating modes:
+        //   no config yet                 → nothing loaded.
+        //   selectedShaderCode set        → run that GLSL inline; the path,
+        //                                   if any, is identity only.
+        //   selectedShaderPath set        → load the file (and its buffer /
+        //                                   common files) from disk.
+        //   both empty                    → bundled default.
         //
-        // CRITICAL: in mode 2 we MUST send an empty shaderSource so the
-        // engine's m_loadShadersFromDisk flag clears and setShaderCode
-        // actually takes effect. The previous always-fall-back behaviour
-        // here made tweaks/inline shaders silently revert to the default
-        // file on the live wallpaper instance.
-        // Resolves the saved selectedShaderPath in two contexts:
-        //   - relative "Shaders/Foo.frag"     → resolved against this QML file
-        //   - absolute file:///... under any plugin install dir → collapsed
-        //     to relative first, then resolved against the *current* QML
-        //     directory (the user picked it from ~/.local on the desktop but
-        //     the greeter runs from /usr, so we can't keep the absolute path)
-        //   - absolute path outside the plugin install (user's own .frag) →
-        //     pass through unchanged
-        shaderSource: wallpaperConfig && wallpaperConfig.selectedShaderPath
-            ? Qt.resolvedUrl(ShaderLibrarySingleton.toRelativeShaderPath(
-                  wallpaperConfig.selectedShaderPath.toString()))
-            : ((wallpaperConfig && wallpaperConfig.selectedShaderCode && wallpaperConfig.selectedShaderCode.length > 0)
-                ? ""
-                : Qt.resolvedUrl("Shaders/PS3_MenuColor.frag"))
-        shaderCode: wallpaperConfig && wallpaperConfig.selectedShaderPath
-            ? ""
-            : ((wallpaperConfig && wallpaperConfig.selectedShaderCode) || "")
+        // Path forms: relative "Shaders/Foo.frag" resolves against this
+        // file; absolute paths under any plugin install collapse to relative
+        // first (desktop runs from ~/.local, the greeter from /usr); other
+        // absolute paths pass through.
+        shaderSource: {
+            if (!shaderSystem.wallpaperConfig || shaderSystem._inlineActive) return ""
+            if (shaderSystem._shaderPath.length > 0) {
+                const rel = ShaderLibrarySingleton.toRelativeShaderPath(shaderSystem._shaderPath)
+                return ShaderLibrarySingleton.userFileUrl(rel) || Qt.resolvedUrl(rel)
+            }
+            return Qt.resolvedUrl("Shaders/PS3_MenuColor.frag")
+        }
+        // The code setters are no-ops while a file is bound. Depending on
+        // shaderSource re-applies them after the engine leaves disk mode,
+        // whichever of the two bindings updates first.
+        readonly property bool _inlineMode: String(shaderSource) === ""
+        shaderCode: _inlineMode ? shaderSystem._inlineCode : ""
 
         running: wallpaperConfig && wallpaperConfig.running && shouldRun
         speed: wallpaperConfig ? (wallpaperConfig.shaderSpeed || 1.0) : 1.0
@@ -240,6 +296,9 @@ Item {
             ? (wallpaperConfig.bufferSimulationMaxHeight || 0)
             : 0
         hdrPipeline: (wallpaperConfig && wallpaperConfig.experimentalHdrPipeline) || false
+        dither: wallpaperConfig ? (wallpaperConfig.dither !== false) : true
+        // Only the performance HUD reads the per-frame signals.
+        frameSignals: performanceLoader.active
 
         // Mouse input — disabled in lock-screen mode.
         mouseEnabled: shaderSystem._allowMouse
@@ -248,9 +307,12 @@ Item {
         // Audio input — disabled in lock-screen mode.
         audioEnabled: shaderSystem._allowAudio
         audioChannel: (wallpaperConfig && wallpaperConfig.audioChannel) || 0
+        audioSource: audioCapture
 
-        // Window tracking — disabled in lock-screen mode.
+        // Window tracking — disabled in lock-screen mode. The renderer reads
+        // the tracker directly, without a QML round trip per poll.
         windowsEnabled: shaderSystem._allowWindows
+        windowSource: windowTracker
 
         // Hot-reload (C8) — disabled in lock-screen mode (dev workflow).
         watchSourceFile: shaderSystem._allowWatchSource
@@ -272,19 +334,20 @@ Item {
         iChannel2Enabled: wallpaperConfig ? wallpaperConfig.iChannel2Enabled === true : false
         iChannel3Enabled: wallpaperConfig ? wallpaperConfig.iChannel3Enabled === true : false
 
-        // Buffer configuration
-        useBufferA: (wallpaperConfig && wallpaperConfig.useBufferA) || false
-        useBufferB: (wallpaperConfig && wallpaperConfig.useBufferB) || false
-        useBufferC: (wallpaperConfig && wallpaperConfig.useBufferC) || false
-        useBufferD: (wallpaperConfig && wallpaperConfig.useBufferD) || false
+        // Buffer flags. A file load sets the engine's flags from the files on
+        // disk without touching the config, and the setters ignore an
+        // unchanged value: depending on shaderSource re-pushes the config
+        // value after every source change.
+        useBufferA: { void shaderSource; return !!(wallpaperConfig && wallpaperConfig.useBufferA) }
+        useBufferB: { void shaderSource; return !!(wallpaperConfig && wallpaperConfig.useBufferB) }
+        useBufferC: { void shaderSource; return !!(wallpaperConfig && wallpaperConfig.useBufferC) }
+        useBufferD: { void shaderSource; return !!(wallpaperConfig && wallpaperConfig.useBufferD) }
 
-        // Common code (shared across all passes)
-        commonCode: (wallpaperConfig && wallpaperConfig.commonCode) || ""
-
-        bufferACode: (wallpaperConfig && wallpaperConfig.bufferACode) || ""
-        bufferBCode: (wallpaperConfig && wallpaperConfig.bufferBCode) || ""
-        bufferCCode: (wallpaperConfig && wallpaperConfig.bufferCCode) || ""
-        bufferDCode: (wallpaperConfig && wallpaperConfig.bufferDCode) || ""
+        commonCode:  _inlineMode && wallpaperConfig ? (wallpaperConfig.commonCode  || "") : ""
+        bufferACode: _inlineMode && wallpaperConfig ? (wallpaperConfig.bufferACode || "") : ""
+        bufferBCode: _inlineMode && wallpaperConfig ? (wallpaperConfig.bufferBCode || "") : ""
+        bufferCCode: _inlineMode && wallpaperConfig ? (wallpaperConfig.bufferCCode || "") : ""
+        bufferDCode: _inlineMode && wallpaperConfig ? (wallpaperConfig.bufferDCode || "") : ""
 
         // Per-pass channel mappings
         imageChannels: wallpaperConfig ? [
@@ -321,6 +384,7 @@ Item {
         // In lock/login greeter mode force "never pause".
         property bool shouldRun: {
             if (shaderSystem.restrictedMode) return true
+            if (screenLock.locked) return false
             if (!wallpaperConfig) return true
             switch (wallpaperConfig.pauseMode) {
                 case 0: return !windowModel.maximizedExists
@@ -340,17 +404,19 @@ Item {
     }
 
     // Input flows into the engine only via the trackers' own poll timers
-    // (onIMouseChanged / onWindowsChanged above). Do NOT re-poll them from a
+    // (onIMouseChanged, windowSource above). Do NOT re-poll them from a
     // FrameAnimation or similar: a running animation forces the whole window
     // to render at display refresh, which defeats the FPS limit, and the
     // synchronous XCB window poll is too heavy to run per frame.
 
-    // Mouse tracking area (fallback for Wayland). Disabled on greeter surfaces
-    // so we don't intercept events the login/lock UI needs.
+    // Mouse tracking area (fallback for Wayland). Disabled on greeter
+    // surfaces, whose UI needs the events.
     MouseArea {
         id: mouseArea
         anchors.fill: parent
-        enabled: !shaderSystem.restrictedMode
+        // Absent unless the shader follows the mouse: nothing in the
+        // wallpaper then takes part in desktop input (issue #72).
+        enabled: !shaderSystem.restrictedMode && shaderSystem._allowMouse
         visible: enabled
         hoverEnabled: shaderSystem._allowMouse
         propagateComposedEvents: true
@@ -382,74 +448,83 @@ Item {
         onWheel: (wheel) => wheel.accepted = false
     }
 
-    // Performance HUD — hidden on greeter surfaces.
-    PerformanceWidget {
-        id: performanceWidget
-        visible: !shaderSystem.restrictedMode && wallpaperConfig != null
+    // Performance HUD — hidden on greeter surfaces. Instantiated only while
+    // shown; the engine's per-frame signals (frameSignals) follow it.
+    Loader {
+        id: performanceLoader
+        active: !shaderSystem.restrictedMode && wallpaperConfig != null
               && (wallpaperConfig.showPerformance || false)
         anchors {
             top: parent.top
             right: parent.right
             margins: 10
         }
-        
-        currentFps: shaderEngine.currentFps
-        frameTime: shaderEngine.frameTime
-        averageFrameTime: shaderEngine.averageFrameTime
-        minFrameTime: shaderEngine.minFrameTime
-        maxFrameTime: shaderEngine.maxFrameTime
-        
-        performanceTier: {
-            var avg = shaderEngine.averageFrameTime
-            if (avg <= 0) return 1
-            if (avg < 4.0) return 0
-            if (avg < 8.0) return 1
-            if (avg < 16.0) return 2
-            return 3
-        }
-        
-        powerCost: {
-            var baseCost = 0
-            var avg = shaderEngine.averageFrameTime
-            
-            if (avg <= 0) baseCost = 50
-            else if (avg < 2.0) baseCost = 10
-            else if (avg < 4.0) baseCost = 20
-            else if (avg < 8.0) baseCost = 35
-            else if (avg < 16.0) baseCost = 50
-            else if (avg < 33.0) baseCost = 70
-            else baseCost = 85
-            
-            var modifier = 0
-            if (wallpaperConfig && (wallpaperConfig.useBufferA || wallpaperConfig.useBufferB ||
-                wallpaperConfig.useBufferC || wallpaperConfig.useBufferD)) {
-                modifier += 15
-            }
-            if (wallpaperConfig && wallpaperConfig.audioEnabled) {
-                modifier += 5
+
+        sourceComponent: PerformanceWidget {
+            id: performanceWidget
+
+            currentFps: shaderEngine.currentFps
+            frameTime: shaderEngine.frameTime
+            averageFrameTime: shaderEngine.averageFrameTime
+            minFrameTime: shaderEngine.minFrameTime
+            maxFrameTime: shaderEngine.maxFrameTime
+
+            performanceTier: {
+                var avg = shaderEngine.averageFrameTime
+                if (avg <= 0) return 1
+                if (avg < 4.0) return 0
+                if (avg < 8.0) return 1
+                if (avg < 16.0) return 2
+                return 3
             }
 
-            return Math.min(100, baseCost + modifier)
-        }
+            powerCost: {
+                var baseCost = 0
+                var avg = shaderEngine.averageFrameTime
 
-        expanded: !wallpaperConfig || wallpaperConfig.performanceExpanded !== false
-        showGraph: !wallpaperConfig || wallpaperConfig.showPerformanceGraph !== false
-        gpuTdp: (wallpaperConfig && wallpaperConfig.gpuTdp) || 75
+                if (avg <= 0) baseCost = 50
+                else if (avg < 2.0) baseCost = 10
+                else if (avg < 4.0) baseCost = 20
+                else if (avg < 8.0) baseCost = 35
+                else if (avg < 16.0) baseCost = 50
+                else if (avg < 33.0) baseCost = 70
+                else baseCost = 85
+
+                var modifier = 0
+                if (wallpaperConfig && (wallpaperConfig.useBufferA || wallpaperConfig.useBufferB ||
+                    wallpaperConfig.useBufferC || wallpaperConfig.useBufferD)) {
+                    modifier += 15
+                }
+                if (wallpaperConfig && wallpaperConfig.audioEnabled) {
+                    modifier += 5
+                }
+
+                return Math.min(100, baseCost + modifier)
+            }
+
+            expanded: !wallpaperConfig || wallpaperConfig.performanceExpanded !== false
+            showGraph: !wallpaperConfig || wallpaperConfig.showPerformanceGraph !== false
+            gpuTdp: (wallpaperConfig && wallpaperConfig.gpuTdp) || 75
+
+            // The history feeds the graph only.
+            Connections {
+                target: shaderEngine
+                function onFrameTimeChanged() {
+                    if (performanceWidget.showGraph) {
+                        performanceWidget.addFrameTime(shaderEngine.frameTime)
+                    }
+                }
+            }
+        }
     }
-    
-    // Connect frame time updates to the widget
-    Connections {
-        target: shaderEngine
-        function onFrameTimeChanged() {
-            if (performanceWidget.visible) {
-                performanceWidget.addFrameTime(shaderEngine.frameTime)
-            }
-        }
-    }
 
-    // Pause indicator
+    // Pause badge, opt-in: in pause modes 1/2 an active or visible window
+    // is the normal state, so an unconditional badge sat centre-screen
+    // whenever the desktop was revealed.
     Rectangle {
-        visible: !shaderEngine.running && wallpaperConfig && wallpaperConfig.running
+        visible: !shaderSystem.restrictedMode && wallpaperConfig !== null
+              && wallpaperConfig.showPauseIndicator === true
+              && wallpaperConfig.running === true && !shaderEngine.running
         anchors.centerIn: parent
         width: pauseIcon.width + 40
         height: pauseIcon.height + 20
@@ -476,38 +551,44 @@ Item {
         }
     }
 
-    // Thumbnail generation timer
+    // Thumbnail capture for the shader on screen. The id is fixed when the
+    // capture is scheduled and when it starts, so a shader switch in
+    // between never files one shader's frame under another's id.
+    property string _thumbnailCaptureId: ""
+
     Timer {
         id: thumbnailTimer
         interval: 2000
         repeat: false
-        
+        property string scheduledId: ""
+
         onTriggered: {
             if (shaderSystem.restrictedMode || !wallpaperConfig) return
-            if (shaderEngine.running && !shaderEngine.hasError) {
-                var shaderId = getShaderIdFromPath(wallpaperConfig.selectedShaderPath)
-                if (shaderId && ShaderLibrarySingleton.needsThumbnail(shaderId)) {
-                    var thumbPath = ShaderLibrarySingleton.getThumbnailPath(shaderId)
-                    console.log("Capturing thumbnail for:", shaderId)
-                    shaderEngine.captureFrame(thumbPath)
-                }
-            }
+            if (!shaderEngine.running || shaderSystem._inlineActive) return
+            if (shaderEngine.compileFailed || shaderEngine.hasError) return
+            var shaderId = getShaderIdFromPath(shaderSystem._shaderPath)
+            if (!shaderId || shaderId !== scheduledId) return
+            if (!ShaderLibrarySingleton.needsThumbnail(shaderId)) return
+            shaderSystem._thumbnailCaptureId = shaderId
+            shaderEngine.captureFrame(ShaderLibrarySingleton.getThumbnailPath(shaderId))
         }
     }
-    
-    // Handle thumbnail capture completion
+
+    function _scheduleThumbnail() {
+        thumbnailTimer.scheduledId = getShaderIdFromPath(shaderSystem._shaderPath)
+        if (thumbnailTimer.scheduledId) thumbnailTimer.restart()
+        else thumbnailTimer.stop()
+    }
+
     Connections {
         target: shaderEngine
         function onFrameCaptured(path) {
-            if (!wallpaperConfig) return
-            var shaderId = getShaderIdFromPath(wallpaperConfig.selectedShaderPath)
-            if (shaderId) {
-                ShaderLibrarySingleton.saveThumbnail(shaderId, path)
-            }
+            const id = shaderSystem._thumbnailCaptureId
+            shaderSystem._thumbnailCaptureId = ""
+            if (id) ShaderLibrarySingleton.saveThumbnail(id, path)
         }
     }
-    
-    // Helper to extract shader ID from path
+
     function getShaderIdFromPath(path) {
         if (!path) return ""
         var shader = ShaderLibrarySingleton.getShaderByPath(path)
@@ -515,61 +596,80 @@ Item {
     }
 
     Component.onCompleted: {
-        console.log("Shader Wallpaper v4.0 initialized")
+        _pushScreenUniforms()
+        console.log("Shader Wallpaper initialized")
+        _migrateConfig()
         if (!wallpaperConfig) {
-            console.warn("Shader Wallpaper: wallpaperConfig not wired yet")
+            console.warn("Shader Wallpaper: no wallpaper configuration")
             return
         }
-        console.log("Shader:", wallpaperConfig.selectedShaderPath)
-        
-        if (wallpaperConfig.selectedShaderPath) {
-            thumbnailTimer.start()
-        }
+        console.log("Shader:", shaderSystem._shaderPath,
+                    shaderSystem._inlineActive ? "(inline code)" : "")
+        _scheduleThumbnail()
     }
-    
+
     Connections {
         target: wallpaperConfig
         enabled: wallpaperConfig !== null
-        function onSelectedShaderPathChanged() {
-            thumbnailTimer.restart()
-        }
+        function onSelectedShaderPathChanged() { shaderSystem._scheduleThumbnail() }
+        function onSelectedShaderCodeChanged() { shaderSystem._scheduleThumbnail() }
     }
 
     // ------------------------------------------------------------------
-    // Playlist (A3) — rotates through wallpaperConfig.playlistShaders
-    // every playlistIntervalMinutes. In shuffle mode picks a random one
-    // each time (never repeats the current one twice in a row); in
-    // sequence mode advances to the next list entry, wrapping around.
+    // Automatic shader changes. Pool: playlistSource 0 = playlistShaders,
+    // 1 = favourites, 2 = whole library. Each change applies the full
+    // shader config (buffers, routing, inputs) through ShaderApply.
     // ------------------------------------------------------------------
+    function _shaderPool() {
+        if (!wallpaperConfig) return []
+        const lib = ShaderLibrarySingleton
+        const source = wallpaperConfig.playlistSource || 0
+        let raw = []
+        if (source === 0) {
+            raw = Array.prototype.slice.call(wallpaperConfig.playlistShaders || [])
+        } else {
+            const metas = source === 1 ? lib.favorites() : lib.allShaders()
+            for (let i = 0; i < metas.length; i++) raw.push(String(metas[i].shaderPath))
+        }
+        const pool = []
+        for (let j = 0; j < raw.length; j++) {
+            const rel = lib.toRelativeShaderPath(String(raw[j]))
+            if (rel.length > 0 && pool.indexOf(rel) < 0) pool.push(rel)
+        }
+        return pool
+    }
+
+    function advancePlaylist() {
+        const pool = _shaderPool()
+        if (pool.length < 2) return
+        const current = ShaderLibrarySingleton.toRelativeShaderPath(shaderSystem._shaderPath)
+        let next
+        if (wallpaperConfig.playlistShuffle) {
+            let attempts = 0
+            do {
+                next = pool[Math.floor(Math.random() * pool.length)]
+                attempts++
+            } while (next === current && attempts < 8)
+        } else {
+            next = pool[(pool.indexOf(current) + 1) % pool.length]
+        }
+        if (!next) return
+        // Shader, buffers, routing and declared images only: the input
+        // preferences (mouse, windows, sound) are the user's.
+        const state = ShaderApply.collect(wallpaperConfig, ShaderApply.TEXTURE_STATE_KEYS, "")
+        ShaderApply.applyMap(wallpaperConfig,
+                             ShaderApply.withoutInputs(ShaderApply.forPath(ShaderLibrarySingleton, next, state)), "")
+    }
+
     Timer {
         id: playlistTimer
         interval: Math.max(1, (wallpaperConfig && wallpaperConfig.playlistIntervalMinutes) || 10) * 60 * 1000
         repeat: true
         running: !shaderSystem.restrictedMode
-              && wallpaperConfig != null
-              && wallpaperConfig.playlistEnabled
-              && (wallpaperConfig.playlistShaders || []).length >= 2
-        triggeredOnStart: false
-
-        onTriggered: {
-            if (!wallpaperConfig) return
-            var list = wallpaperConfig.playlistShaders || []
-            if (list.length < 2) return
-            var current = wallpaperConfig.selectedShaderPath || ""
-            var nextPath
-            if (wallpaperConfig.playlistShuffle) {
-                var attempts = 0
-                do {
-                    nextPath = list[Math.floor(Math.random() * list.length)]
-                    attempts++
-                } while (nextPath === current && attempts < 8)
-            } else {
-                var idx = list.indexOf(current)
-                if (idx < 0) idx = -1
-                nextPath = list[(idx + 1) % list.length]
-            }
-            if (nextPath) wallpaperConfig.selectedShaderPath = nextPath
-        }
+              && wallpaperConfig !== null
+              && wallpaperConfig.playlistEnabled === true
+              && ((wallpaperConfig.playlistSource || 0) !== 0
+                  || (wallpaperConfig.playlistShaders || []).length >= 2)
+        onTriggered: shaderSystem.advancePlaylist()
     }
 }
-

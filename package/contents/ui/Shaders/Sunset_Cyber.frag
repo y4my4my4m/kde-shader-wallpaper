@@ -1,10 +1,10 @@
 // https://www.shadertoy.com/view/4dt3RX
 // Credits to Flyguy
+// @texture0 Resources/Shadertoy_Pebbles.png
+// @texture1 Resources/Shadertoy_Lichen.jpg
+// @texture2 Resources/Shadertoy_Bayer.png
 
 
-/* property Image iChannel0: Image { source: "./Shadertoy_Pebbles.png" }
-property Image iChannel1: Image { source: "./Shadertoy_Lichen.jpg" }
-property Image iChannel2: Image { source: "./Shadertoy_Bayer.png" } */
 
 //Raymarch settings
 

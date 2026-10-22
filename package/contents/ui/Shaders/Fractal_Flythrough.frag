@@ -1,5 +1,6 @@
 // https://www.shadertoy.com/view/4s3SRN
 // Credits to Shane
+// @texture0 Shaders/Fractal_Flythrough_iChannel0.png
 
 /*
 
@@ -49,7 +50,6 @@
 
 */
 
-// property Image iChannel0: Image { source: "./Shader_Fractal_Flythrough_iChannel0.png" }
 
 const float FAR = 50.0; // Far plane.
 

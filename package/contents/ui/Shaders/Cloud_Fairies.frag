@@ -1,5 +1,6 @@
 // url: https://www.shadertoy.com/view/3stfzB
 // credits: athibaul
+// @texture0 Resources/Shadertoy_Gray_Noise_Medium.png
 
 // Simplified lighting of clouds
 

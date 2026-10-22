@@ -42,7 +42,7 @@ Item {
     property var isActive: abstractTasksModel.IsActive
     property var isHidden: abstractTasksModel.IsHidden
     property bool activeScreenOnly: config ? (config.checkActiveScreen ?? true) : true
-    property var excludeWindows: (config && config.excludeWindows) || []
+    property var excludeWindows: config && config.excludeWindows ? Array.prototype.slice.call(config.excludeWindows) : []
 
     Connections {
         target: wModel.config
@@ -126,8 +126,14 @@ Item {
             for (var i = 0; i < tasksModel.count; i++) {
                 const currentTask = tasksModel.index(i, 0);
 
-                // Long line
-                if (currentTask === undefined || excludeWindows.includes(tasksModel.data(currentTask, appId).replace(/\.desktop$/, "")) || tasksModel.data(currentTask, isHidden) || !tasksModel.data(currentTask, isWindow) || tasksModel.data(currentTask, isMinimized))
+                if (currentTask === undefined)
+                    continue;
+                // AppId is undefined for windows without a desktop file.
+                const taskAppId = String(tasksModel.data(currentTask, appId) || "").replace(/\.desktop$/, "");
+                if ((taskAppId.length > 0 && excludeWindows.includes(taskAppId))
+                        || tasksModel.data(currentTask, isHidden)
+                        || !tasksModel.data(currentTask, isWindow)
+                        || tasksModel.data(currentTask, isMinimized))
                     continue;
 
                 visibleCount += 1;

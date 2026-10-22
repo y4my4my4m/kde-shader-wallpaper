@@ -16,6 +16,8 @@
 #include <QDateTime>
 #include <QQmlEngine>
 #include <QProcess>
+#include <QSet>
+#include <QHash>
 #include <QTimer>
 
 const QStringList ShaderLibrary::DEFAULT_CATEGORIES = {
@@ -97,19 +99,23 @@ ShaderLibrary::ShaderLibrary(QObject *parent)
     m_libraryPath = resolveLibraryRoot();
     m_canonicalLibraryRoot = QFileInfo(m_libraryPath).canonicalFilePath();
 
+    m_userDataPath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+                   + QStringLiteral("/shaderwallpaper");
+    QDir().mkpath(m_userDataPath);
+    m_canonicalUserDataPath = QFileInfo(m_userDataPath).canonicalFilePath();
+
     // /usr/.../contents/ui is the location the PLM greeter reads from
-    // (running as the plasmalogin user it cannot see ~/.local). We record
-    // it here as "greeterPath" iff it exists AND it's a different path from
-    // the writable library root — when those are the same, every shader is
-    // trivially greeter-available so the badge is irrelevant.
+    // (running as the plasmalogin user it cannot see ~/.local, nor the user
+    // data root). Shaders without a twin there are not greeter-available.
     static const QString systemRoot = QStringLiteral(
         "/usr/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui");
-    if (m_libraryPath != systemRoot && directoryHasShaderFiles(systemRoot)) {
+    if (directoryHasShaderFiles(systemRoot)) {
         m_greeterPath = systemRoot;
     }
 
     m_categories = DEFAULT_CATEGORIES;
 
+    migrateUserData();
     loadIndex();
     refresh();
     watchIndexFile();
@@ -170,10 +176,13 @@ void ShaderLibrary::refresh()
 
     // 1) Add anything new on disk.
     const int countBeforeScan = m_shaders.size();
-    const QStringList scanRoots = {
+    QStringList scanRoots = {
         m_libraryPath + QStringLiteral("/Shaders"),
         m_libraryPath + QStringLiteral("/Shaders6"),
     };
+    if (m_userDataPath != m_libraryPath) {
+        scanRoots.append(m_userDataPath + QStringLiteral("/Shaders"));
+    }
     for (const QString &root : scanRoots) {
         if (QDir(root).exists()) {
             scanDirectory(root, QStringLiteral(""));
@@ -184,11 +193,15 @@ void ShaderLibrary::refresh()
     // them first to avoid mutating m_shaders while iterating it.
     QList<std::shared_ptr<ShaderMetadata>> stale;
     stale.reserve(m_shaders.size());
+    // A stale bundled entry comes back from the read-only bundled index on
+    // every start; only dropping an overlay entry is worth a write.
+    bool staleInOverlay = false;
     for (const auto &s : m_shaders) {
         const QString p = s->shaderPath().toLocalFile();
         if (p.isEmpty()) continue;          // inline / virtual entries
         if (QFile::exists(p)) continue;     // still on disk
         stale.append(s);
+        staleInOverlay = staleInOverlay || inOverlay(*s);
     }
     for (const auto &s : stale) {
         const QString id = s->id();
@@ -207,7 +220,7 @@ void ShaderLibrary::refresh()
     // Persist only when the scan actually added or removed something —
     // the index file is shared across processes, and every write is a
     // chance to overwrite another process's newer state.
-    if (m_shaders.size() != countBeforeScan || !stale.isEmpty()) {
+    if (m_shaders.size() + stale.size() != countBeforeScan || staleInOverlay) {
         saveIndex();
     }
 }
@@ -344,20 +357,62 @@ QString ShaderLibrary::toRelativeShaderPath(const QString &input) const
         return path.mid(idx + marker.size());
     }
 
-    // Symlinked installs (~/.local/... -> a git checkout): some hosts
-    // canonicalize QML urls (the System Settings wallpaper KCM does, the
-    // in-process desktop dialog doesn't), so the same shader arrives here
-    // as the symlink *target* path, which never contains the marker. Those
-    // absolute paths used to pass through into the saved config, and then
-    // exact-match lookups in the other process failed. Collapse anything
-    // whose canonical form lives under the canonical library root.
-    if (!m_canonicalLibraryRoot.isEmpty()) {
-        const QString canonical = QFileInfo(path).canonicalFilePath();
-        if (canonical.startsWith(m_canonicalLibraryRoot + QLatin1Char('/'))) {
-            return canonical.mid(m_canonicalLibraryRoot.size() + 1);
+    // The user data root mirrors contents/ui; its files collapse the same
+    // way and resolve through userFileUrl()/resolveLibraryFile().
+    //
+    // Some hosts canonicalize QML urls (the System Settings wallpaper KCM
+    // does, the in-process desktop dialog doesn't), so a symlinked install
+    // (~/.local/... -> a git checkout) hands over the symlink target path,
+    // which lacks the marker. Collapse against both raw and canonical roots.
+    const QString roots[] = {
+        m_userDataPath, m_canonicalUserDataPath, m_libraryPath, m_canonicalLibraryRoot,
+    };
+    for (const QString &root : roots) {
+        if (!root.isEmpty() && path.startsWith(root + QLatin1Char('/'))) {
+            return path.mid(root.size() + 1);
+        }
+    }
+    const QString canonical = QFileInfo(path).canonicalFilePath();
+    if (!canonical.isEmpty()) {
+        for (const QString &root : {m_canonicalUserDataPath, m_canonicalLibraryRoot}) {
+            if (!root.isEmpty() && canonical.startsWith(root + QLatin1Char('/'))) {
+                return canonical.mid(root.size() + 1);
+            }
         }
     }
     return input;
+}
+
+QString ShaderLibrary::userFileUrl(const QString &relativePath) const
+{
+    if (relativePath.isEmpty() || QDir::isAbsolutePath(relativePath)
+            || relativePath.startsWith(QLatin1String("file:"))) {
+        return QString();
+    }
+    const QString path = m_userDataPath + QLatin1Char('/') + relativePath;
+    return QFileInfo::exists(path) ? QUrl::fromLocalFile(path).toString() : QString();
+}
+
+QString ShaderLibrary::resolveLibraryFile(const QString &path) const
+{
+    if (path.isEmpty() || QDir::isAbsolutePath(path)) {
+        return path;
+    }
+    const QString user = m_userDataPath + QLatin1Char('/') + path;
+    if (QFileInfo::exists(user)) {
+        return user;
+    }
+    return QDir(m_libraryPath).filePath(path);
+}
+
+bool ShaderLibrary::isShadowed(const QString &absolutePath) const
+{
+    if (m_userDataPath == m_libraryPath) {
+        return false;
+    }
+    const QString prefix = m_libraryPath + QLatin1Char('/');
+    return absolutePath.startsWith(prefix)
+        && QFileInfo::exists(m_userDataPath + QLatin1Char('/') + absolutePath.mid(prefix.size()));
 }
 
 bool ShaderLibrary::addShader(ShaderMetadata *metadata)
@@ -457,36 +512,48 @@ void ShaderLibrary::generateAllThumbnails()
     }
 }
 
+QString ShaderLibrary::thumbnailFileForId(const QString &shaderId) const
+{
+    QString safeId = shaderId;
+    safeId.replace(QRegularExpression(QStringLiteral("[^a-zA-Z0-9_-]")), QStringLiteral("_"));
+    return QStringLiteral("thumbnails/") + safeId + QStringLiteral(".png");
+}
+
 QString ShaderLibrary::getThumbnailPath(const QString &shaderId) const
 {
-    // Thumbnails are stored in a thumbnails subdirectory
-    QString thumbnailDir = m_libraryPath + QStringLiteral("/thumbnails");
-    QDir dir(thumbnailDir);
+    // Generated thumbnails go to the user data root; bundled ones stay in
+    // the package directory.
+    QDir dir(m_userDataPath + QStringLiteral("/thumbnails"));
     if (!dir.exists()) {
         dir.mkpath(QStringLiteral("."));
     }
-    
-    // Use shaderId as filename (sanitize it)
-    QString safeId = shaderId;
-    safeId.replace(QRegularExpression(QStringLiteral("[^a-zA-Z0-9_-]")), QStringLiteral("_"));
-    
-    return thumbnailDir + QStringLiteral("/") + safeId + QStringLiteral(".png");
+    return m_userDataPath + QLatin1Char('/') + thumbnailFileForId(shaderId);
 }
 
 bool ShaderLibrary::needsThumbnail(const QString &shaderId) const
 {
     auto shader = getShader(shaderId);
     if (!shader) return false;
-    
-    // Check if thumbnail exists
-    if (shader->thumbnailPath().isEmpty()) return true;
-    
-    QString path = shader->thumbnailPath().toLocalFile();
+
+    const QUrl resolved = resolveIndexUrl(shader->thumbnailPath());
+    QString path = resolved.toLocalFile();
     if (path.isEmpty()) {
-        path = shader->thumbnailPath().path();
+        path = resolved.path();
     }
-    
-    return !QFile::exists(path);
+    if (!path.isEmpty() && QFile::exists(path)) {
+        return false;
+    }
+
+    // The entry lost its thumbnail path but the file named after the id
+    // is still on disk.
+    const QString byId = resolveLibraryFile(thumbnailFileForId(shaderId));
+    if (QFile::exists(byId)) {
+        shader->setThumbnailPath(QUrl::fromLocalFile(byId));
+        QMetaObject::invokeMethod(const_cast<ShaderLibrary *>(this), "shaderUpdated",
+                                  Qt::QueuedConnection, Q_ARG(QString, shaderId));
+        return false;
+    }
+    return true;
 }
 
 bool ShaderLibrary::launchExternal(const QString &program, const QStringList &args)
@@ -596,9 +663,9 @@ bool ShaderLibrary::importFromShadertoy(const QString &code, const QVariantMap &
     
     // Save the shader code to a file
     QString filename = metadata[QStringLiteral("id")].toString() + QStringLiteral(".frag");
-    QString savePath = m_libraryPath + QStringLiteral("/Shaders/Imported/") + filename;
-    
-    QDir dir(m_libraryPath + QStringLiteral("/Shaders/Imported"));
+    QString savePath = m_userDataPath + QStringLiteral("/Shaders/Imported/") + filename;
+
+    QDir dir(m_userDataPath + QStringLiteral("/Shaders/Imported"));
     if (!dir.exists()) {
         dir.mkpath(QStringLiteral("."));
     }
@@ -634,9 +701,7 @@ bool ShaderLibrary::saveShaderCode(const QUrl &filePath, const QString &code)
         path = filePath.path();
     }
     // Allow library-relative paths too — same convention as loadShaderCode().
-    if (!path.isEmpty() && !QDir::isAbsolutePath(path)) {
-        path = QDir(m_libraryPath).filePath(path);
-    }
+    path = resolveLibraryFile(path);
     if (path.isEmpty()) {
         Q_EMIT error(QStringLiteral("saveShaderCode: empty path"));
         return false;
@@ -713,7 +778,7 @@ QUrl ShaderLibrary::saveShaderAs(const QString &displayName, const QString &code
     fileStem.replace(QRegularExpression(QStringLiteral("\\s+")), QStringLiteral("_"));
     if (fileStem.isEmpty()) fileStem = QStringLiteral("Untitled_Shader");
 
-    const QString dirPath = m_libraryPath + QStringLiteral("/Shaders/Imported");
+    const QString dirPath = m_userDataPath + QStringLiteral("/Shaders/Imported");
     QDir dir(dirPath);
     if (!dir.exists() && !dir.mkpath(QStringLiteral("."))) {
         Q_EMIT error(QStringLiteral("Failed to create %1").arg(dirPath));
@@ -752,92 +817,336 @@ QUrl ShaderLibrary::saveShaderAs(const QString &displayName, const QString &code
     return QUrl::fromLocalFile(candidate);
 }
 
-void ShaderLibrary::loadIndex()
+namespace {
+
+// False when the file is missing or does not parse (partial write).
+bool readIndexObject(const QString &path, QJsonObject *out)
 {
-    QString indexPath = m_libraryPath + QStringLiteral("/shader_index.json");
-    QFile file(indexPath);
-    
+    QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        // No index file, will be created on first scan
+        return false;
+    }
+    const QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    if (!doc.isObject()) {
+        return false;
+    }
+    *out = doc.object();
+    return true;
+}
+
+// Recursive copy; existing destination files are kept, symlinked
+// directories are not followed.
+void copyTreeMissing(const QString &from, const QString &to)
+{
+    const QDir source(from);
+    if (!source.exists()) {
         return;
     }
-    
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-    file.close();
-    
-    if (!doc.isObject()) return;
-    
-    QJsonObject root = doc.object();
-    QJsonArray shadersArray = root[QStringLiteral("shaders")].toArray();
-    
-    for (const auto &shaderRef : shadersArray) {
-        auto shader = std::make_shared<ShaderMetadata>(shaderRef.toObject(), this);
+    QDir().mkpath(to);
+    const QFileInfoList entries =
+        source.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const QFileInfo &entry : entries) {
+        const QString target = to + QLatin1Char('/') + entry.fileName();
+        if (entry.isDir()) {
+            if (!entry.isSymLink()) {
+                copyTreeMissing(entry.absoluteFilePath(), target);
+            }
+        } else if (!QFileInfo::exists(target)) {
+            QFile::copy(entry.absoluteFilePath(), target);
+        }
+    }
+}
 
-        // Backward/portable compatibility: allow shader_index.json entries
-        // to store paths relative to m_libraryPath (e.g. "Shaders/foo.frag").
-        // Older builds wrote absolute file:// URLs, newer packaged indexes may
-        // be checked in with relative paths so they survive across machines.
-        const QString shaderLocal = shader->shaderPath().toLocalFile();
-        const QString shaderRaw = shaderLocal.isEmpty() ? shader->shaderPath().toString() : shaderLocal;
-        if (!shaderRaw.isEmpty() && !QDir::isAbsolutePath(shaderRaw) && !shaderRaw.startsWith(QStringLiteral("file:"))) {
-            shader->setShaderPath(QUrl::fromLocalFile(QDir(m_libraryPath).filePath(shaderRaw)));
+} // namespace
+
+QString ShaderLibrary::userIndexPath() const
+{
+    return m_userDataPath + QStringLiteral("/shader_index.json");
+}
+
+void ShaderLibrary::migrateUserData()
+{
+    if (QFile::exists(userIndexPath())) {
+        return;
+    }
+
+    // Builds without a user data root kept favorites, thumbnails, imports and
+    // saved packages in the package directory, which upgrades replace. A
+    // system-wide install is read-only and holds none of it.
+    const QString localPackage =
+        QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+        + QStringLiteral("/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui");
+    QStringList sources;
+    QSet<QString> canonicalSources;
+    for (const QString &dir : {m_libraryPath, localPackage}) {
+        const QString canonical = QFileInfo(dir).canonicalFilePath();
+        if (!canonical.isEmpty() && !canonicalSources.contains(canonical)) {
+            canonicalSources.insert(canonical);
+            sources.append(dir);
+        }
+    }
+
+    QJsonArray shaders;
+    QJsonArray categories;
+    QSet<QString> seenIds;
+    for (const QString &source : std::as_const(sources)) {
+        QJsonObject root;
+        if (!QFileInfo(source).isWritable()
+                || !readIndexObject(source + QStringLiteral("/shader_index.json"), &root)) {
+            continue;
+        }
+        qInfo() << "ShaderLibrary: migrating user data from" << source << "to" << m_userDataPath;
+
+        for (const QString &sub : {QStringLiteral("Shaders/Imported"), QStringLiteral("Shaders/Packages")}) {
+            copyTreeMissing(source + QLatin1Char('/') + sub, m_userDataPath + QLatin1Char('/') + sub);
         }
 
-        const QString thumbLocal = shader->thumbnailPath().toLocalFile();
-        const QString thumbRaw = thumbLocal.isEmpty() ? shader->thumbnailPath().toString() : thumbLocal;
-        if (!thumbRaw.isEmpty() && !QDir::isAbsolutePath(thumbRaw) && !thumbRaw.startsWith(QStringLiteral("file:"))) {
-            shader->setThumbnailPath(QUrl::fromLocalFile(QDir(m_libraryPath).filePath(thumbRaw)));
+        const QString prefix = source + QLatin1Char('/');
+        const auto localFile = [&prefix](const QString &value) {
+            const QUrl url(value);
+            const QString path = url.isLocalFile() ? url.toLocalFile() : value;
+            return path.isEmpty() || QDir::isAbsolutePath(path) ? path : prefix + path;
+        };
+
+        // Carried over: user files, external imports and favorites. Bundled
+        // shaders without user state come from the bundled index.
+        for (const auto &ref : root[QStringLiteral("shaders")].toArray()) {
+            QJsonObject entry = ref.toObject();
+            const QString id = entry[QStringLiteral("id")].toString();
+            if (id.isEmpty() || seenIds.contains(id)) {
+                continue;
+            }
+            const QString shaderFile = localFile(entry[QStringLiteral("shaderPath")].toString());
+            const QString rel = shaderFile.startsWith(prefix) ? shaderFile.mid(prefix.size())
+                                                              : toRelativeShaderPath(shaderFile);
+            const bool external = QDir::isAbsolutePath(rel);
+            const bool userFile = rel.startsWith(QLatin1String("Shaders/Imported/"))
+                               || rel.startsWith(QLatin1String("Shaders/Packages/"));
+            if (!external && !userFile && !entry[QStringLiteral("favorite")].toBool()) {
+                continue;
+            }
+            seenIds.insert(id);
+            entry[QStringLiteral("shaderPath")] = external ? QUrl::fromLocalFile(rel).toString() : rel;
+
+            const QFileInfo thumb(localFile(entry[QStringLiteral("thumbnailPath")].toString()));
+            if (thumb.isFile()) {
+                const QString target = QStringLiteral("thumbnails/") + thumb.fileName();
+                const QString targetFile = m_userDataPath + QLatin1Char('/') + target;
+                QDir().mkpath(m_userDataPath + QStringLiteral("/thumbnails"));
+                if (QFileInfo::exists(targetFile) || QFile::copy(thumb.absoluteFilePath(), targetFile)) {
+                    entry[QStringLiteral("thumbnailPath")] = target;
+                }
+            }
+            shaders.append(entry);
         }
 
+        for (const auto &category : root[QStringLiteral("categories")].toArray()) {
+            if (!categories.contains(category)) {
+                categories.append(category);
+            }
+        }
+    }
+
+    // Written even when empty: its presence marks the migration done and
+    // gives the other processes' watchers a file to watch.
+    QJsonObject out;
+    out[QStringLiteral("shaders")] = shaders;
+    out[QStringLiteral("categories")] = categories;
+    out[QStringLiteral("version")] = 1;
+    QSaveFile file(userIndexPath());
+    if (QDir().mkpath(m_userDataPath) && file.open(QIODevice::WriteOnly)) {
+        file.write(QJsonDocument(out).toJson());
+        file.commit();
+    }
+}
+
+QJsonObject ShaderLibrary::indexEntry(const ShaderMetadata &shader) const
+{
+    QJsonObject json = shader.toJson();
+    // contents/ui-relative paths keep the index machine-independent;
+    // loadIndex() resolves them against the user root, then the package.
+    json[QStringLiteral("shaderPath")] =
+        toRelativeShaderPath(json[QStringLiteral("shaderPath")].toString());
+    json[QStringLiteral("thumbnailPath")] =
+        toRelativeShaderPath(json[QStringLiteral("thumbnailPath")].toString());
+    return json;
+}
+
+bool ShaderLibrary::inOverlay(const ShaderMetadata &shader) const
+{
+    const auto bundled = m_bundledEntries.constFind(shader.id());
+    return bundled == m_bundledEntries.constEnd() || *bundled != indexEntry(shader);
+}
+
+void ShaderLibrary::loadIndex()
+{
+    QJsonObject bundled;
+    readIndexObject(m_libraryPath + QStringLiteral("/shader_index.json"), &bundled);
+    QJsonObject user;
+    readIndexObject(userIndexPath(), &user);
+    m_release = bundled[QStringLiteral("release")].toString();
+    for (const auto &id : user[QStringLiteral("seen")].toArray()) {
+        m_seenNew.insert(id.toString());
+    }
+
+    const auto load = [this](const QJsonObject &obj) {
+        auto shader = std::make_shared<ShaderMetadata>(obj, this);
+        // Paths are contents/ui-relative ("Shaders/foo.frag"), or absolute
+        // file:// URLs from older builds and external imports.
+        shader->setShaderPath(resolveIndexUrl(shader->shaderPath()));
+        shader->setThumbnailPath(resolveIndexUrl(shader->thumbnailPath()));
+        if (shader->thumbnailPath().isEmpty()) {
+            const QString byId = resolveLibraryFile(thumbnailFileForId(shader->id()));
+            if (QFile::exists(byId)) {
+                shader->setThumbnailPath(QUrl::fromLocalFile(byId));
+            }
+        }
+        return shader;
+    };
+    const auto insert = [this](const std::shared_ptr<ShaderMetadata> &shader) {
         m_shaders.append(shader);
         m_shaderMap[shader->id()] = shader;
         m_pathMap[shader->shaderPath().toString()] = shader;
+    };
+
+    for (const auto &ref : bundled[QStringLiteral("shaders")].toArray()) {
+        const auto shader = load(ref.toObject());
+        m_bundledEntries.insert(shader->id(), indexEntry(*shader));
+        m_bundledIdByPath.insert(comparablePath(shader->shaderPath()), shader->id());
+        insert(shader);
     }
-    
-    // Load custom categories
-    QJsonArray categoriesArray = root[QStringLiteral("categories")].toArray();
-    for (const auto &cat : categoriesArray) {
-        QString category = cat.toString();
-        if (!m_categories.contains(category)) {
-            m_categories.append(category);
+
+    for (const auto &ref : user[QStringLiteral("shaders")].toArray()) {
+        const auto shader = load(ref.toObject());
+        // Matched by id, or by path when an upgraded bundled index re-minted
+        // the id; the bundled id wins.
+        auto base = m_shaderMap.value(shader->id());
+        if (!base) {
+            const QString bundledId = m_bundledIdByPath.value(comparablePath(shader->shaderPath()));
+            base = bundledId.isEmpty() ? nullptr : m_shaderMap.value(bundledId);
+        }
+        if (!base) {
+            insert(shader);
+            continue;
+        }
+        base->setFavorite(shader->favorite());
+        if (QFile::exists(shader->thumbnailPath().toLocalFile())) {
+            base->setThumbnailPath(shader->thumbnailPath());
         }
     }
-    
+
+    for (const QJsonObject *root : {&bundled, &user}) {
+        for (const auto &cat : (*root)[QStringLiteral("categories")].toArray()) {
+            const QString category = cat.toString();
+            if (!category.isEmpty() && !m_categories.contains(category)) {
+                m_categories.append(category);
+            }
+        }
+    }
+
+    updateNewFlags();
     Q_EMIT shaderCountChanged();
+}
+
+namespace {
+// "4.2.1" -> "4.2"
+QString majorMinor(const QString &version)
+{
+    const QStringList parts = version.split(QLatin1Char('.'));
+    return parts.size() >= 2 ? parts[0] + QLatin1Char('.') + parts[1] : version;
+}
+} // namespace
+
+void ShaderLibrary::updateNewFlags()
+{
+    const QString release = majorMinor(m_release);
+    int count = 0;
+    for (const auto &shader : std::as_const(m_shaders)) {
+        const bool isNew = !release.isEmpty() && !shader->addedIn().isEmpty()
+            && majorMinor(shader->addedIn()) == release
+            && !m_seenNew.contains(shader->id());
+        if (shader->isNew() != isNew) {
+            shader->setIsNew(isNew);
+            Q_EMIT shaderUpdated(shader->id());
+        }
+        count += isNew ? 1 : 0;
+    }
+    if (m_newCount != count) {
+        m_newCount = count;
+        Q_EMIT newCountChanged();
+    }
+}
+
+void ShaderLibrary::markSeen(const QString &id)
+{
+    const auto shader = getShader(id);
+    if (!shader || !shader->isNew()) {
+        return;
+    }
+    m_seenNew.insert(id);
+    updateNewFlags();
+    saveIndex();
+}
+
+void ShaderLibrary::markAllSeen()
+{
+    if (m_newCount == 0) {
+        return;
+    }
+    for (const auto &shader : std::as_const(m_shaders)) {
+        if (shader->isNew()) {
+            m_seenNew.insert(shader->id());
+        }
+    }
+    updateNewFlags();
+    saveIndex();
 }
 
 void ShaderLibrary::saveIndex()
 {
-    QString indexPath = m_libraryPath + QStringLiteral("/shader_index.json");
-    
     QJsonArray shadersArray;
     for (const auto &shader : m_shaders) {
-        QJsonObject json = shader->toJson();
-        // Serialize paths in the portable contents/ui-relative form so the
-        // index stays machine-independent; loadIndex() resolves them back
-        // against m_libraryPath.
-        json[QStringLiteral("shaderPath")] =
-            toRelativeShaderPath(json[QStringLiteral("shaderPath")].toString());
-        json[QStringLiteral("thumbnailPath")] =
-            toRelativeShaderPath(json[QStringLiteral("thumbnailPath")].toString());
+        const QJsonObject json = indexEntry(*shader);
+        const auto bundled = m_bundledEntries.constFind(shader->id());
+        if (bundled != m_bundledEntries.constEnd() && *bundled == json) {
+            continue;
+        }
         shadersArray.append(json);
     }
-    
+
     QJsonArray categoriesArray;
     for (const QString &cat : m_categories) {
         if (!DEFAULT_CATEGORIES.contains(cat)) {
             categoriesArray.append(cat);
         }
     }
-    
+
+    // Ids of shaders no longer marked with a release drop out.
+    QStringList seen;
+    for (const QString &id : std::as_const(m_seenNew)) {
+        const auto shader = m_shaderMap.value(id);
+        if (shader && !shader->addedIn().isEmpty()) {
+            seen.append(id);
+        }
+    }
+    seen.sort();
+
     QJsonObject root;
     root[QStringLiteral("shaders")] = shadersArray;
     root[QStringLiteral("categories")] = categoriesArray;
     root[QStringLiteral("version")] = 1;
+    if (!seen.isEmpty()) {
+        root[QStringLiteral("seen")] = QJsonArray::fromStringList(seen);
+    }
+
+    if (!QDir().mkpath(m_userDataPath)) {
+        Q_EMIT error(QStringLiteral("Failed to create %1").arg(m_userDataPath));
+        return;
+    }
 
     // Atomic write: a truncated index fails to parse on next start, which
     // re-mints every shader (and loses favorites) — never leave one behind.
-    QSaveFile file(indexPath);
+    QSaveFile file(userIndexPath());
     if (!file.open(QIODevice::WriteOnly)) {
         Q_EMIT error(QStringLiteral("Failed to save shader index"));
         return;
@@ -857,7 +1166,7 @@ void ShaderLibrary::saveIndex()
 
 void ShaderLibrary::watchIndexFile()
 {
-    const QString indexPath = m_libraryPath + QStringLiteral("/shader_index.json");
+    const QString indexPath = userIndexPath();
     if (!QFile::exists(indexPath)) {
         return;
     }
@@ -884,45 +1193,154 @@ void ShaderLibrary::watchIndexFile()
     }
 }
 
+QUrl ShaderLibrary::resolveIndexUrl(const QUrl &url) const
+{
+    const QString local = url.toLocalFile();
+    const QString raw = local.isEmpty() ? url.toString() : local;
+    if (!raw.isEmpty() && !QDir::isAbsolutePath(raw) && !raw.startsWith(QStringLiteral("file:"))) {
+        return QUrl::fromLocalFile(resolveLibraryFile(raw));
+    }
+    return url;
+}
+
+QString ShaderLibrary::comparablePath(const QUrl &url) const
+{
+    const QUrl resolved = resolveIndexUrl(url);
+    const QString path = resolved.isLocalFile() ? resolved.toLocalFile()
+                                                : resolved.toString(QUrl::RemoveQuery);
+    return toRelativeShaderPath(path);
+}
+
 void ShaderLibrary::mergeIndexFromDisk()
 {
     // Fold another process's index write into our in-memory state so a later
     // save from this process doesn't roll their changes back. Merging our own
     // write back is a harmless no-op — every field already matches — so we
     // don't bother distinguishing writers.
-    const QString indexPath = m_libraryPath + QStringLiteral("/shader_index.json");
-    QFile file(indexPath);
-    if (!file.open(QIODevice::ReadOnly)) {
-        return;
-    }
-    const QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-    file.close();
-    if (!doc.isObject()) {
-        return;  // partial/corrupt write — keep our state, we'll re-save it
+    QJsonObject root;
+    if (!readIndexObject(userIndexPath(), &root)) {
+        return;  // missing or partial write: in-memory state stands, the next save rewrites it
     }
 
-    const QJsonArray shadersArray = doc.object()[QStringLiteral("shaders")].toArray();
-    for (const auto &shaderRef : shadersArray) {
-        const QJsonObject obj = shaderRef.toObject();
+    bool seenGrew = false;
+    for (const auto &id : root[QStringLiteral("seen")].toArray()) {
+        if (!m_seenNew.contains(id.toString())) {
+            m_seenNew.insert(id.toString());
+            seenGrew = true;
+        }
+    }
+    if (seenGrew) {
+        updateNewFlags();
+    }
+
+    // Disk state is the bundled index with the overlay applied, layered as
+    // loadIndex() does. A bundled shader absent from the overlay is back at
+    // its bundled state (e.g. unfavorited by another process).
+    QList<QJsonObject> entries;
+    entries.reserve(m_bundledEntries.size());
+    QHash<QString, qsizetype> rowById;
+    for (auto it = m_bundledEntries.cbegin(); it != m_bundledEntries.cend(); ++it) {
+        rowById.insert(it.key(), entries.size());
+        entries.append(it.value());
+    }
+    for (const auto &ref : root[QStringLiteral("shaders")].toArray()) {
+        const QJsonObject obj = ref.toObject();
         const QString id = obj[QStringLiteral("id")].toString();
         if (id.isEmpty()) {
             continue;
         }
-        auto it = m_shaderMap.find(id);
-        if (it == m_shaderMap.end()) {
-            continue;  // unknown entry; our next refresh()/scan will find its file
+        qsizetype row = rowById.value(id, -1);
+        if (row < 0) {
+            const QString bundledId = m_bundledIdByPath.value(
+                comparablePath(QUrl(obj[QStringLiteral("shaderPath")].toString())));
+            row = bundledId.isEmpty() ? -1 : rowById.value(bundledId, -1);
         }
-        auto &shader = it.value();
-        const bool fav = obj[QStringLiteral("favorite")].toBool();
-        if (shader->favorite() != fav) {
-            shader->setFavorite(fav);
+        if (row < 0) {
+            rowById.insert(id, entries.size());
+            entries.append(obj);
+            continue;
+        }
+        QJsonObject &entry = entries[row];
+        entry[QStringLiteral("favorite")] = obj[QStringLiteral("favorite")];
+        const QString thumb = obj[QStringLiteral("thumbnailPath")].toString();
+        if (QFile::exists(resolveIndexUrl(QUrl(thumb)).toLocalFile())) {
+            entry[QStringLiteral("thumbnailPath")] = thumb;
+        }
+    }
+
+    QSet<QString> diskIds;
+    for (const QJsonObject &obj : std::as_const(entries)) {
+        diskIds.insert(obj[QStringLiteral("id")].toString());
+    }
+
+    // Built on the first unknown id: entries whose id the disk lacks, by
+    // collapsed shader path.
+    QHash<QString, std::shared_ptr<ShaderMetadata>> unmatchedByPath;
+    bool unmatchedBuilt = false;
+    bool saveNeeded = false;
+
+    for (const QJsonObject &obj : std::as_const(entries)) {
+        const QString id = obj[QStringLiteral("id")].toString();
+        if (id.isEmpty()) {
+            continue;
+        }
+
+        std::shared_ptr<ShaderMetadata> shader = m_shaderMap.value(id);
+        bool adopted = false;
+        if (!shader) {
+            // A file scanned by two processes gets an id from each, and each
+            // save would drop the other's entry. Take the disk's id for the
+            // same file; an unknown file is left to refresh().
+            if (!unmatchedBuilt) {
+                unmatchedBuilt = true;
+                for (const auto &candidate : std::as_const(m_shaders)) {
+                    if (!diskIds.contains(candidate->id())) {
+                        unmatchedByPath.insert(comparablePath(candidate->shaderPath()), candidate);
+                    }
+                }
+            }
+            const QString key = comparablePath(QUrl(obj[QStringLiteral("shaderPath")].toString()));
+            shader = key.isEmpty() ? nullptr : unmatchedByPath.take(key);
+            if (!shader) {
+                continue;
+            }
+            qInfo() << "ShaderLibrary: adopting index id" << id << "for" << key
+                    << "(was" << shader->id() << ")";
+            m_shaderMap.remove(shader->id());
+            shader->setId(id);
+            m_shaderMap.insert(id, shader);
+            adopted = true;
+        }
+
+        bool changed = adopted;
+        const bool diskFavorite = obj[QStringLiteral("favorite")].toBool();
+        // Adopting merges two entries for one file: a favorite set on either
+        // survives, and goes back to disk if only ours had it.
+        const bool favorite = adopted ? (diskFavorite || shader->favorite()) : diskFavorite;
+        if (favorite != diskFavorite) {
+            saveNeeded = true;
+        }
+        if (shader->favorite() != favorite) {
+            shader->setFavorite(favorite);
+            changed = true;
+        }
+
+        const QString thumbRaw = obj[QStringLiteral("thumbnailPath")].toString();
+        if (!thumbRaw.isEmpty()) {
+            const QUrl diskThumb = resolveIndexUrl(QUrl(thumbRaw));
+            if (comparablePath(diskThumb) != comparablePath(shader->thumbnailPath())) {
+                shader->setThumbnailPath(diskThumb);
+                changed = true;
+            }
+        }
+
+        if (changed) {
             Q_EMIT shaderUpdated(id);
         }
-        const QUrl thumb(obj[QStringLiteral("thumbnailPath")].toString());
-        if (!thumb.isEmpty() && shader->thumbnailPath() != thumb) {
-            shader->setThumbnailPath(thumb);
-            Q_EMIT shaderUpdated(id);
-        }
+    }
+
+    if (saveNeeded) {
+        saveIndex();
     }
 }
 
@@ -938,7 +1356,7 @@ void ShaderLibrary::scanDirectory(const QString &path, const QString &category)
         QString mainShaderPath = path + QStringLiteral("/main.frag");
         if (QFile::exists(mainShaderPath)) {
             QUrl filePath = QUrl::fromLocalFile(mainShaderPath);
-            if (!m_pathMap.contains(filePath.toString())) {
+            if (!m_pathMap.contains(filePath.toString()) && !isShadowed(mainShaderPath)) {
                 auto metadata = createMetadataFromPackage(path, category);
                 if (metadata) {
                     auto shared = std::shared_ptr<ShaderMetadata>(metadata);
@@ -971,7 +1389,7 @@ void ShaderLibrary::scanDirectory(const QString &path, const QString &category)
         
         // Skip if already in library
         QUrl filePath = QUrl::fromLocalFile(info.absoluteFilePath());
-        if (m_pathMap.contains(filePath.toString())) {
+        if (m_pathMap.contains(filePath.toString()) || isShadowed(info.absoluteFilePath())) {
             continue;
         }
         
@@ -1253,11 +1671,9 @@ QString ShaderLibrary::loadShaderCode(const QUrl &filePath) const
     }
 
     // Support relative paths stored in index entries (e.g. "Shaders/foo.frag")
-    // by resolving them against the library root.
-    if (!path.isEmpty() && !QDir::isAbsolutePath(path)) {
-        path = QDir(m_libraryPath).filePath(path);
-    }
-    
+    // by resolving them against the library roots.
+    path = resolveLibraryFile(path);
+
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qWarning() << "Failed to open shader file:" << path;
@@ -1304,9 +1720,7 @@ QVariantMap ShaderLibrary::loadBufferCodes(const QUrl &shaderPath) const
     if (mainPath.isEmpty()) {
         mainPath = shaderPath.path();
     }
-    if (!mainPath.isEmpty() && !QDir::isAbsolutePath(mainPath)) {
-        mainPath = QDir(m_libraryPath).filePath(mainPath);
-    }
+    mainPath = resolveLibraryFile(mainPath);
     const QFileInfo mainInfo(mainPath);
     const QString manifestPath = mainInfo.absolutePath() + QStringLiteral("/manifest.json");
     if (mainInfo.completeBaseName() == QStringLiteral("main") && QFile::exists(manifestPath)) {

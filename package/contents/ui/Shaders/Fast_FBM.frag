@@ -1,5 +1,6 @@
 // url: https://www.shadertoy.com/view/ftBfWm
 // credits: VPas
+// @texture0 Resources/Shadertoy_RGBA_Noise_Small.png
 
 float noise(vec2 p) {
   return texture(iChannel0, p*.065).r;

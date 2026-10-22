@@ -1,6 +1,6 @@
-// property Image iChannel0: Image { source: "./Shadertoy_Organic_3.jpg" }
 // from Shane
 // url https://www.shadertoy.com/view/4sGSRV
+// @texture0 Resources/Shadertoy_Organic_3.jpg
 /*
   Abstract Plane
   --------------

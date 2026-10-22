@@ -5,7 +5,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
-import "shaderwallpaper" as ShaderPlugin
 
 // ────────────────────────────────────────────────────────────────────────────
 // Wallpaper-plugin config root.
@@ -46,10 +45,10 @@ import "shaderwallpaper" as ShaderPlugin
 //   4. Optionally provide a `saveConfig()` function called by the host shell.
 //
 // The actual visible UI lives in ConfigContent.qml (or SetupWizard.qml when
-// the C++ plugin isn't installed yet). We sync configRoot.cfg_* ↔
-// contentLoader.item.cfg_* on load and on every change in either direction,
-// which keeps ConfigContent.qml's existing per-control cfg_* bindings
-// untouched.
+// the native engine isn't installed yet), loaded asynchronously with the
+// cfg_* values as initial properties. configRoot.cfg_* ↔ contentLoader.item.cfg_*
+// are mirrored in both directions afterwards. This file does not import the
+// engine module (see EngineStatus.qml).
 // ────────────────────────────────────────────────────────────────────────────
 ColumnLayout {
     id: configRoot
@@ -77,11 +76,66 @@ ColumnLayout {
     // flow, to copy our cfg_* back into the live wallpaper configuration).
     signal configurationChanged()
 
-    property bool plmAppearanceContext: configDialog !== null
+    // In-process desktop dialog (plasma-desktop ContainmentConfigView):
+    // wallpaperConfiguration is the running wallpaper's own map, so every
+    // write below is a live preview on the desktop. PLM and the System
+    // Settings KCM hand us a map that is not live.
+    readonly property bool liveDesktopDialog: configDialog !== null
+        && ("applyWallpaper" in configDialog) && ("containmentPlugin" in configDialog)
 
-    // Called by the KCM right before save; placeholder — no per-save cleanup
-    // needed today.
-    function saveConfig() {}
+    // Desktop wallpaper settings: the in-process dialog or System Settings'
+    // wallpaper KCM (KQuickConfigModule class WallpaperModule). Not the
+    // lock screen or sign-in screen pages.
+    readonly property bool desktopWallpaperContext: liveDesktopDialog
+        || (typeof kcm !== "undefined" && kcm !== null && String(kcm).indexOf("WallpaperModule") === 0)
+
+    // Values as of the last save (or page creation). In the live desktop
+    // dialog a page destroyed without saveConfig() writes these back, so
+    // Cancel / Discard also undoes the live preview.
+    property var _committed: ({})
+    property bool _livePreviewDirty: false
+    function _snapshotCommitted() {
+        const snap = {}
+        _cfgKeys.forEach(function(key) {
+            const v = configRoot[key]
+            snap[key] = _isList(v) ? Array.prototype.slice.call(v) : v
+        })
+        _committed = snap
+        _livePreviewDirty = false
+    }
+
+    // Called by the host shell / KCM right before it copies cfg_* out.
+    function saveConfig() {
+        _snapshotCommitted()
+    }
+
+    // configVersion 1 → 2. Version 1 ran the file whenever a path was set;
+    // leftover code (an import that kept the path, the old editor) would
+    // otherwise start running. Path wins, the inline copies go. Runs before
+    // the host signals are wired, so the page opens clean; the values are
+    // saved with the next Apply.
+    function _migrateConfig() {
+        if (cfg_configVersion >= 2) return
+        if (cfg_selectedShaderPath.length > 0 && cfg_selectedShaderCode.length > 0) {
+            cfg_selectedShaderCode = ""
+            cfg_commonCode = ""
+            cfg_bufferACode = ""
+            cfg_bufferBCode = ""
+            cfg_bufferCCode = ""
+            cfg_bufferDCode = ""
+        }
+        cfg_configVersion = 2
+    }
+
+    Component.onDestruction: {
+        if (!liveDesktopDialog || !_livePreviewDirty || !wallpaperConfiguration) return
+        _cfgKeys.forEach(function(key) {
+            const name = key.substring(4)
+            if (!(key in _committed)) return
+            if (_differs(wallpaperConfiguration[name], _committed[key]))
+                wallpaperConfiguration[name] = _committed[key]
+        })
+    }
 
     // ════════════════════════════════════════════════════════════════════════
     // cfg_<key> declarations — MUST live on the QML root the host instantiates.
@@ -98,6 +152,7 @@ ColumnLayout {
     property string cfg_selectedShaderPath: wallpaperConfiguration ? (wallpaperConfiguration.selectedShaderPath ?? "Shaders/PS3_MenuColor.frag") : "Shaders/PS3_MenuColor.frag"
     property string cfg_selectedShaderCode: wallpaperConfiguration ? (wallpaperConfiguration.selectedShaderCode ?? "") : ""
     property int    cfg_selectedShaderIndex: wallpaperConfiguration ? (wallpaperConfiguration.selectedShaderIndex ?? 0) : 0
+    property int    cfg_configVersion: wallpaperConfiguration ? (wallpaperConfiguration.configVersion ?? 1) : 1
 
     // — Playback
     property bool   cfg_running: wallpaperConfiguration ? (wallpaperConfiguration.running ?? true) : true
@@ -106,6 +161,7 @@ ColumnLayout {
     property double cfg_resolutionScale: wallpaperConfiguration ? (wallpaperConfiguration.resolutionScale || 1.0) : 1.0
     property int    cfg_pauseMode: wallpaperConfiguration ? (wallpaperConfiguration.pauseMode ?? 0) : 0
     property bool   cfg_checkActiveScreen: wallpaperConfiguration ? (wallpaperConfiguration.checkActiveScreen ?? true) : true
+    property bool   cfg_showPauseIndicator: wallpaperConfiguration ? (wallpaperConfiguration.showPauseIndicator ?? false) : false
     // List-typed keys are NOT bound to wallpaperConfiguration (see _syncListKey):
     // a binding hands out a fresh JS array on every re-evaluation, so it can
     // never compare equal to the previous value.
@@ -168,6 +224,9 @@ ColumnLayout {
     property int cfg_bufferDChannel2: wallpaperConfiguration ? (wallpaperConfiguration.bufferDChannel2 ?? -1) : -1
     property int cfg_bufferDChannel3: wallpaperConfiguration ? (wallpaperConfiguration.bufferDChannel3 ?? -1) : -1
 
+    // 0 = shader's own @sim-max-height header, else native.
+    property int cfg_bufferSimulationMaxHeight: wallpaperConfiguration ? (wallpaperConfiguration.bufferSimulationMaxHeight ?? 0) : 0
+
     // — Debug & performance HUD
     property bool cfg_showFps:              wallpaperConfiguration ? (wallpaperConfiguration.showFps ?? false) : false
     property bool cfg_showPerformance:      wallpaperConfiguration ? (wallpaperConfiguration.showPerformance ?? false) : false
@@ -180,6 +239,7 @@ ColumnLayout {
     property var  cfg_playlistShaders:         []   // see _syncListKey
     property int  cfg_playlistIntervalMinutes: wallpaperConfiguration ? (wallpaperConfiguration.playlistIntervalMinutes || 10) : 10
     property bool cfg_playlistShuffle:         wallpaperConfiguration ? (wallpaperConfiguration.playlistShuffle ?? false) : false
+    property int  cfg_playlistSource:          wallpaperConfiguration ? (wallpaperConfiguration.playlistSource ?? 0) : 0
 
     // — Hot-reload
     property bool cfg_watchSourceFile: wallpaperConfiguration ? (wallpaperConfiguration.watchSourceFile ?? false) : false
@@ -190,6 +250,7 @@ ColumnLayout {
     property bool   cfg_experimentalParallax:         wallpaperConfiguration ? (wallpaperConfiguration.experimentalParallax ?? false) : false
     property double cfg_experimentalParallaxStrength: wallpaperConfiguration ? (wallpaperConfiguration.experimentalParallaxStrength ?? 0.25) : 0.25
     property bool   cfg_experimentalHdrPipeline:      wallpaperConfiguration ? (wallpaperConfiguration.experimentalHdrPipeline ?? false) : false
+    property bool   cfg_dither:                       wallpaperConfiguration ? (wallpaperConfiguration.dither ?? true) : true
 
     // — Shader tweaks
     property bool cfg_enableShaderTweaks: wallpaperConfiguration ? (wallpaperConfiguration.enableShaderTweaks ?? false) : false
@@ -200,37 +261,25 @@ ColumnLayout {
     property bool cfg_emergencyHelp_dismissed:      wallpaperConfiguration ? (wallpaperConfiguration.emergencyHelp_dismissed ?? false) : false
 
     // ════════════════════════════════════════════════════════════════════════
-    // cfg_* ↔ contentLoader.item.cfg_* bidirectional wiring + signal plumbing
+    // cfg_* ↔ contentLoader.item.cfg_* wiring
     //
-    // Why this exists:
-    //   The KCM/shell only interacts with cfg_* on THIS file's root, but the
-    //   actual UI controls live in ConfigContent.qml which is loaded into
-    //   `contentLoader` below. To keep ConfigContent.qml's existing per-control
-    //   bindings untouched, we mirror values in both directions on every change.
+    // The host reads and writes cfg_* on this root only; the controls live in
+    // ConfigContent.qml. Per key:
+    //   configRoot.cfg_<key>Changed → wallpaperConfiguration (live preview)
+    //                                 and contentLoader.item.cfg_<key>
+    //   item.cfg_<key>Changed       → configRoot.cfg_<key> and
+    //                                 configurationChanged() (dirty state)
+    // Every mirror compares first, so a round trip terminates.
     //
-    // For each cfg_<key> we:
-    //   • Connect configRoot.cfg_<key>Changed →
-    //       1. emit configurationChanged()                 // KCM/shell dirty tracking
-    //       2. write through to wallpaperConfiguration     // in-process live preview
-    //       3. mirror to contentLoader.item.cfg_<key>      // refresh the UI
-    //   • Connect contentLoader.item.cfg_<key>Changed →
-    //       mirror back to configRoot.cfg_<key>            // user moved a slider, etc.
-    //
-    // The mirrors are no-ops when the value already matches, so they don't
-    // cause binding loops.
-    //
-    // We use an EXPLICIT key list rather than `for (k in configRoot)` because
-    // QML's for-in enumeration of dynamic QObject properties is unreliable
-    // across Qt versions — and silent enumeration failure here would mean
-    // saved values never propagate, which is exactly the failure mode we hit.
-    // Keep this list in lock-step with the cfg_* property declarations above
-    // (and with package/contents/config/main.xml).
+    // Explicit key list: for-in over dynamic QObject properties does not
+    // enumerate them reliably across Qt versions, and a missed key never
+    // propagates. Kept in step with the declarations above and main.xml.
     // ════════════════════════════════════════════════════════════════════════
 
     readonly property var _cfgKeys: [
-        "cfg_selectedShaderPath", "cfg_selectedShaderCode", "cfg_selectedShaderIndex",
+        "cfg_selectedShaderPath", "cfg_selectedShaderCode", "cfg_selectedShaderIndex", "cfg_configVersion",
         "cfg_running", "cfg_shaderSpeed", "cfg_targetFps", "cfg_resolutionScale",
-        "cfg_pauseMode", "cfg_checkActiveScreen", "cfg_excludeWindows",
+        "cfg_pauseMode", "cfg_checkActiveScreen", "cfg_excludeWindows", "cfg_showPauseIndicator",
         "cfg_mouseEnabled", "cfg_mouseBias",
         "cfg_audioEnabled", "cfg_audioChannel", "cfg_audioSensitivity",
         "cfg_windowsEnabled",
@@ -245,13 +294,15 @@ ColumnLayout {
         "cfg_bufferBChannel0", "cfg_bufferBChannel1", "cfg_bufferBChannel2", "cfg_bufferBChannel3",
         "cfg_bufferCChannel0", "cfg_bufferCChannel1", "cfg_bufferCChannel2", "cfg_bufferCChannel3",
         "cfg_bufferDChannel0", "cfg_bufferDChannel1", "cfg_bufferDChannel2", "cfg_bufferDChannel3",
+        "cfg_bufferSimulationMaxHeight",
         "cfg_showFps",
         "cfg_showPerformance", "cfg_showPerformanceGraph", "cfg_performanceExpanded", "cfg_gpuTdp",
         "cfg_playlistEnabled", "cfg_playlistShaders", "cfg_playlistIntervalMinutes", "cfg_playlistShuffle",
+        "cfg_playlistSource",
         "cfg_watchSourceFile",
         "cfg_experimentalScreenUniforms", "cfg_experimentalDesktopUniform",
         "cfg_experimentalParallax", "cfg_experimentalParallaxStrength",
-        "cfg_experimentalHdrPipeline",
+        "cfg_experimentalHdrPipeline", "cfg_dither",
         "cfg_enableShaderTweaks",
         "cfg_infoPlasma6Preview_dismissed", "cfg_warningResources_dismissed", "cfg_emergencyHelp_dismissed"
     ]
@@ -260,6 +311,7 @@ ColumnLayout {
         if (!wallpaperConfiguration) return
         if (!_differs(wallpaperConfiguration[key], value)) return
         wallpaperConfiguration[key] = value
+        _livePreviewDirty = true
     }
 
     // ── list-typed keys (StringList in main.xml: excludeWindows, playlistShaders)
@@ -288,17 +340,15 @@ ColumnLayout {
         function onValueChanged(key, value) { if (configRoot._listKeys.indexOf(key) >= 0) configRoot._syncListKey(key) }
     }
 
-    // Suppresses configurationChanged / live-preview side effects during the
-    // initial value push in Loader.onLoaded (we don't want loading the UI to
-    // mark the KCM dirty). Ping-pongs between configRoot ↔ item during normal
-    // edits are prevented by the equality checks in each handler — once
-    // values match, the second-direction handler's `!==` test is false and
-    // nothing fires.
+    // Set during the initial push in Loader.onLoaded: loading the page must
+    // not write the live config or dirty the host.
     property bool _suppressBroadcast: false
     property var _listSnapshot: ({})
 
     Component.onCompleted: {
         _listKeys.forEach(_syncListKey)
+        _migrateConfig()
+        _snapshotCommitted()
         // configRoot.cfg_<key>Changed → broadcast: KCM signal, live config, UI.
         let wired = 0
         let missing = []
@@ -340,10 +390,9 @@ ColumnLayout {
     // UI
     // ════════════════════════════════════════════════════════════════════════
 
-    // Plasma's containment-config form expects a `formLayout` alias on the
-    // wallpaper plugin's root, for label-column alignment with the wallpaper-
-    // type combo above us. We expose a hidden zero-size FormLayout to satisfy
-    // that contract without affecting visible layout.
+    // Plasma's containment-config form reads a `formLayout` alias on the
+    // wallpaper page root for label alignment with the wallpaper-type combo.
+    // A hidden zero-size FormLayout satisfies it.
     property alias formLayout: hiddenFormLayout
     Kirigami.FormLayout {
         id: hiddenFormLayout
@@ -352,41 +401,69 @@ ColumnLayout {
         height: 0
     }
 
-    // Detect whether the C++ plugin .so is installed; show the setup wizard
-    // when it isn't.
-    ShaderPlugin.PluginStatus { id: pluginStatus }
+    // Native engine availability; SetupWizard.qml replaces the settings
+    // while it is missing.
+    EngineStatus { id: engineStatus }
+    Connections {
+        target: engineStatus
+        function onAvailableChanged() { contentLoader.loadContent() }
+        function onFailedChanged() { contentLoader.loadContent() }
+    }
+
+    // Asynchronous with initial properties: the host may build a throwaway
+    // instance of this page only to enumerate cfg_* keys; destroying it
+    // cancels the incubation, so the heavy content (preview engine, shader
+    // library models) is never built for it. The page that stays forces
+    // completion shortly after: with an animation running, Qt interleaves
+    // incubation with frames at a third of a frame each (about 1 ms per
+    // frame at 240 Hz), which makes a fully asynchronous load crawl.
+    Timer {
+        id: forceLoadTimer
+        interval: 150
+        onTriggered: contentLoader.asynchronous = false
+    }
 
     Loader {
         id: contentLoader
         Layout.fillWidth: true
         Layout.fillHeight: true
-        source: pluginStatus.installed ? "ConfigContent.qml" : "SetupWizard.qml"
+        asynchronous: true
+
+        function loadContent() {
+            if (status !== Loader.Null) return
+            if (!engineStatus.available) {
+                setSource("SetupWizard.qml", { engineError: engineStatus.error })
+                forceLoadTimer.start()
+                return
+            }
+            const props = { hostConfigDialog: configRoot.configDialog,
+                            liveDesktopDialog: configRoot.liveDesktopDialog,
+                            desktopWallpaperContext: configRoot.desktopWallpaperContext }
+            configRoot._cfgKeys.forEach(function(key) {
+                const v = configRoot[key]
+                props[key] = configRoot._isList(v) ? Array.prototype.slice.call(v) : v
+            })
+            setSource("ConfigContent.qml", props)
+            forceLoadTimer.start()
+        }
+
+        Component.onCompleted: if (engineStatus.available || engineStatus.failed) loadContent()
 
         onLoaded: {
-            if (!item) return
+            // SetupWizard.qml has no cfg_* properties.
+            if (!item || !engineStatus.available) return
 
-            // Initial push: configRoot.cfg_* → item.cfg_* (so the UI shows
-            // current values rather than its declared type-defaults).
-            // Suppress broadcast so this doesn't spuriously mark the host KCM
-            // dirty or fire a live-preview reload before anything has actually
-            // changed.
+            // Values that changed while the item incubated.
             _suppressBroadcast = true
             _cfgKeys.forEach(function(key) {
                 if ((key in item) && _differs(item[key], configRoot[key])) {
                     item[key] = configRoot[key]
                 }
             })
-            if ("plmAppearanceContext" in item) {
-                item.plmAppearanceContext = configRoot.plmAppearanceContext
-            }
             _suppressBroadcast = false
 
-            // Wire item.cfg_*Changed → configRoot.cfg_* . The equality check
-            // in each handler prevents ping-pong: when the user moves a
-            // slider, item.cfg_X changes, we assign it to configRoot.cfg_X,
-            // configRoot's handler then tries to push back to item but
-            // `item[key] !== configRoot[key]` is false at that point so the
-            // chain terminates.
+            // item.cfg_*Changed → configRoot.cfg_*. Each handler compares
+            // first, so the configRoot → item mirror above terminates.
             let wired = 0
             let missing = []
             _cfgKeys.forEach(function(key) {
@@ -399,20 +476,16 @@ ColumnLayout {
                 sig.connect(function() {
                     if (_differs(configRoot[key], item[key])) {
                         configRoot[key] = item[key]
-                        configRoot.configurationChanged()   // a UI edit: dirty the KCM
+                        configRoot.configurationChanged()
                     }
                 })
                 wired++
             })
+            // Apply to all screens wrote this screen too: Discard keeps it.
+            if (item.screensSynced) item.screensSynced.connect(configRoot._snapshotCommitted)
             console.log("[ShaderWallpaper] contentLoader wired", wired,
                         "cfg_* item signals;",
                         missing.length, "missing on item:", missing.join(","))
-        }
-
-        BusyIndicator {
-            anchors.centerIn: parent
-            visible: parent.status === Loader.Loading
-            running: visible
         }
     }
 }

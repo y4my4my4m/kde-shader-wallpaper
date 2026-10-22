@@ -2,462 +2,291 @@
 // SPDX-FileCopyrightText: 2026 @y4my4my4m <y4my4m@protonmail.com>
 
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import QtQuick.Dialogs
 import org.kde.kirigami as Kirigami
 import "shaderwallpaper"
+import "ShaderApply.js" as ShaderApply
 
-/**
- * Dialog for importing shaders from Shadertoy or files
- */
-Kirigami.OverlaySheet {
-    id: root
-    
-    property bool importing: shadertoyApi.busy
-    
-    // Emitted for main shader code (simple shaders)
-    signal shaderImported(string code, var metadata)
-    // Emitted when shader with buffers/common code is imported
-    signal shaderWithBuffersImported(string mainCode, var bufferCodes, string commonCode, var metadata)
-    
+// Import from Shadertoy, pasted code, or a local file.
+Kirigami.Dialog {
+    id: dialog
+    parent: QQC2.Overlay.overlay
+
+    // routing: ShaderApply.routingFromShadertoy() output, or null.
+    signal shaderImported(string mainCode, var bufferCodes, string commonCode, var routing, var metadata)
+    signal shaderFileChosen(url url)
+
     title: i18n("Import Shader")
-    
+    preferredWidth: Kirigami.Units.gridUnit * 38
+    padding: Kirigami.Units.largeSpacing
+    standardButtons: Kirigami.Dialog.Close
+
+    readonly property bool importing: shadertoyApi.busy
+
+    // Pending multi-pass Shadertoy result, shown for review before import.
+    property var pending: null
+    property var pendingRouting: null
+
+    onClosed: {
+        pending = null
+        errorMessage.visible = false
+    }
+
     ShadertoyAPI {
         id: shadertoyApi
-        
-        onShaderReady: (mainCode, bufferCodes, commonCode, metadata) => {
-            // Check if we have buffer codes or common code
-            let hasBuffers = Object.keys(bufferCodes).length > 0
-            let hasCommon = commonCode && commonCode.trim().length > 0
-            
-            if (hasBuffers || hasCommon) {
-                // Show buffer confirmation dialog
-                bufferPreviewDialog.mainCode = mainCode
-                bufferPreviewDialog.bufferCodes = bufferCodes
-                bufferPreviewDialog.commonCode = commonCode || ""
-                bufferPreviewDialog.metadata = metadata
-                bufferPreviewDialog.open()
+        onShaderFetched: function(shaderData) {
+            dialog.pendingRouting = ShaderApply.routingFromShadertoy(shaderData)
+        }
+        onShaderReady: function(mainCode, bufferCodes, commonCode, metadata) {
+            const multi = Object.keys(bufferCodes || {}).length > 0 || (commonCode && commonCode.trim().length > 0)
+            const result = { mainCode: mainCode, bufferCodes: bufferCodes || {}, commonCode: commonCode || "",
+                             metadata: metadata || {}, routing: dialog.pendingRouting }
+            if (multi) {
+                dialog.pending = result
             } else {
-                root.shaderImported(mainCode, metadata)
-                root.close()
+                dialog.finish(result)
             }
         }
-        
-        onErrorOccurred: (error) => {
-            errorLabel.text = error
-            errorLabel.visible = true
+        onErrorOccurred: function(error) {
+            errorMessage.text = error
+            errorMessage.visible = true
         }
     }
-    
+
+    function finish(r) {
+        shaderImported(r.mainCode, r.bufferCodes, r.commonCode, r.routing, r.metadata)
+        close()
+    }
+
+    function passPresent(key) {
+        if (!pending) return false
+        if (key === "main") return pending.mainCode.length > 0
+        if (key === "common") return pending.commonCode.length > 0
+        for (const k in pending.bufferCodes) {
+            const m = /buffer\s*([a-d])/i.exec(k)
+            if (m && m[1].toUpperCase() === key && pending.bufferCodes[k]) return true
+        }
+        return false
+    }
+
+    component CodeArea: QQC2.ScrollView {
+        id: codeArea
+        property alias text: area.text
+        property string hint: "void mainImage(out vec4 fragColor, in vec2 fragCoord)\n{\n}"
+        QQC2.TextArea {
+            id: area
+            font.family: "monospace"
+            wrapMode: TextEdit.NoWrap
+            placeholderText: codeArea.hint
+        }
+    }
+
     ColumnLayout {
         spacing: Kirigami.Units.largeSpacing
-        // Pin both implicit dimensions so Kirigami's OverlaySheet has
-        // stable size hints with no chance of a binding loop.
-        implicitWidth: Kirigami.Units.gridUnit * 30
-        Layout.preferredWidth: Kirigami.Units.gridUnit * 30
 
-        // Import method tabs
-        TabBar {
-            id: importTabs
+        QQC2.TabBar {
+            id: tabs
             Layout.fillWidth: true
-            
-            TabButton {
-                text: i18n("Shadertoy URL")
-                icon.name: "internet-web-browser"
-            }
-            
-            TabButton {
-                text: i18n("Paste Code")
-                icon.name: "edit-paste"
-            }
-            
-            TabButton {
-                text: i18n("Local File")
-                icon.name: "document-open"
-            }
+            visible: dialog.pending === null
+            QQC2.TabButton { text: i18n("Shadertoy"); icon.name: "internet-web-browser" }
+            QQC2.TabButton { text: i18n("Paste Code"); icon.name: "edit-paste" }
+            QQC2.TabButton { text: i18n("File"); icon.name: "document-open" }
         }
-        
+
         StackLayout {
+            id: importStack
             Layout.fillWidth: true
-            currentIndex: importTabs.currentIndex
-            
-            // Shadertoy URL import
+            // Height of the shown page, not the tallest one.
+            Layout.preferredHeight: children[currentIndex] ? children[currentIndex].implicitHeight : 0
+            visible: dialog.pending === null
+            currentIndex: tabs.currentIndex
+
+            // ── Shadertoy ─────────────────────────────────────────────────
             ColumnLayout {
                 spacing: Kirigami.Units.smallSpacing
-                
-                Label {
-                    text: i18n("Enter a Shadertoy URL or shader ID:")
+                QQC2.Label {
+                    Layout.fillWidth: true
+                    text: i18n("Shadertoy link or shader ID:")
                 }
-                
-                TextField {
-                    id: shadertoyUrlField
+                QQC2.TextField {
+                    id: urlField
                     Layout.fillWidth: true
                     placeholderText: "https://www.shadertoy.com/view/XXXXXX"
+                    onAccepted: if (text.length > 0 && !dialog.importing) apiButton.clicked()
                 }
-                
                 RowLayout {
-                    spacing: Kirigami.Units.smallSpacing
-                    
-                    Button {
-                        text: i18n("Import via API")
-                        enabled: shadertoyUrlField.text.length > 0 && !root.importing
-                        icon.name: "download"
-                        
-                        ToolTip.visible: hovered
-                        ToolTip.text: i18n("Use Shadertoy API (requires working API)")
-                        ToolTip.delay: 500
-                        
-                        onClicked: {
-                            errorLabel.visible = false
-                            shadertoyApi.importFromUrl(shadertoyUrlField.text)
-                        }
-                    }
-                    
-                    Button {
-                        text: i18n("Scrape Page")
-                        enabled: shadertoyUrlField.text.length > 0 && !root.importing
-                        icon.name: "globe"
-                        
-                        ToolTip.visible: hovered
-                        ToolTip.text: i18n("Scrape shader directly from webpage (use when API is unavailable)")
-                        ToolTip.delay: 500
-                        
-                        onClicked: {
-                            errorLabel.visible = false
-                            shadertoyApi.scrapeFromPage(shadertoyUrlField.text)
-                        }
-                    }
-                }
-                
-                // API status warning
-                Kirigami.InlineMessage {
-                    Layout.fillWidth: true
-                    type: Kirigami.MessageType.Warning
-                    text: i18n("Shadertoy API may be temporarily unavailable. Try 'Scrape Page' if API import fails.")
-                    visible: !root.importing
-                }
-                
-                // Progress indicator
-                ProgressBar {
-                    Layout.fillWidth: true
-                    visible: root.importing
-                    indeterminate: true
-                }
-                
-                Label {
-                    visible: root.importing
-                    text: i18n("Fetching shader from Shadertoy...")
-                }
-            }
-            
-            // Paste code import
-            ColumnLayout {
-                spacing: Kirigami.Units.smallSpacing
-                
-                Label {
-                    text: i18n("Paste your shader code (mainImage function):")
-                }
-                
-                // Tab bar for Common/Main/Buffer selection
-                TabBar {
-                    id: codePassTabs
-                    Layout.fillWidth: true
-                    
-                    TabButton { text: i18n("Common") }
-                    TabButton { text: i18n("Main Image") }
-                    TabButton { text: i18n("Buffer A") }
-                    TabButton { text: i18n("Buffer B") }
-                    TabButton { text: i18n("Buffer C") }
-                    TabButton { text: i18n("Buffer D") }
-                }
-                
-                StackLayout {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 180
-                    currentIndex: codePassTabs.currentIndex
-                    
-                    ScrollView {
-                        TextArea {
-                            id: commonCodeArea
-                            font.family: "monospace"
-                            placeholderText: "// Shared code (functions, constants, structs)\n// This is prepended to ALL passes\n\n#define PI 3.14159265359\n\nfloat hash(vec2 p) { ... }"
-                            wrapMode: TextEdit.NoWrap
-                        }
-                    }
-                    
-                    ScrollView {
-                        TextArea {
-                            id: codeTextArea
-                            font.family: "monospace"
-                            placeholderText: "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n    // Your main image shader code here\n}"
-                            wrapMode: TextEdit.NoWrap
-                        }
-                    }
-                    
-                    ScrollView {
-                        TextArea {
-                            id: bufferACode
-                            font.family: "monospace"
-                            placeholderText: "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n    // Buffer A code (leave empty if not used)\n}"
-                            wrapMode: TextEdit.NoWrap
-                        }
-                    }
-                    
-                    ScrollView {
-                        TextArea {
-                            id: bufferBCode
-                            font.family: "monospace"
-                            placeholderText: "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n    // Buffer B code (leave empty if not used)\n}"
-                            wrapMode: TextEdit.NoWrap
-                        }
-                    }
-                    
-                    ScrollView {
-                        TextArea {
-                            id: bufferCCode
-                            font.family: "monospace"
-                            placeholderText: "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n    // Buffer C code (leave empty if not used)\n}"
-                            wrapMode: TextEdit.NoWrap
-                        }
-                    }
-                    
-                    ScrollView {
-                        TextArea {
-                            id: bufferDCode
-                            font.family: "monospace"
-                            placeholderText: "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n    // Buffer D code (leave empty if not used)\n}"
-                            wrapMode: TextEdit.NoWrap
-                        }
-                    }
-                }
-                
-                RowLayout {
-                    TextField {
-                        id: shaderNameField
-                        Layout.fillWidth: true
-                        placeholderText: i18n("Shader name (optional)")
-                    }
-                    
-                    Button {
+                    QQC2.Button {
+                        id: apiButton
                         text: i18n("Import")
-                        enabled: codeTextArea.text.length > 0
-                        icon.name: "document-import"
-                        
+                        icon.name: "download"
+                        enabled: urlField.text.length > 0 && !dialog.importing
                         onClicked: {
-                            let metadata = {
-                                name: shaderNameField.text || "Custom Shader",
-                                author: "User",
-                                source: "paste"
-                            }
-                            
-                            // Collect buffer codes
-                            let bufferCodes = {}
-                            if (bufferACode.text.trim()) bufferCodes["BufferA"] = bufferACode.text
-                            if (bufferBCode.text.trim()) bufferCodes["BufferB"] = bufferBCode.text
-                            if (bufferCCode.text.trim()) bufferCodes["BufferC"] = bufferCCode.text
-                            if (bufferDCode.text.trim()) bufferCodes["BufferD"] = bufferDCode.text
-                            
-                            let commonCode = commonCodeArea.text.trim()
-                            
-                            if (Object.keys(bufferCodes).length > 0 || commonCode) {
-                                root.shaderWithBuffersImported(codeTextArea.text, bufferCodes, commonCode, metadata)
-                            } else {
-                                root.shaderImported(codeTextArea.text, metadata)
-                            }
-                            root.close()
+                            errorMessage.visible = false
+                            dialog.pendingRouting = null
+                            shadertoyApi.importFromUrl(urlField.text)
                         }
                     }
+                    QQC2.Button {
+                        text: i18n("Read from Web Page")
+                        icon.name: "globe"
+                        enabled: urlField.text.length > 0 && !dialog.importing
+                        QQC2.ToolTip.text: i18n("Use when the Shadertoy API refuses the request. Input routing is not available this way.")
+                        QQC2.ToolTip.visible: hovered
+                        QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+                        onClicked: {
+                            errorMessage.visible = false
+                            dialog.pendingRouting = null
+                            shadertoyApi.scrapeFromPage(urlField.text)
+                        }
+                    }
+                    QQC2.BusyIndicator {
+                        visible: dialog.importing
+                        running: visible
+                        implicitHeight: Kirigami.Units.iconSizes.smallMedium
+                        implicitWidth: implicitHeight
+                    }
                 }
-                
-                Label {
+                QQC2.Label {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    font.italic: true
-                    opacity: 0.7
-                    text: i18n("Tip: Use 'Common' for shared functions/constants. For multi-pass shaders, paste each buffer's code in its respective tab.")
+                    font: Kirigami.Theme.smallFont
+                    color: Kirigami.Theme.disabledTextColor
+                    text: i18n("Shaders that use the keyboard, video, webcam or cube maps import but may not look the same.")
                 }
             }
-            
-            // Local file import
+
+            // ── Paste ─────────────────────────────────────────────────────
             ColumnLayout {
                 spacing: Kirigami.Units.smallSpacing
-                
-                Label {
-                    text: i18n("Select a shader file (.frag, .glsl):")
+                QQC2.TabBar {
+                    id: passTabs
+                    Layout.fillWidth: true
+                    QQC2.TabButton { text: i18n("Image") }
+                    QQC2.TabButton { text: i18n("Common") }
+                    QQC2.TabButton { text: i18n("Buffer A") }
+                    QQC2.TabButton { text: i18n("Buffer B") }
+                    QQC2.TabButton { text: i18n("Buffer C") }
+                    QQC2.TabButton { text: i18n("Buffer D") }
                 }
-                
-                RowLayout {
-                    TextField {
-                        id: filePathField
-                        Layout.fillWidth: true
-                        readOnly: true
-                        placeholderText: i18n("No file selected")
-                    }
-                    
-                    Button {
-                        text: i18n("Browse...")
-                        icon.name: "document-open"
-                        
-                        onClicked: fileDialog.open()
-                    }
+                StackLayout {
+                    id: pasteStack
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Kirigami.Units.gridUnit * 11
+                    currentIndex: passTabs.currentIndex
+                    CodeArea { id: pasteImage }
+                    CodeArea { id: pasteCommon; hint: i18n("// Functions and constants shared by every pass") }
+                    CodeArea { id: pasteA }
+                    CodeArea { id: pasteB }
+                    CodeArea { id: pasteC }
+                    CodeArea { id: pasteD }
                 }
-                
-                Button {
-                    text: i18n("Import")
-                    enabled: filePathField.text.length > 0
-                    icon.name: "document-import"
+                QQC2.Button {
                     Layout.alignment: Qt.AlignRight
-                    
-                    onClicked: {
-                        ShaderLibrarySingleton.importShader(filePathField.text)
-                        root.close()
-                    }
+                    text: i18n("Use This Code")
+                    icon.name: "dialog-ok-apply"
+                    enabled: pasteImage.text.trim().length > 0
+                    onClicked: dialog.finish({
+                        mainCode: pasteImage.text, commonCode: pasteCommon.text.trim(),
+                        bufferCodes: { BufferA: pasteA.text.trim(), BufferB: pasteB.text.trim(),
+                                       BufferC: pasteC.text.trim(), BufferD: pasteD.text.trim() },
+                        routing: null, metadata: { source: "paste" }
+                    })
                 }
             }
-        }
-        
-        // Error message
-        Kirigami.InlineMessage {
-            id: errorLabel
-            Layout.fillWidth: true
-            type: Kirigami.MessageType.Error
-            visible: false
-            showCloseButton: true
-        }
-        
-        // Tips
-        Kirigami.InlineMessage {
-            Layout.fillWidth: true
-            type: Kirigami.MessageType.Information
-            text: i18n("Note: Complex shaders with multiple buffers may require additional setup.")
-            visible: importTabs.currentIndex === 0
-        }
-    }
-    
-    FileDialog {
-        id: fileDialog
-        title: i18n("Select Shader File")
-        nameFilters: ["Shader files (*.frag *.glsl)", "All files (*)"]
-        
-        onAccepted: {
-            filePathField.text = selectedFile
-        }
-    }
-    
-    // Buffer preview/confirmation dialog
-    Kirigami.OverlaySheet {
-        id: bufferPreviewDialog
-        
-        property string mainCode: ""
-        property var bufferCodes: ({})
-        property string commonCode: ""
-        property var metadata: ({})
-        
-        title: i18n("Multi-Pass Shader Detected")
-        
-        ColumnLayout {
-            spacing: Kirigami.Units.largeSpacing
-            implicitWidth: Kirigami.Units.gridUnit * 35
-            Layout.preferredWidth: Kirigami.Units.gridUnit * 35
 
-            Kirigami.InlineMessage {
-                Layout.fillWidth: true
-                type: Kirigami.MessageType.Information
-                text: i18n("This shader uses multiple render passes and/or shared code. Review and import below.")
-            }
-            
-            // Shader info
-            Label {
-                text: i18n("Shader: %1 by %2", 
-                    bufferPreviewDialog.metadata.name || "Unknown",
-                    bufferPreviewDialog.metadata.author || "Unknown")
-                font.bold: true
-            }
-            
-            // Pass summary
-            GridLayout {
-                Layout.fillWidth: true
-                columns: 2
-                columnSpacing: Kirigami.Units.largeSpacing
-                rowSpacing: Kirigami.Units.smallSpacing
-                
-                Label { text: i18n("Common:"); font.bold: true }
-                Label { 
-                    text: bufferPreviewDialog.commonCode ? "✓ " + i18n("Present (%1 chars)", bufferPreviewDialog.commonCode.length) : "—"
-                    color: bufferPreviewDialog.commonCode ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.disabledTextColor
+            // ── File ──────────────────────────────────────────────────────
+            ColumnLayout {
+                spacing: Kirigami.Units.smallSpacing
+                QQC2.Label {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: i18n("Adds a .frag file to your library and applies it. Buffer files named like shader_bufferA.frag next to it are picked up too.")
                 }
-                
-                Label { text: i18n("Main Image:"); font.bold: true }
-                Label { 
-                    text: bufferPreviewDialog.mainCode ? "✓ " + i18n("Present") : "✗ " + i18n("Missing")
-                    color: bufferPreviewDialog.mainCode ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.negativeTextColor
-                }
-                
-                Label { text: "Buffer A:"; font.bold: true }
-                Label { 
-                    text: bufferPreviewDialog.bufferCodes["BufferA"] ? "✓ " + i18n("Present") : "—"
-                    color: bufferPreviewDialog.bufferCodes["BufferA"] ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.disabledTextColor
-                }
-                
-                Label { text: "Buffer B:"; font.bold: true }
-                Label { 
-                    text: bufferPreviewDialog.bufferCodes["BufferB"] ? "✓ " + i18n("Present") : "—"
-                    color: bufferPreviewDialog.bufferCodes["BufferB"] ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.disabledTextColor
-                }
-                
-                Label { text: "Buffer C:"; font.bold: true }
-                Label { 
-                    text: bufferPreviewDialog.bufferCodes["BufferC"] ? "✓ " + i18n("Present") : "—"
-                    color: bufferPreviewDialog.bufferCodes["BufferC"] ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.disabledTextColor
-                }
-                
-                Label { text: "Buffer D:"; font.bold: true }
-                Label { 
-                    text: bufferPreviewDialog.bufferCodes["BufferD"] ? "✓ " + i18n("Present") : "—"
-                    color: bufferPreviewDialog.bufferCodes["BufferD"] ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.disabledTextColor
+                QQC2.Button {
+                    text: i18n("Choose File…")
+                    icon.name: "document-open"
+                    onClicked: fileDialog.open()
                 }
             }
-            
-            Kirigami.Separator { Layout.fillWidth: true }
-            
-            Label {
+        }
+
+        // ── review of a multi-pass import ─────────────────────────────────
+        ColumnLayout {
+            Layout.fillWidth: true
+            visible: dialog.pending !== null
+            spacing: Kirigami.Units.smallSpacing
+            Kirigami.Heading {
+                level: 3
                 Layout.fillWidth: true
                 wrapMode: Text.WordWrap
-                text: i18n("Note: After importing, make sure to:\n" +
-                          "1. Enable the required buffers in the 'Shader Buffers' section\n" +
-                          "2. Configure iChannel inputs to connect buffers correctly\n" +
-                          "3. Common code is automatically prepended to all passes")
+                text: dialog.pending
+                    ? i18nc("@title shader name and author", "%1 by %2",
+                            dialog.pending.metadata.name || i18n("Untitled"),
+                            dialog.pending.metadata.author || i18n("unknown author"))
+                    : ""
             }
-            
+            QQC2.Label {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: i18n("This shader has several passes. They are imported together with their input routing.")
+            }
+            Repeater {
+                model: [
+                    { key: "main", label: i18n("Image") },
+                    { key: "common", label: i18n("Common code") },
+                    { key: "A", label: i18n("Buffer A") },
+                    { key: "B", label: i18n("Buffer B") },
+                    { key: "C", label: i18n("Buffer C") },
+                    { key: "D", label: i18n("Buffer D") }
+                ]
+                delegate: RowLayout {
+                    required property var modelData
+                    readonly property bool present: dialog.passPresent(modelData.key)
+                    visible: present || modelData.key === "main"
+                    Kirigami.Icon {
+                        implicitWidth: Kirigami.Units.iconSizes.small
+                        implicitHeight: Kirigami.Units.iconSizes.small
+                        source: present ? "dialog-ok-apply" : "dialog-error"
+                        color: present ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.negativeTextColor
+                    }
+                    QQC2.Label { text: modelData.label }
+                }
+            }
             RowLayout {
                 Layout.alignment: Qt.AlignRight
-                spacing: Kirigami.Units.smallSpacing
-                
-                Button {
-                    text: i18n("Cancel")
-                    icon.name: "dialog-cancel"
-                    onClicked: bufferPreviewDialog.close()
+                QQC2.Button {
+                    text: i18n("Back")
+                    icon.name: "go-previous"
+                    onClicked: dialog.pending = null
                 }
-                
-                Button {
-                    text: i18n("Import All")
+                QQC2.Button {
+                    text: i18n("Import All Passes")
                     icon.name: "document-import"
-                    highlighted: true
-                    
-                    onClicked: {
-                        root.shaderWithBuffersImported(
-                            bufferPreviewDialog.mainCode,
-                            bufferPreviewDialog.bufferCodes,
-                            bufferPreviewDialog.commonCode,
-                            bufferPreviewDialog.metadata
-                        )
-                        bufferPreviewDialog.close()
-                        root.close()
-                    }
+                    enabled: dialog.passPresent("main")
+                    onClicked: dialog.finish(dialog.pending)
                 }
             }
+        }
+
+        Kirigami.InlineMessage {
+            id: errorMessage
+            Layout.fillWidth: true
+            type: Kirigami.MessageType.Error
+            showCloseButton: true
+            visible: false
+        }
+    }
+
+    FileDialog {
+        id: fileDialog
+        title: i18n("Choose Shader File")
+        nameFilters: [i18n("Shader files (*.frag *.glsl)"), i18n("All files (*)")]
+        onAccepted: {
+            ShaderLibrarySingleton.importShader(selectedFile)
+            dialog.shaderFileChosen(selectedFile)
+            dialog.close()
         }
     }
 }
-

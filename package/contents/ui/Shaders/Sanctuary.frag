@@ -11,8 +11,8 @@
 // Music production with a soundshader: :)
 // http://srtuss.thrill-project.com/music/shader.ogg
 //
+// @texture0 Shaders/4ddfwx.png
 
-// property Image iChannel0: Image { source: "qrc:/Qml/Shader/4ddfwx.png" }
 
 vec2 rotate(vec2 p, float a)
 {

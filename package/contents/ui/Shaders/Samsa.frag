@@ -1,3 +1,4 @@
+// @texture0 Resources/wallpaper.jpg
 /* "Samsa - Fragment IV"
     2024
     by KΛTUR

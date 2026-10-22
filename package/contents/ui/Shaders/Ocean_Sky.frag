@@ -151,7 +151,7 @@ vec3 doSky(vec3 rd, vec3 ro){
 vec3 render(vec3 rd, vec3 ro){
     if(rd.y < 0.0){
         float rdParam = rd.y + length(rd.xz);
-        vec3 intrsect = ro + cameraHeight * rd / rd.y;
+        vec3 intersect = ro + cameraHeight * rd / rd.y;
         float dist = length(intersect.xz);
         float d = distance(intersect, ro);
         vec3 pos = intersect;
@@ -178,4 +178,4 @@ void mainImage(out vec4 fragColor, vec2 fragCoord){
     if(iMouse.xy == vec2(0)) m = vec2(0);
     rd = r(rd, m);
     fragColor.xyz = mix(render(rd, ro), fogColor, max(0.0, 1.0 - abs(10.0 * rd.y)));
-}e
+}

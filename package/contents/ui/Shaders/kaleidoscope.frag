@@ -1,3 +1,5 @@
+// @texture0 Resources/wallpaper2.png
+// @texture1 Resources/Shadertoy_Lichen.jpg
 
 // configuration
 #define MIRRORS (5.0)
@@ -92,19 +94,19 @@ vec3 compute(vec2 xy, sampler2D Texture, float mirrors, float density, vec2 repe
 
 // MSAA offsets
 #if defined(MSAA2X)
-vec2[] msaaOffsets = vec2[] (vec2(0.0, 0.0), vec2(-4.0, -4.0), vec2( 4.0,  4.0));
+const vec2[] msaaOffsets = vec2[] (vec2(0.0, 0.0), vec2(-4.0, -4.0), vec2( 4.0,  4.0));
 #elif defined(MSAA4X)
-vec2[] msaaOffsets = vec2[] (vec2(0.0, 0.0), vec2(-2.0, -6.0), vec2( 6.0, -2.0), vec2(-6.0,  2.0), vec2( 2.0,  6.0));
+const vec2[] msaaOffsets = vec2[] (vec2(0.0, 0.0), vec2(-2.0, -6.0), vec2( 6.0, -2.0), vec2(-6.0,  2.0), vec2( 2.0,  6.0));
 #elif defined(MSAA8X)
-vec2[] msaaOffsets = vec2[] (vec2(0.0, 0.0), vec2( 1.0, -3.0), vec2(-1.0,  3.0), vec2( 5.0,  1.0), vec2(-3.0, -5.0), vec2(-5.0,  5.0), vec2(-7.0, -1.0), vec2( 3.0,  7.0), vec2( 7.0, -7.0));
+const vec2[] msaaOffsets = vec2[] (vec2(0.0, 0.0), vec2( 1.0, -3.0), vec2(-1.0,  3.0), vec2( 5.0,  1.0), vec2(-3.0, -5.0), vec2(-5.0,  5.0), vec2(-7.0, -1.0), vec2( 3.0,  7.0), vec2( 7.0, -7.0));
 #elif defined MSAA16X
-vec2[] msaaOffsets = vec2[] (vec2(0.0, 0.0), vec2( 1.0,  1.0), vec2(-1.0, -3.0), vec2(-3.0,  2.0), vec2( 4.0, -1.0), vec2(-5.0, -2.0), vec2( 2.0,  5.0), vec2( 5.0,  3.0), vec2( 3.0, -5.0), vec2(-2.0,  6.0), vec2( 0.0, -7.0), vec2(-4.0, -6.0), vec2(-6.0,  4.0), vec2(-8.0,  0.0), vec2( 7.0, -4.0), vec2( 6.0,  7.0), vec2(-7.0, -8.0));
+const vec2[] msaaOffsets = vec2[] (vec2(0.0, 0.0), vec2( 1.0,  1.0), vec2(-1.0, -3.0), vec2(-3.0,  2.0), vec2( 4.0, -1.0), vec2(-5.0, -2.0), vec2( 2.0,  5.0), vec2( 5.0,  3.0), vec2( 3.0, -5.0), vec2(-2.0,  6.0), vec2( 0.0, -7.0), vec2(-4.0, -6.0), vec2(-6.0,  4.0), vec2(-8.0,  0.0), vec2( 7.0, -4.0), vec2( 6.0,  7.0), vec2(-7.0, -8.0));
 #else
-vec2[] msaaOffsets = vec2[] (vec2(0.0, 0.0));
+const vec2[] msaaOffsets = vec2[] (vec2(0.0, 0.0));
 #endif
 
-int msaaSamplesCount = msaaOffsets.length();
-float msaaOffsetSize = 1.0/8.0;
+const int msaaSamplesCount = msaaOffsets.length();
+const float msaaOffsetSize = 1.0/8.0;
 
 vec3 computeWithMsaa(vec2 coord, sampler2D Texture, float mirrors, float density, vec2 repeat) {
     vec3 accum = vec3(0.0);

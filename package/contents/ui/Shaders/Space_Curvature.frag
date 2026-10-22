@@ -1,12 +1,12 @@
 // https://www.shadertoy.com/view/llj3Rz
 // Credits to inigo quilez - iq/2015
+// @texture0 Resources/Shadertoy_Organic_2.jpg
+// @texture1 Resources/Shadertoy_Stars.jpg
+// @texture2 Resources/Shadertoy_Gray_Noise_Medium.png
 
 // Created by inigo quilez - iq/2015
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
 
-// property Image iChannel0: Image { source: "./Shadertoy_Organic_2.jpg" }
-// property Image iChannel1: Image { source: "./Shadertoy_Stars.jpg" }
-// property Image iChannel2: Image { source: "./Shadertoy_Gray_Noise_Medium.png" }
 
 vec3 fancyCube( sampler2D sam, in vec3 d, in float s, in float b )
 {

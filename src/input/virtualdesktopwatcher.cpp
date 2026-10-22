@@ -3,11 +3,11 @@
 #include "virtualdesktopwatcher.h"
 
 #include <QDBusConnection>
-#include <QDBusInterface>
 #include <QDBusPendingCall>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QDBusMessage>
+#include <QDBusServiceWatcher>
 #include <QDateTime>
 #include <QDebug>
 
@@ -26,54 +26,110 @@ inline const QString kKWinInterface() { return QStringLiteral("org.kde.KWin.Virt
 VirtualDesktopWatcher::VirtualDesktopWatcher(QObject *parent)
     : QObject(parent)
 {
-    m_iface = new QDBusInterface(kKWinService(), kKWinPath(), kKWinInterface(),
-                                 QDBusConnection::sessionBus(), this);
-
-    // Signals — these names match Plasma 5/6's KWin VirtualDesktopManager.
-    // We connect to the strings rather than typed function pointers because
-    // QDBusInterface doesn't generate a typed proxy.
-    QDBusConnection::sessionBus().connect(
-        kKWinService(), kKWinPath(), kKWinInterface(),
-        QStringLiteral("currentChanged"),
-        this, SLOT(refresh()));
-    QDBusConnection::sessionBus().connect(
-        kKWinService(), kKWinPath(), kKWinInterface(),
-        QStringLiteral("desktopsChanged"),
-        this, SLOT(refresh()));
-
     // Low-frequency fallback poll — only relevant if the D-Bus signals
     // aren't delivered (e.g. on weird WM setups). 2s is plenty.
     m_pollTimer.setInterval(2000);
     connect(&m_pollTimer, &QTimer::timeout, this, &VirtualDesktopWatcher::refresh);
-    if (m_enabled) m_pollTimer.start();
 
     // Animation timer — runs at ~60Hz only while a transition is in flight
     // (started/stopped from refresh()).
     m_animTimer.setInterval(16);
     connect(&m_animTimer, &QTimer::timeout, this, &VirtualDesktopWatcher::animateStep);
 
-    refresh();
+    // Deferred: QML assigns `enabled` after construction, and a watcher
+    // created disabled must never touch the bus.
+    QMetaObject::invokeMethod(this, &VirtualDesktopWatcher::applyEnabled, Qt::QueuedConnection);
 }
 
 VirtualDesktopWatcher::~VirtualDesktopWatcher() = default;
-
-bool VirtualDesktopWatcher::available() const
-{
-    return m_iface && m_iface->isValid();
-}
 
 void VirtualDesktopWatcher::setEnabled(bool enabled)
 {
     if (m_enabled == enabled) return;
     m_enabled = enabled;
     Q_EMIT enabledChanged();
-    if (m_enabled) {
-        m_pollTimer.start();
-        refresh();
-    } else {
-        m_pollTimer.stop();
-        m_animTimer.stop();
+    applyEnabled();
+}
+
+void VirtualDesktopWatcher::applyEnabled()
+{
+    if (m_enabled && !m_started) {
+        start();
+    } else if (!m_enabled && m_started) {
+        stop();
     }
+}
+
+void VirtualDesktopWatcher::start()
+{
+    m_started = true;
+    QDBusConnection bus = QDBusConnection::sessionBus();
+
+    // An empty service name: QtDBus resolves the owner of a named service
+    // with a blocking GetNameOwner call. Only KWin emits on this path and
+    // interface.
+    bus.connect(QString(), kKWinPath(), kKWinInterface(),
+                QStringLiteral("currentChanged"), this, SLOT(refresh()));
+    bus.connect(QString(), kKWinPath(), kKWinInterface(),
+                QStringLiteral("desktopsChanged"), this, SLOT(refresh()));
+
+    if (!m_serviceWatcher) {
+        m_serviceWatcher = new QDBusServiceWatcher(kKWinService(), bus,
+                                                   QDBusServiceWatcher::WatchForOwnerChange, this);
+        connect(m_serviceWatcher, &QDBusServiceWatcher::serviceRegistered, this, [this]() {
+            setAvailable(true);
+            refresh();
+        });
+        connect(m_serviceWatcher, &QDBusServiceWatcher::serviceUnregistered, this, [this]() {
+            setAvailable(false);
+        });
+    }
+
+    requestAvailability();
+    m_pollTimer.start();
+    refresh();
+}
+
+void VirtualDesktopWatcher::stop()
+{
+    m_started = false;
+    m_pollTimer.stop();
+    m_animTimer.stop();
+
+    QDBusConnection bus = QDBusConnection::sessionBus();
+    bus.disconnect(QString(), kKWinPath(), kKWinInterface(),
+                   QStringLiteral("currentChanged"), this, SLOT(refresh()));
+    bus.disconnect(QString(), kKWinPath(), kKWinInterface(),
+                   QStringLiteral("desktopsChanged"), this, SLOT(refresh()));
+
+    delete m_serviceWatcher;
+    m_serviceWatcher = nullptr;
+}
+
+void VirtualDesktopWatcher::setAvailable(bool available)
+{
+    if (m_available == available) return;
+    m_available = available;
+    Q_EMIT availableChanged();
+}
+
+void VirtualDesktopWatcher::requestAvailability()
+{
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        QStringLiteral("org.freedesktop.DBus"), QStringLiteral("/org/freedesktop/DBus"),
+        QStringLiteral("org.freedesktop.DBus"), QStringLiteral("NameHasOwner"));
+    msg << kKWinService();
+
+    auto *watcher = new QDBusPendingCallWatcher(
+        QDBusConnection::sessionBus().asyncCall(msg), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this,
+            [this](QDBusPendingCallWatcher *w) {
+        w->deleteLater();
+        QDBusPendingReply<bool> reply = *w;
+        if (reply.isValid()) {
+            setAvailable(reply.value());
+        }
+    });
 }
 
 void VirtualDesktopWatcher::refresh()
@@ -163,7 +219,7 @@ void VirtualDesktopWatcher::requestCurrentDesktop()
 
 void VirtualDesktopWatcher::applyCurrentDesktop(int newIdx)
 {
-    if (newIdx == m_currentDesktop) return;
+    if (!m_enabled || newIdx == m_currentDesktop) return;
 
     m_previousDesktop = m_currentDesktop;
     m_currentDesktop = newIdx;

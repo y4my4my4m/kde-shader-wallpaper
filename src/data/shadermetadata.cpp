@@ -170,6 +170,20 @@ void ShaderMetadata::setGreeterAvailable(bool available)
     Q_EMIT greeterAvailableChanged();
 }
 
+void ShaderMetadata::setAddedIn(const QString &release)
+{
+    if (m_addedIn == release) return;
+    m_addedIn = release;
+    Q_EMIT addedInChanged();
+}
+
+void ShaderMetadata::setIsNew(bool isNew)
+{
+    if (m_isNew == isNew) return;
+    m_isNew = isNew;
+    Q_EMIT isNewChanged();
+}
+
 QString ShaderMetadata::performanceTierName() const
 {
     switch (m_performanceTier) {
@@ -212,6 +226,9 @@ QJsonObject ShaderMetadata::toJson() const
     json[QStringLiteral("hasBuffers")] = m_hasBuffers;
     json[QStringLiteral("needsAudio")] = m_needsAudio;
     json[QStringLiteral("needsTextures")] = m_needsTextures;
+    if (!m_addedIn.isEmpty()) {
+        json[QStringLiteral("addedIn")] = m_addedIn;
+    }
     
     // Performance metrics
     if (m_performanceTier >= 0) {
@@ -252,6 +269,7 @@ void ShaderMetadata::fromJson(const QJsonObject &json)
     setHasBuffers(json[QStringLiteral("hasBuffers")].toBool());
     setNeedsAudio(json[QStringLiteral("needsAudio")].toBool());
     setNeedsTextures(json[QStringLiteral("needsTextures")].toBool());
+    setAddedIn(json[QStringLiteral("addedIn")].toString());
     
     // Performance metrics (optional)
     if (json.contains(QStringLiteral("performanceTier"))) {

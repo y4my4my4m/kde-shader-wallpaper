@@ -11,16 +11,16 @@
 #include <QMutex>
 #include <QTimer>
 
-#ifdef HAVE_PIPEWIRE
-#include <pipewire/pipewire.h>
-#include <spa/utils/hook.h>
-#else
-// Forward declarations when PipeWire not available
+#include <memory>
+#include <vector>
+
+// PipeWire headers stay out of this header: they trip -Wpedantic in every
+// translation unit that includes them.
 struct pw_thread_loop;
 struct pw_stream;
 struct pw_context;
 struct pw_core;
-#endif
+struct spa_hook;
 
 /**
  * @brief Captures system audio for audio-reactive shaders
@@ -61,6 +61,10 @@ public:
     // which the texture row shows the first 512 one-per-texel (issue #120 —
     // a 512-point FFT only has 256 bins and smears them across the row).
     static constexpr int DEFAULT_FFT_SIZE = 2048;
+    // The waveform row reads the newest TEXTURE_WIDTH ring samples, so the
+    // ring (= FFT size) holds at least that many.
+    static constexpr int MIN_FFT_SIZE = TEXTURE_WIDTH;
+    static constexpr int MAX_FFT_SIZE = 8192;
 
     explicit AudioCapture(QObject *parent = nullptr);
     ~AudioCapture() override;
@@ -91,6 +95,13 @@ public:
      * @return Vector of RGBA float values
      */
     Q_INVOKABLE QVariantList getTextureData();
+
+    /**
+     * @brief Same layout as getTextureData(), as floats.
+     *
+     * Resizes @p out to TEXTURE_WIDTH * TEXTURE_HEIGHT * 4. Thread-safe.
+     */
+    void copyTextureData(std::vector<float> &out) const;
     
     /**
      * @brief Get raw waveform data
@@ -153,7 +164,7 @@ private:
     QVector<float> m_waveform;
     QVector<float> m_spectrum;
     QVector<float> m_smoothedSpectrum;
-    QMutex m_dataMutex;
+    mutable QMutex m_dataMutex;
     
     // FFT data
     QVector<float> m_fftInput;
@@ -168,11 +179,10 @@ private:
     pw_stream *m_stream = nullptr;
     pw_context *m_context = nullptr;
     pw_core *m_core = nullptr;
-    struct spa_hook m_streamListener;
-    
-    static void onProcess(void *data);
-    static void onStreamStateChanged(void *data, pw_stream_state old, 
-                                      pw_stream_state state, const char *error);
+    std::unique_ptr<spa_hook> m_streamListener;
+
+    // Stream callbacks, defined in audiocapture.cpp.
+    friend struct AudioCapturePipeWire;
 #endif
 };
 
