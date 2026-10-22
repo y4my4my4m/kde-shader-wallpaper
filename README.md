@@ -37,88 +37,69 @@
 
 ## 📦 Installation
 
-This plugin requires compilation because it uses C++ for OpenGL rendering, audio capture, and cursor tracking.
+Shader Wallpaper has two parts: the wallpaper package (QML, shaders, previews) and a small native engine that renders through OpenGL and reads audio, mouse and windows. The engine is compiled for your system.
 
-### From Source (All Distros)
+### KDE Store
 
-**One-liner install:**
+1. Right-click the desktop → **Desktop and Wallpaper** → **Get New Plugins…**, search for **Shader Wallpaper** and press **Install**.
+2. Choose **Shader Wallpaper** as the wallpaper type. The settings page shows **Finish installing Shader Wallpaper**:
+   1. **Install the build tools** shows the command for your distribution, with a Copy button.
+   2. **Build and Install** opens a terminal that compiles the engine (about a minute) and offers to install missing build tools.
+   3. **Restart Plasma**, or log out and back in.
+
+The store can deliver only the package, so the engine is built after each store update as well; the settings page appears again when that is needed. The same steps from a terminal:
+
 ```bash
-git clone https://github.com/y4my4my4m/kde-shader-wallpaper.git && cd kde-shader-wallpaper && ./scripts/build.sh
+bash ~/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/scripts/build.sh
 ```
 
-**Step by step:**
+### Distribution packages
+
+Packages include the engine, so there is no setup step.
+
+- **Arch Linux, Manjaro**: `cd packaging/arch && makepkg -si`
+- **Fedora, openSUSE**: build an RPM from `packaging/rpm/plasma-wallpaper-shader.spec`
+
+### From source
+
 ```bash
-# 1. Install dependencies (see below)
-# 2. Clone and build
 git clone https://github.com/y4my4my4m/kde-shader-wallpaper.git
 cd kde-shader-wallpaper
-./scripts/build.sh install
-
-# 3. Restart plasmashell
-pkill plasmashell && plasmashell &
+./scripts/build.sh deps             # dependency command for your distribution
+./scripts/build.sh                  # build and install to ~/.local
+./scripts/build.sh restart-plasma
 ```
-
-### Dependencies
 
 <details>
-<summary><strong>Arch Linux / Manjaro</strong></summary>
+<summary><strong>Build dependencies</strong></summary>
+
+`./scripts/build.sh deps` prints the command for the running distribution, and the build offers to run it.
 
 ```bash
-sudo pacman -S cmake extra-cmake-modules qt6-base qt6-declarative \
-    libplasma kf6-kconfig kf6-ki18n kf6-kpackage pipewire libpipewire xcb-util
-```
-</details>
+# Arch Linux, Manjaro
+sudo pacman -S --needed base-devel cmake extra-cmake-modules qt6-base qt6-declarative kconfig ki18n kpackage libplasma libpipewire libxcb wayland
 
-<details>
-<summary><strong>Ubuntu / Debian (24.04+)</strong></summary>
+# Fedora
+sudo dnf install gcc-c++ make cmake extra-cmake-modules 'cmake(Qt6Quick)' 'cmake(Qt6OpenGL)' 'cmake(KF6Config)' 'cmake(KF6I18n)' 'cmake(KF6Package)' 'cmake(Plasma)' 'cmake(PlasmaQuick)' 'pkgconfig(libpipewire-0.3)' 'pkgconfig(xcb)' 'pkgconfig(wayland-client)'
 
-```bash
-sudo apt install cmake extra-cmake-modules build-essential \
-    qt6-base-dev qt6-declarative-dev libplasma-dev \
-    libkf6config-dev libkf6i18n-dev libkf6package-dev \
-    libpipewire-0.3-dev libxcb1-dev
-```
-</details>
+# openSUSE
+sudo zypper install gcc-c++ make cmake kf6-extra-cmake-modules 'cmake(Qt6Quick)' 'cmake(Qt6OpenGL)' 'cmake(KF6Config)' 'cmake(KF6I18n)' 'cmake(KF6Package)' 'cmake(Plasma)' 'cmake(PlasmaQuick)' 'pkgconfig(libpipewire-0.3)' 'pkgconfig(xcb)' 'pkgconfig(wayland-client)'
 
-<details>
-<summary><strong>Fedora 40+</strong></summary>
-
-```bash
-sudo dnf install cmake extra-cmake-modules gcc-c++ \
-    qt6-qtbase-devel qt6-qtdeclarative-devel \
-    libplasma-devel kf6-kconfig-devel kf6-kcoreaddons-devel \
-    kf6-ki18n-devel kf6-kpackage-devel \
-    pipewire-devel libxcb-devel
-```
-</details>
-
-<details>
-<summary><strong>openSUSE Tumbleweed</strong></summary>
-
-```bash
-sudo zypper install cmake kf6-extra-cmake-modules gcc-c++ \
-    qt6-base-devel qt6-declarative-devel \
-    libplasma6-devel kf6-kconfig-devel kf6-kcoreaddons-devel \
-    kf6-ki18n-devel kf6-kpackage-devel \
-    pipewire-devel libxcb-devel
-
-# Optional — Wayland cursor tracking and runtime shader compilation:
-sudo zypper install wayland-devel wayland-protocols-devel shaderc-devel
+# Debian 13+, Ubuntu 25.04+, KDE neon
+sudo apt install build-essential cmake extra-cmake-modules pkg-config qt6-base-dev qt6-declarative-dev libkf6config-dev libkf6i18n-dev libkf6package-dev libkf6windowsystem-dev libkirigami-dev libplasma-dev libpipewire-0.3-dev libxcb1-dev libwayland-dev
 ```
 
-> Note: openSUSE names the Plasma 6 library package `libplasma6-devel`
-> (it provides the `Plasma` and `PlasmaQuick` CMake configs), not
-> `libplasma-devel` as on Fedora/Debian.
+PipeWire, XCB and Wayland are optional: without them the engine builds without sound reactivity, X11 mouse and window tracking, or Wayland mouse tracking.
 </details>
 
 ### Uninstall
 
-```bash
-./scripts/build.sh uninstall
-# Or manually:
-rm -rf ~/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/
-pkill plasmashell && plasmashell &
-```
+- **KDE Store**: Get New Plugins → **Uninstall**.
+- **Any install in your home folder**, including the engine build cache:
+
+  ```bash
+  bash ~/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/scripts/build.sh uninstall
+  ```
 
 Favorites, generated thumbnails, imported shaders, saved packages and presets live in `~/.local/share/shaderwallpaper/` and survive upgrades and reinstalls. Delete that directory to remove them.
 
@@ -141,7 +122,7 @@ The wallpaper settings UI has a **Login screen** card that handles both. From gi
 bash ~/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/scripts/install-plm-greeter.sh
 ```
 
-The script runs `sudo make install` (system-wide), then writes:
+The script builds the engine, installs everything to `/usr` (sudo), then writes:
 
 ```ini
 # /etc/plasmalogin.conf
@@ -222,8 +203,8 @@ cd kde-shader-wallpaper
 # Build and install
 ./scripts/build.sh install
 
-# Test changes - restart plasmashell
-pkill plasmashell && plasmashell &
+# Load the new build
+./scripts/build.sh restart-plasma
 ```
 
 ## 📸 Screenshots

@@ -16,13 +16,12 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+PKG_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 PLUGIN_ID="online.knowmad.shaderwallpaper"
 CONF="/etc/plasmalogin.conf"
-USER_PKG="$HOME/.local/share/plasma/wallpapers/$PLUGIN_ID/contents/ui"
+USER_PKG="${XDG_DATA_HOME:-$HOME/.local/share}/plasma/wallpapers/$PLUGIN_ID/contents/ui"
 SYSTEM_PKG="/usr/share/plasma/wallpapers/$PLUGIN_ID/contents/ui"
-REPO_URL="https://github.com/y4my4my4m/kde-shader-wallpaper.git"
-CACHE_REPO="$HOME/.cache/shader-wallpaper-build/kde-shader-wallpaper"
 
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; NC='\033[0m'
 say()  { echo -e "${GREEN}➤${NC} $*"; }
@@ -37,23 +36,22 @@ check_plm() {
     exit 1
 }
 
-resolve_repo_root() {
-    local dev_root
-    dev_root="$(cd "$SCRIPT_DIR/../../.." 2>/dev/null && pwd || true)"
-    if [ -n "$dev_root" ] && [ -f "$dev_root/scripts/build.sh" ] && [ -d "$dev_root/.git" ]; then
-        echo "$dev_root"; return
-    fi
-    if [ ! -d "$CACHE_REPO/.git" ]; then
-        say "Downloading source (one-off, into $CACHE_REPO)…"
-        mkdir -p "$(dirname "$CACHE_REPO")"
-        git clone --depth 1 "$REPO_URL" "$CACHE_REPO"
-    fi
-    echo "$CACHE_REPO"
+# Installed helper first; the bundled or checkout copy otherwise.
+find_helper() {
+    local h
+    for h in /usr/lib/libexec/shaderwallpaper/enable-plm-greeter \
+             /usr/lib64/libexec/shaderwallpaper/enable-plm-greeter \
+             /usr/libexec/shaderwallpaper/enable-plm-greeter \
+             "$PKG_DIR/contents/source/scripts/enable-plm-greeter.sh" \
+             "$(dirname "$PKG_DIR")/scripts/enable-plm-greeter.sh"; do
+        if [ -f "$h" ]; then echo "$h"; return 0; fi
+    done
+    return 1
 }
 
 uninstall() {
     say "Removing PLM registration…"
-    [ "$(id -u)" -eq 0 ] || exec sudo "$0" --uninstall
+    [ "$(id -u)" -eq 0 ] || exec sudo bash "$0" --uninstall
     if [ -f "$CONF" ] && grep -q '^WallpaperPluginId=' "$CONF"; then
         sed -i '/^WallpaperPluginId=/d' "$CONF"
         echo "Removed WallpaperPluginId from $CONF."
@@ -102,17 +100,15 @@ fi
 
 check_plm
 
-REPO_ROOT="$(resolve_repo_root)"
 say "Building and installing system-wide (you'll be prompted for sudo)…"
-"$REPO_ROOT/scripts/build.sh" system
+bash "$SCRIPT_DIR/build.sh" system --package "$PKG_DIR"
 
 sync_user_shaders
 
-HELPER="/usr/libexec/shaderwallpaper/enable-plm-greeter"
-[ -x "$HELPER" ] || HELPER="$REPO_ROOT/scripts/enable-plm-greeter.sh"
+HELPER="$(find_helper)" || { err "enable-plm-greeter helper not found."; exit 1; }
 
 say "Registering plugin in /etc/plasmalogin.conf (sudo)…"
-sudo "$HELPER"
+sudo bash "$HELPER"
 
 echo ""
 echo -e "${GREEN}✓ Done.${NC} Log out to see Shader Wallpaper on the sign-in screen."

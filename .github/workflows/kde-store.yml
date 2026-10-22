@@ -1,0 +1,63 @@
+# KDE Store archive: built on every v* tag and attached to its GitHub release.
+# The job also compiles the engine from the archive's bundled sources with the
+# bundled installer, the path a KDE Store user takes.
+
+name: KDE Store archive
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm --needed git github-cli base-devel cmake extra-cmake-modules \
+            qt6-base qt6-declarative kconfig ki18n kpackage libplasma libpipewire libxcb wayland
+
+      - uses: actions/checkout@v4
+
+      - name: Trust the checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Check tag against package version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version="$(sed -n 's/.*"Version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' package/metadata.json | head -n1)"
+          test "v$version" = "$GITHUB_REF_NAME" || {
+            echo "::error::Tag $GITHUB_REF_NAME does not match package/metadata.json Version $version"
+            exit 1
+          }
+
+      - name: Build the archive
+        run: scripts/package-kde-store.sh --tracked-only --verify --output dist
+
+      - name: Build the engine from the archive
+        run: |
+          mkdir -p /tmp/store
+          tar -xzf dist/*.tar.gz -C /tmp/store
+          pkg=/tmp/store/online.knowmad.shaderwallpaper
+          XDG_CACHE_HOME=/tmp/store-cache bash "$pkg/contents/scripts/build.sh" build --yes
+          test -f "$pkg/contents/ui/shaderwallpaper/libshaderwallpaperplugin.so"
+          test -f "$pkg/contents/ui/shaderwallpaper/qmldir"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kde-store-archive
+          path: dist/*.tar.gz
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" dist/*.tar.gz --repo "$GITHUB_REPOSITORY" --clobber

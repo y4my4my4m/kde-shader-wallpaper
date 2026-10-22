@@ -1,8 +1,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2026 @y4my4my4m <y4my4m@protonmail.com>
 
-# Define package output directory - this is where kpackagetool6 will install from
-set(PACKAGE_DIR "${CMAKE_SOURCE_DIR}/package")
+# Plasma package that receives the QML module in contents/ui/shaderwallpaper,
+# next to the QML files that import it, and that the install rules copy.
+# KDE Store installs point it at the installed package
+# (package/contents/scripts/build.sh).
+set(SHADERWALLPAPER_PACKAGE_DIR "${CMAKE_SOURCE_DIR}/package" CACHE PATH
+    "Plasma wallpaper package; the QML module builds into its contents/ui/shaderwallpaper")
+set(PACKAGE_DIR "${SHADERWALLPAPER_PACKAGE_DIR}")
+if(NOT EXISTS "${PACKAGE_DIR}/metadata.json" OR NOT IS_DIRECTORY "${PACKAGE_DIR}/contents/ui")
+    message(FATAL_ERROR "SHADERWALLPAPER_PACKAGE_DIR (${PACKAGE_DIR}) is not a Plasma wallpaper package")
+endif()
 set(PACKAGE_UI_DIR "${PACKAGE_DIR}/contents/ui")
 set(PLUGIN_OUTPUT_DIR "${PACKAGE_UI_DIR}/shaderwallpaper")
 
@@ -163,13 +171,5 @@ add_custom_command(TARGET shaderwallpaperplugin POST_BUILD
     COMMENT "Installing kpackage-compatible qmldir"
 )
 
-# Copy PluginStatus.qml (returns installed: true) to replace the stub
-add_custom_command(TARGET shaderwallpaperplugin POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-        "${CMAKE_CURRENT_SOURCE_DIR}/qml/PluginStatus.qml"
-        "${PLUGIN_OUTPUT_DIR}/PluginStatus.qml"
-    COMMENT "Installing PluginStatus.qml (marks plugin as installed)"
-)
-
 # Install the Plasma wallpaper package (for system-wide installation)
-plasma_install_package(${CMAKE_SOURCE_DIR}/package online.knowmad.shaderwallpaper wallpapers)
+plasma_install_package(${PACKAGE_DIR} online.knowmad.shaderwallpaper wallpapers)

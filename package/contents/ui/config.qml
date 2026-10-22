@@ -5,7 +5,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
-import "shaderwallpaper" as ShaderPlugin
 
 // ────────────────────────────────────────────────────────────────────────────
 // Wallpaper-plugin config root.
@@ -46,9 +45,10 @@ import "shaderwallpaper" as ShaderPlugin
 //   4. Optionally provide a `saveConfig()` function called by the host shell.
 //
 // The actual visible UI lives in ConfigContent.qml (or SetupWizard.qml when
-// the C++ plugin isn't installed yet), loaded asynchronously with the cfg_*
-// values as initial properties. configRoot.cfg_* ↔ contentLoader.item.cfg_*
-// are mirrored in both directions afterwards.
+// the native engine isn't installed yet), loaded asynchronously with the
+// cfg_* values as initial properties. configRoot.cfg_* ↔ contentLoader.item.cfg_*
+// are mirrored in both directions afterwards. This file does not import the
+// engine module (see EngineStatus.qml).
 // ────────────────────────────────────────────────────────────────────────────
 ColumnLayout {
     id: configRoot
@@ -401,9 +401,14 @@ ColumnLayout {
         height: 0
     }
 
-    // Detect whether the C++ plugin .so is installed; show the setup wizard
-    // when it isn't.
-    ShaderPlugin.PluginStatus { id: pluginStatus }
+    // Native engine availability; SetupWizard.qml replaces the settings
+    // while it is missing.
+    EngineStatus { id: engineStatus }
+    Connections {
+        target: engineStatus
+        function onAvailableChanged() { contentLoader.loadContent() }
+        function onFailedChanged() { contentLoader.loadContent() }
+    }
 
     // Asynchronous with initial properties: the host may build a throwaway
     // instance of this page only to enumerate cfg_* keys; destroying it
@@ -424,9 +429,11 @@ ColumnLayout {
         Layout.fillHeight: true
         asynchronous: true
 
-        Component.onCompleted: {
-            if (!pluginStatus.installed) {
-                setSource("SetupWizard.qml")
+        function loadContent() {
+            if (status !== Loader.Null) return
+            if (!engineStatus.available) {
+                setSource("SetupWizard.qml", { engineError: engineStatus.error })
+                forceLoadTimer.start()
                 return
             }
             const props = { hostConfigDialog: configRoot.configDialog,
@@ -440,8 +447,11 @@ ColumnLayout {
             forceLoadTimer.start()
         }
 
+        Component.onCompleted: if (engineStatus.available || engineStatus.failed) loadContent()
+
         onLoaded: {
-            if (!item) return
+            // SetupWizard.qml has no cfg_* properties.
+            if (!item || !engineStatus.available) return
 
             // Values that changed while the item incubated.
             _suppressBroadcast = true
