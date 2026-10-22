@@ -21,6 +21,7 @@ const vec3  SAND_COLOR     = vec3(0.96, 0.91, 0.78); // @color @label("Sand colo
 const float DEPTH          = 0.55; // @range(0.0, 1.0, 0.01) @label("Water depth")
 const float REFRACTION     = 1.0;  // @range(0.0, 3.0, 0.05) @label("Refraction")
 const float CAUSTICS       = 0.8;  // @range(0.0, 3.0, 0.05) @label("Caustics")
+const bool  CAUSTICS_ON_IMAGE = false; // @label("Caustics over Image 2")
 const float GLINTS         = 1.0;  // @range(0.0, 3.0, 0.05) @label("Sun glints")
 const float AMBIENT_SWELL  = 1.0;  // @range(0.0, 3.0, 0.05) @label("Ambient swell")
 const float WINDOW_SHADOW  = 0.45; // @range(0.0, 1.0, 0.01) @label("Window shadows")
@@ -282,7 +283,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     float shadow = windowShadow(floorPx);
     float light = 1.0 - WINDOW_SHADOW * shadow;
     float caust = 0.0;
-    if (!hasWallpaper) {
+    if (!hasWallpaper || CAUSTICS_ON_IMAGE) {
         caust = caustics(fp, t) * (0.55 + 0.45 * (1.0 - depth));
     }
     caust += clamp(-curvature * 70.0, -0.6, 2.0) * (hasWallpaper ? 0.6 : 1.0);
