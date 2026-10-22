@@ -105,12 +105,13 @@ WallpaperItem {
     }
 
     // Shown until the engine is installed and Plasma restarted.
+    // Loaded by URL: an inline component would make a load error in the
+    // notice fail main.qml itself.
     Loader {
         anchors.fill: parent
         active: engineStatus.failed
-        sourceComponent: EngineMissing {
-            showMessage: !main.lockScreenMode && !main.loginScreenMode
-        }
+        source: "EngineMissing.qml"
+        onLoaded: item.showMessage = Qt.binding(function() { return !main.lockScreenMode && !main.loginScreenMode })
     }
 
     Loader {
