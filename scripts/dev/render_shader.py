@@ -101,6 +101,26 @@ def prepare_user_source(code, extensions):
     return "\n".join(lines)
 
 
+SHARED_RE = re.compile(
+    r"^[ \t]*const[ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*=[^;]*;[ \t]*//.*@shared\b")
+
+
+def split_shared(code, common):
+    """splitSharedConsts() in shaderengine.cpp: main-file consts marked
+    @shared move to the front of the common code of every pass."""
+    if "@shared" not in code:
+        return code, common
+    lines = code.split("\n")
+    shared = ""
+    for i, line in enumerate(lines):
+        if "@shared" in line and SHARED_RE.match(line):
+            shared += "#line %d 0\n%s\n" % (i + 1, line)
+            lines[i] = ""
+    if not shared:
+        return code, common
+    return "\n".join(lines), shared + "#line 1 1\n" + common
+
+
 def assemble_fragment(eng, gles, common, code):
     """assembleFragmentSource() in shaderengine.cpp."""
     extensions = []
@@ -367,6 +387,7 @@ class Renderer:
         self.programs = {}
         self.uniform_locations = {}
         self.gl_error_reported = False
+        main_code, common = split_shared(main_code, common)
         prog, err = compile_program(vs, assemble_fragment(eng, args.gles, common, main_code))
         if err:
             sys.exit("Fragment shader (main pass) failed:\n" + err)
@@ -713,6 +734,7 @@ def check_all(root, gles):
     failed = 0
     for main in files:
         code, passes, common = discover_package(main)
+        code, common = split_shared(code, common)
         units = [("image", code)] + [("buffer " + l, c) for l, c in passes.items()]
         for name, src in units:
             _, err = compile_program(vs, assemble_fragment(eng, gles, common, src))

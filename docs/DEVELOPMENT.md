@@ -12,6 +12,7 @@ This guide covers everything you need to know about creating, importing, and cus
 - [Audio Reactive Shaders](#audio-reactive-shaders)
 - [Window Reactive Shaders](#window-reactive-shaders)
 - [Available Uniforms](#available-uniforms)
+- [Tweakable Constants](#tweakable-constants)
 - [Headless Rendering and Compile Checks](#headless-rendering-and-compile-checks)
 
 ## Fast Iteration (Dev Harness)
@@ -309,6 +310,33 @@ Do not write `#version` or `precision` lines; the engine strips them and adds
 its own header: `#version 330 core` on desktop OpenGL, `#version 300 es` with
 `highp` defaults when Plasma runs on OpenGL ES. `#extension` lines are moved
 to just after that header. Compile errors report line numbers of your file.
+
+## Tweakable Constants
+
+The **Tweak this shader** panel lists annotated constants of the main
+`.frag` file. Each must be a single top-level line with a literal value:
+
+```glsl
+const float SPEED = 1.0;              // @range(0.1, 5.0, 0.1) @label("Speed")
+const int   COUNT = 300;              // @range(50, 1000, 10) @label("Birds")
+const bool  NIGHT = true;             // @label("Follow the clock")
+const vec3  TINT  = vec3(1.0, 0.9, 0.8); // @color @label("Tint")
+```
+
+`@range(min, max[, step])` sets a slider, `@label` its caption, `@color`
+forces a colour picker. A changed value recompiles the shader and clears
+buffer state.
+
+Buffer passes and the common file do not see the main file. A constant
+marked `@shared` is moved to the front of the common code of every pass, so
+simulation parameters can be tweaked too:
+
+```glsl
+const int ANTS = 480; // @range(64, 1024, 32) @label("Ants") @shared
+```
+
+A `@shared` constant must not also be declared in `_common.frag`. Compile
+errors in it report its line in the main file.
 
 ## Headless Rendering and Compile Checks
 

@@ -178,6 +178,30 @@ QString prepareUserSource(const QString &code, QStringList &extensions)
     return lines.join(QLatin1Char('\n'));
 }
 
+// Single-line top-level consts of the main file whose comment carries
+// "@shared" ("const float N = 1.0; // @range(...) @shared"). They move to the
+// front of the common code, so every pass sees the value the tweak panel
+// wrote into the main file. Each keeps its main-file line for compile errors
+// ("#line n 0"); the main file keeps an empty line in its place.
+void splitSharedConsts(const QString &main, QString &mainOut, QString &shared)
+{
+    static const QRegularExpression sharedRe(QStringLiteral(
+        "^[ \\t]*const[ \\t]+[A-Za-z_][A-Za-z0-9_]*[ \\t]+[A-Za-z_][A-Za-z0-9_]*[ \\t]*=[^;]*;[ \\t]*//.*@shared\\b"));
+    shared.clear();
+    if (!main.contains(QLatin1String("@shared"))) {
+        mainOut = main;
+        return;
+    }
+    QStringList lines = main.split(QLatin1Char('\n'));
+    for (qsizetype i = 0; i < lines.size(); ++i) {
+        if (lines[i].contains(QLatin1String("@shared")) && sharedRe.match(lines[i]).hasMatch()) {
+            shared += QStringLiteral("#line %1 0\n").arg(i + 1) + lines[i] + QLatin1Char('\n');
+            lines[i].clear();
+        }
+    }
+    mainOut = shared.isEmpty() ? main : lines.join(QLatin1Char('\n'));
+}
+
 // Errors report "0(n)" for the pass code and "1(n)" for common code, n
 // being the line in that file.
 QString assembleFragmentSource(bool gles, const QString &common, const QString &code)
@@ -2349,8 +2373,12 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
     // --- Shader compilation ----------------------------------------------
     // Each pass recompiles only when its (code, common) pair differs from
     // the last attempt, successful or not.
-    const QString commonCode = engine->commonCode();
-    const QString newCode = engine->shaderCode();
+    QString newCode;
+    QString sharedConsts;
+    splitSharedConsts(engine->shaderCode(), newCode, sharedConsts);
+    const QString commonCode = sharedConsts.isEmpty()
+        ? engine->commonCode()
+        : sharedConsts + QLatin1String("#line 1 1\n") + engine->commonCode();
 
     static bool loggedOnce = false;
     if (!loggedOnce) {
