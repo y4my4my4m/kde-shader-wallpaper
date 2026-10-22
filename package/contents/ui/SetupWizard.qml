@@ -294,7 +294,7 @@ Item {
                 id: column
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: Kirigami.Units.gridUnit * 1.5
-                width: Math.min(parent.width - Kirigami.Units.gridUnit * 2, Kirigami.Units.gridUnit * 40)
+                width: Math.max(0, Math.min(parent.width - Kirigami.Units.gridUnit * 2, Kirigami.Units.gridUnit * 40))
                 spacing: Kirigami.Units.gridUnit * 1.5
 
                 // ── header ─────────────────────────────────────────────────

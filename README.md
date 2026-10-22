@@ -162,17 +162,18 @@ sudo ./scripts/install-plm-greeter.sh --uninstall
 <details>
 <summary><strong>Shader causes black screen or crashes</strong></summary>
 
-Delete the configuration and restart:
+Switch the desktop to a plain image, then pick a different shader in the settings:
 ```bash
-rm -rf ~/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/
-pkill plasmashell && plasmashell &
+plasma-apply-wallpaperimage /usr/share/wallpapers/Next
 ```
+If Plasma itself does not come up, restart it after that with `plasmashell --replace &`.
 </details>
 
 <details>
 <summary><strong>High CPU/GPU usage</strong></summary>
 
 - Lower the target FPS (30 is often sufficient)
+- The lock screen has its own copy of these settings: System Settings → Screen Locking → Appearance
 - Enable "Pause when maximized window" in settings
 - Choose lighter shaders (check the performance tier indicator)
 </details>

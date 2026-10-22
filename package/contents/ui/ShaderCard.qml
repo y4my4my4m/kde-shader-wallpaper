@@ -19,6 +19,7 @@ Item {
     property bool isNew: false
     property bool hasBuffers: false
     property bool needsAudio: false
+    property bool needsTextures: false
     property bool greeterAvailable: true
     // -1 unmeasured, 0 light .. 3 extreme
     property int performanceTier: -1
@@ -114,6 +115,7 @@ Item {
                           tip: card.performanceTier >= 3 ? i18n("Very heavy on the graphics card") : i18n("Heavy on the graphics card") },
                         { show: card.hasBuffers, icon: "layer-visible-on", tone: "", tip: i18n("Multi-pass shader") },
                         { show: card.needsAudio, icon: "audio-volume-high", tone: "", tip: i18n("Reacts to sound") },
+                        { show: card.needsTextures, icon: "insert-image", tone: "", tip: i18n("Uses images: set them in the Inputs tab") },
                         { show: !card.greeterAvailable && ShaderLibrarySingleton.greeterPathPresent, icon: "system-lock-screen",
                           tone: "neutral", tip: i18n("Not available on the sign-in screen: this shader is only in your user library.") }
                     ]

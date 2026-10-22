@@ -22,7 +22,7 @@ Rectangle {
 
     ColumnLayout {
         anchors.centerIn: parent
-        width: Math.min(parent.width - Kirigami.Units.gridUnit * 4, Kirigami.Units.gridUnit * 28)
+        width: Math.max(0, Math.min(parent.width - Kirigami.Units.gridUnit * 4, Kirigami.Units.gridUnit * 28))
         visible: root.showMessage
         spacing: Kirigami.Units.largeSpacing
 

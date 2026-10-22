@@ -76,7 +76,7 @@ ColumnLayout {
             }
             Kirigami.PlaceholderMessage {
                 anchors.centerIn: parent
-                width: parent.width - Kirigami.Units.largeSpacing * 2
+                width: Math.max(0, parent.width - Kirigami.Units.largeSpacing * 2)
                 visible: presetList.count === 0
                 text: i18n("No presets yet")
             }

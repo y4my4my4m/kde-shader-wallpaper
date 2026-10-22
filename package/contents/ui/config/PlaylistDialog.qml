@@ -130,7 +130,7 @@ Kirigami.Dialog {
 
         Kirigami.PlaceholderMessage {
             anchors.centerIn: parent
-            width: parent.width - Kirigami.Units.gridUnit * 4
+            width: Math.max(0, parent.width - Kirigami.Units.gridUnit * 4)
             visible: list.count === 0
             icon.name: "view-media-playlist"
             text: i18n("The playlist is empty")

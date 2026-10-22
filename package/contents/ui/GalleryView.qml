@@ -133,6 +133,7 @@ FocusScope {
                 isNew: m.isNew === true,
                 hasBuffers: m.hasBuffers === true,
                 needsAudio: m.needsAudio === true,
+                needsTextures: m.needsTextures === true,
                 performanceTier: m.performanceTier === undefined ? -1 : m.performanceTier,
                 averageFrameTime: avg,
                 greeterAvailable: m.greeterAvailable !== false
@@ -388,6 +389,7 @@ FocusScope {
                 required property bool isNew
                 required property bool hasBuffers
                 required property bool needsAudio
+                required property bool needsTextures
                 required property int performanceTier
                 required property bool greeterAvailable
 
@@ -410,6 +412,7 @@ FocusScope {
                     isNew: cell.isNew
                     hasBuffers: cell.hasBuffers
                     needsAudio: cell.needsAudio
+                    needsTextures: cell.needsTextures
                     performanceTier: cell.performanceTier
                     greeterAvailable: cell.greeterAvailable
                     compact: gallerySettings.density === 0
@@ -426,7 +429,7 @@ FocusScope {
 
             Kirigami.PlaceholderMessage {
                 anchors.centerIn: parent
-                width: parent.width - Kirigami.Units.gridUnit * 4
+                width: Math.max(0, parent.width - Kirigami.Units.gridUnit * 4)
                 visible: items.count === 0 && !ShaderLibrarySingleton.loading
                 icon.name: gallerySettings.favouritesOnly && searchField.text.length === 0 ? "love" : "search"
                 text: searchField.text.length > 0

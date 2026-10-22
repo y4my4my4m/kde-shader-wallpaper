@@ -111,7 +111,7 @@ Item {
                 color: Kirigami.Theme.backgroundColor
                 ColumnLayout {
                     anchors.centerIn: parent
-                    width: parent.width - Kirigami.Units.largeSpacing * 2
+                    width: Math.max(0, parent.width - Kirigami.Units.largeSpacing * 2)
                     spacing: Kirigami.Units.smallSpacing
                     Kirigami.Icon {
                         Layout.alignment: Qt.AlignHCenter
