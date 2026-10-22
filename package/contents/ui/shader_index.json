@@ -4879,6 +4879,26 @@
             ],
             "thumbnailPath": "thumbnails/b9485197-1099-4f49-989b-3dd7603d1634.png",
             "views": 0
+        },
+        {
+            "addedIn": "4.2.0",
+            "author": "",
+            "category": "Window Reactive",
+            "description": "A pixel-art cat after the classic oneko lives on your desktop: it chases the cursor up onto window tops, grooms and dozes when you stop, rides dragged windows and leaps off with a twist, and taps mugs off window edges. Hover to pet it, click it for a meow, click the desktop to toss it yarn; it eats at mealtimes and sleeps in a basket at night. Uses Image 2 as the room.",
+            "favorite": false,
+            "hasBuffers": true,
+            "id": "0b5c6776-c9a8-492c-9193-e8927866b8c1",
+            "likes": 0,
+            "name": "Neko",
+            "needsAudio": false,
+            "needsTextures": false,
+            "shaderPath": "Shaders/WindowReactive/neko.frag",
+            "source": "local",
+            "sourceId": "",
+            "tags": [
+            ],
+            "thumbnailPath": "thumbnails/0b5c6776-c9a8-492c-9193-e8927866b8c1.png",
+            "views": 0
         }
     ],
     "version": 1
