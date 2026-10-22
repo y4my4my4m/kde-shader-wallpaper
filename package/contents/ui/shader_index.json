@@ -4899,6 +4899,26 @@
             ],
             "thumbnailPath": "thumbnails/0b5c6776-c9a8-492c-9193-e8927866b8c1.png",
             "views": 0
+        },
+        {
+            "addedIn": "4.2.0",
+            "author": "",
+            "category": "Window Reactive",
+            "description": "A summer meadow at dusk where hundreds of fireflies drift and blink, slowly falling into step until waves of light ripple across the grass. Rest the cursor to hold a lantern they circle, sweep it to scatter them, click to open a jar of new ones; they perch on window edges and fly off when you drag. By day, butterflies and dandelion seeds. Uses Image 2 as the sky.",
+            "favorite": false,
+            "hasBuffers": true,
+            "id": "133a7ed6-e99b-4b1f-b4b0-c680e6ef162b",
+            "likes": 0,
+            "name": "Fireflies",
+            "needsAudio": false,
+            "needsTextures": true,
+            "shaderPath": "Shaders/WindowReactive/fireflies.frag",
+            "source": "local",
+            "sourceId": "",
+            "tags": [
+            ],
+            "thumbnailPath": "thumbnails/133a7ed6-e99b-4b1f-b4b0-c680e6ef162b.png",
+            "views": 0
         }
     ],
     "version": 1
