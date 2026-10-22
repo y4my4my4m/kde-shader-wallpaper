@@ -1,5 +1,6 @@
 // Ant Colony — Buffer B: nearest-ant tracking.
 // @channels bufferA, self
+// @substeps 1
 //
 // One texel per grid cell: ids + 1 of the four ants whose bodies pass
 // closest to the cell centre, nearest first, 0 = none. Each update merges

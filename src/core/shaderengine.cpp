@@ -235,12 +235,9 @@ QString assembleVertexSource(bool gles)
     return src + QLatin1String(vertexShaderSource);
 }
 
-// "// @sim-max-height N" in the first 60 lines.
-int parseSimMaxHeightDirective(const QString &code)
+// First 60 lines of code, where header directives are read.
+QStringView directiveHead(const QString &code)
 {
-    static const QRegularExpression re(
-        QStringLiteral("^[ \\t]*//[ \\t]*@sim-max-height[ \\t]*:?[ \\t]*(\\d+)"),
-        QRegularExpression::MultilineOption | QRegularExpression::CaseInsensitiveOption);
     qsizetype end = -1;
     for (int line = 0; line < 60; ++line) {
         end = code.indexOf(QLatin1Char('\n'), end + 1);
@@ -248,9 +245,34 @@ int parseSimMaxHeightDirective(const QString &code)
             break;
         }
     }
-    const QStringView head = end < 0 ? QStringView(code) : QStringView(code).left(end);
-    const QRegularExpressionMatch m = re.matchView(head);
+    return end < 0 ? QStringView(code) : QStringView(code).left(end);
+}
+
+// "// @sim-max-height N" in the first 60 lines.
+int parseSimMaxHeightDirective(const QString &code)
+{
+    static const QRegularExpression re(
+        QStringLiteral("^[ \\t]*//[ \\t]*@sim-max-height[ \\t]*:?[ \\t]*(\\d+)"),
+        QRegularExpression::MultilineOption | QRegularExpression::CaseInsensitiveOption);
+    const QRegularExpressionMatch m = re.matchView(directiveHead(code));
     return m.hasMatch() ? m.capturedView(1).toInt() : 0;
+}
+
+// "// @substeps 1" in the first 60 lines of a buffer pass. No other count
+// is recognised.
+bool parsePerFrameDirective(const QString &code)
+{
+    static const QRegularExpression re(
+        QStringLiteral("^[ \\t]*//[ \\t]*@substeps[ \\t]*:?[ \\t]*(\\d+)"),
+        QRegularExpression::MultilineOption | QRegularExpression::CaseInsensitiveOption);
+    const QRegularExpressionMatch m = re.matchView(directiveHead(code));
+    return m.hasMatch() && m.capturedView(1).toInt() == 1;
+}
+
+// Implicitly shared copies compare by pointer, others by content.
+bool sameText(const QString &a, const QString &b)
+{
+    return a.size() == b.size() && (a.constData() == b.constData() || a == b);
 }
 
 } // namespace
@@ -346,9 +368,21 @@ void ShaderEngine::accumulateFrame()
     m_iTime += m_lastTimeDelta;
     m_iFrame++;
     m_frameCount++;
+    // iTimeChanged / iFrameChanged are emitted by notifyFrameRendered() on
+    // the GUI thread. Emitted here, on the render thread, QML marshals each
+    // emission through a new proxy QObject whenever any property of the
+    // engine has a binding, observed or not. QObject::isSignalConnected()
+    // cannot gate them: QML reports a signal as connected when a bound signal
+    // shares its index modulo 64, and after its last binding is gone.
+}
 
+void ShaderEngine::notifyFrameRendered(qreal frameTimeMs)
+{
     Q_EMIT iTimeChanged();
     Q_EMIT iFrameChanged();
+    if (frameTimeMs >= 0.0) {
+        updatePerformanceStats(frameTimeMs);
+    }
 }
 
 void ShaderEngine::setCompileLog(const QString &log)
@@ -593,6 +627,18 @@ void ShaderEngine::setDither(bool enabled)
     m_dither = enabled;
     Q_EMIT ditherChanged();
     update();
+}
+
+void ShaderEngine::setFrameSignals(bool enabled)
+{
+    if (m_frameSignals == enabled) return;
+    m_frameSignals = enabled;
+    Q_EMIT frameSignalsChanged();
+    if (enabled) {
+        // Current values for bindings that start observing now.
+        Q_EMIT iTimeChanged();
+        Q_EMIT iFrameChanged();
+    }
 }
 
 void ShaderEngine::updateSimMaxHeightDirective()
@@ -977,6 +1023,13 @@ void ShaderEngine::setWindowVelocities(const QVariantList &velocities)
 {
     m_windowVelocities = velocities;
     Q_EMIT windowVelocitiesChanged();
+}
+
+void ShaderEngine::setWindowSource(WindowTracker *source)
+{
+    if (m_windowSource == source) return;
+    m_windowSource = source;
+    Q_EMIT windowSourceChanged();
 }
 
 void ShaderEngine::restartFrameCount()
@@ -1393,6 +1446,7 @@ void ShaderEngineRenderer::releaseGLResources(bool abandon)
 
     m_mainCompile = PassCompileState();
     m_bufferCompile.fill(PassCompileState());
+    m_bufferPerFrame.fill(false);
     m_compileBackoffTimer.invalidate();
     m_compileBackoffMs = 0;
     m_fallbackFailed = false;
@@ -1479,6 +1533,43 @@ void ShaderEngineRenderer::createQuadVAO()
     f->glBindVertexArray(0);
 }
 
+ShaderEngineRenderer::UniformLocations ShaderEngineRenderer::locateUniforms(QOpenGLShaderProgram *program)
+{
+    UniformLocations loc;
+    if (!program) {
+        return loc;
+    }
+    auto at = [program](const char *name) { return GLint(program->uniformLocation(name)); };
+    loc.iResolution = at("iResolution");
+    loc.iTime = at("iTime");
+    loc.iTimeDelta = at("iTimeDelta");
+    loc.iFrameRate = at("iFrameRate");
+    loc.iFrame = at("iFrame");
+    loc.iSubstep = at("iSubstep");
+    loc.iSubsteps = at("iSubsteps");
+    loc.iMouse = at("iMouse");
+    loc.iMousePrev = at("iMousePrev");
+    loc.iDate = at("iDate");
+    loc.iSampleRate = at("iSampleRate");
+    loc.iDitherAmount = at("iDitherAmount");
+    loc.iChannelResolution = at("iChannelResolution");
+    loc.iChannelTime = at("iChannelTime");
+    for (int i = 0; i < 4; ++i) {
+        loc.iChannel[i] = at(kChannelSamplerNames[i]);
+    }
+    loc.iWindowCount = at("iWindowCount");
+    loc.iWindowRects = at("iWindowRects");
+    loc.iWindowRectsPrev = at("iWindowRectsPrev");
+    loc.iWindowVelocities = at("iWindowVelocities");
+    loc.iScreenOffset = at("iScreenOffset");
+    loc.iScreenIndex = at("iScreenIndex");
+    loc.iScreenCount = at("iScreenCount");
+    loc.iVirtualDesktop = at("iVirtualDesktop");
+    loc.iVirtualDesktopCount = at("iVirtualDesktopCount");
+    loc.iVirtualDesktopAnim = at("iVirtualDesktopAnim");
+    return loc;
+}
+
 ShaderEngineRenderer::CompileResult ShaderEngineRenderer::buildProgram(
     const QString &common, const QString &code, const QString &passLabel,
     std::unique_ptr<QOpenGLShaderProgram> &program, QString &error)
@@ -1536,6 +1627,7 @@ void ShaderEngineRenderer::compileMainPass(const QString &code, const QString &c
     switch (buildProgram(common, code, QStringLiteral("main pass"), program, error)) {
     case CompileResult::Ok:
         m_shaderProgram = std::move(program);
+        m_mainUniforms = locateUniforms(m_shaderProgram.get());
         m_mainCompile = {code, common, true, QString()};
         break;
     case CompileResult::Failed:
@@ -1558,6 +1650,8 @@ void ShaderEngineRenderer::compileBufferPass(int bufferIndex, const QString &cod
     switch (buildProgram(common, code, label, program, error)) {
     case CompileResult::Ok:
         m_bufferPrograms[bufferIndex] = std::move(program);
+        m_bufferUniforms[bufferIndex] = locateUniforms(m_bufferPrograms[bufferIndex].get());
+        m_bufferPerFrame[bufferIndex] = parsePerFrameDirective(code);
         m_bufferCompile[bufferIndex] = {code, common, true, QString()};
         break;
     case CompileResult::Failed:
@@ -1580,6 +1674,7 @@ void ShaderEngineRenderer::compileFallbackProgram()
                          program, error)) {
     case CompileResult::Ok:
         m_shaderProgram = std::move(program);
+        m_mainUniforms = locateUniforms(m_shaderProgram.get());
         break;
     case CompileResult::Failed:
         m_fallbackFailed = true;
@@ -1695,8 +1790,9 @@ QVector3D ShaderEngineRenderer::channelResolution(int inputType) const
     return QVector3D();
 }
 
-void ShaderEngineRenderer::updateUniforms(QOpenGLShaderProgram *program, const std::array<int, 4> &mapping,
-                                          bool forBufferPass, int substep, int substeps)
+void ShaderEngineRenderer::updateUniforms(QOpenGLShaderProgram *program, const UniformLocations &loc,
+                                          const std::array<int, 4> &mapping, bool forBufferPass,
+                                          int substep, int substeps)
 {
     if (!program) return;
 
@@ -1743,66 +1839,90 @@ void ShaderEngineRenderer::updateUniforms(QOpenGLShaderProgram *program, const s
         }
     }
 
-    program->setUniformValue("iResolution", resolution);
-    program->setUniformValue("iTime", (float)m_iTime);
-    // Buffer passes are substepped (see render()): each of the N passes this
-    // frame advances 1/N of the frame's delta, so simulations step at a
-    // fixed rate regardless of render FPS.
+    // Locations are cached at link time: setUniformValue(const char *) runs
+    // a glGetUniformLocation per call.
+    program->setUniformValue(loc.iResolution, resolution);
+    program->setUniformValue(loc.iTime, (float)m_iTime);
+    // A substepped buffer pass advances 1/substeps of the frame's delta, so
+    // simulations step at a fixed rate regardless of render FPS.
     const float passDelta = forBufferPass
-        ? (float)(m_iTimeDelta / qMax(1, m_bufferSubSteps))
+        ? (float)(m_iTimeDelta / qMax(1, substeps))
         : (float)m_iTimeDelta;
-    program->setUniformValue("iTimeDelta", passDelta);
-    program->setUniformValue("iFrameRate", m_iFrameRate);
-    program->setUniformValue("iFrame", m_iFrame);
-    program->setUniformValue("iSubstep", substep);
-    program->setUniformValue("iSubsteps", substeps);
-    program->setUniformValue("iMouse", mouse);
-    program->setUniformValue("iMousePrev", mousePrev);
-    program->setUniformValue("iDate", m_iDate);
-    program->setUniformValue("iSampleRate", 44100.0f);
+    program->setUniformValue(loc.iTimeDelta, passDelta);
+    program->setUniformValue(loc.iFrameRate, m_iFrameRate);
+    program->setUniformValue(loc.iFrame, m_iFrame);
+    program->setUniformValue(loc.iSubstep, substep);
+    program->setUniformValue(loc.iSubsteps, substeps);
+    program->setUniformValue(loc.iMouse, mouse);
+    program->setUniformValue(loc.iMousePrev, mousePrev);
+    program->setUniformValue(loc.iDate, m_iDate);
+    program->setUniformValue(loc.iSampleRate, 44100.0f);
 
     // +-1 LSB of an 8-bit target; buffer passes and float outputs get none.
     const bool hdrOutput = m_hdrPipeline && m_hdrSupported;
     const float ditherAmount = (!forBufferPass && m_dither && !hdrOutput) ? 1.0f / 255.0f : 0.0f;
-    program->setUniformValue("iDitherAmount", ditherAmount);
+    program->setUniformValue(loc.iDitherAmount, ditherAmount);
 
     QVector3D channelRes[4];
     for (int i = 0; i < 4; i++) {
         channelRes[i] = channelResolution(mapping[i]);
     }
-    program->setUniformValueArray("iChannelResolution", channelRes, 4);
+    program->setUniformValueArray(loc.iChannelResolution, channelRes, 4);
 
     // Channel times (all same as iTime for now)
     float channelTimes[4] = {(float)m_iTime, (float)m_iTime, (float)m_iTime, (float)m_iTime};
-    program->setUniformValueArray("iChannelTime", channelTimes, 4, 1);
+    program->setUniformValueArray(loc.iChannelTime, channelTimes, 4, 1);
 
     for (int i = 0; i < 4; i++) {
-        program->setUniformValue(kChannelSamplerNames[i], i);
+        program->setUniformValue(loc.iChannel[i], i);
     }
 
     // Window tracking uniforms (for window-reactive shaders)
-    program->setUniformValue("iWindowCount", m_windowCount);
+    program->setUniformValue(loc.iWindowCount, m_windowCount);
     if (m_windowsEnabled) {
-        program->setUniformValueArray("iWindowRects",
+        program->setUniformValueArray(loc.iWindowRects,
             reinterpret_cast<const GLfloat*>(windowRects.data()), MAX_WINDOWS, 4);
-        program->setUniformValueArray("iWindowRectsPrev",
+        program->setUniformValueArray(loc.iWindowRectsPrev,
             reinterpret_cast<const GLfloat*>(windowRectsPrev.data()), MAX_WINDOWS, 4);
-        program->setUniformValueArray("iWindowVelocities",
+        program->setUniformValueArray(loc.iWindowVelocities,
             reinterpret_cast<const GLfloat*>(windowVelocities.data()), MAX_WINDOWS, 2);
     }
 
     // Multi-monitor / virtual-desktop uniforms — always set (zeroed if
     // the feature is off in config). The cost is trivial and shaders
     // can sample them freely without needing a feature flag.
-    program->setUniformValue("iScreenOffset", m_screenOffset);
-    program->setUniformValue("iScreenIndex",  m_screenIndex);
-    program->setUniformValue("iScreenCount",  m_screenCount);
-    program->setUniformValue("iVirtualDesktop",      m_virtualDesktop);
-    program->setUniformValue("iVirtualDesktopCount", m_virtualDesktopCount);
-    program->setUniformValue("iVirtualDesktopAnim", (float)m_virtualDesktopAnim);
+    program->setUniformValue(loc.iScreenOffset, m_screenOffset);
+    program->setUniformValue(loc.iScreenIndex,  m_screenIndex);
+    program->setUniformValue(loc.iScreenCount,  m_screenCount);
+    program->setUniformValue(loc.iVirtualDesktop,      m_virtualDesktop);
+    program->setUniformValue(loc.iVirtualDesktopCount, m_virtualDesktopCount);
+    program->setUniformValue(loc.iVirtualDesktopAnim, (float)m_virtualDesktopAnim);
 }
 
-void ShaderEngineRenderer::bindChannelInput(int channelSlot, int inputType, int currentBuffer)
+// Substepped passes share m_pingPong: a pass writes
+// (m_pingPong ? m_bufferFBOs : m_bufferFBOsBack). Its self-read gets the
+// other surface (previous step); any other reader gets the surface this
+// substep writes, which a later pass has not written yet.
+//
+// A per-frame pass (m_bufferPerFrame) reads and writes as a substepped pass
+// that copies itself on every substep but the last: readers get its latest
+// output, except a lower-indexed pass on substep 0, which gets the output
+// before it (the copy two steps back).
+QOpenGLFramebufferObject *ShaderEngineRenderer::bufferReadSurface(int bufferIndex, int reader, int substep) const
+{
+    const bool self = bufferIndex == reader;
+    if (!m_bufferPerFrame[bufferIndex]) {
+        const auto &fbo = (m_pingPong != self) ? m_bufferFBOs[bufferIndex] : m_bufferFBOsBack[bufferIndex];
+        return fbo.get();
+    }
+    bool latestIsFront = m_bufferFrontLatest[bufferIndex];
+    if (reader >= 0 && reader < bufferIndex && substep == 0) {
+        latestIsFront = !latestIsFront;
+    }
+    return latestIsFront ? m_bufferFBOs[bufferIndex].get() : m_bufferFBOsBack[bufferIndex].get();
+}
+
+void ShaderEngineRenderer::bindChannelInput(int channelSlot, int inputType, int currentBuffer, int substep)
 {
     auto *f = QOpenGLContext::currentContext()->extraFunctions();
     f->glActiveTexture(GL_TEXTURE0 + channelSlot);
@@ -1821,11 +1941,7 @@ void ShaderEngineRenderer::bindChannelInput(int channelSlot, int inputType, int 
         const int bufferIdx = inputType - 10;
         if (m_useBuffers[bufferIdx]) {
             ensureBufferFBOs(bufferIdx);
-            // A pass renders into (m_pingPong ? m_bufferFBOs : m_bufferFBOsBack).
-            // Self-reference reads the other surface (previous step); any
-            // other reader gets the surface written most recently.
-            const bool self = bufferIdx == currentBuffer;
-            const auto &fbo = (m_pingPong != self) ? m_bufferFBOs[bufferIdx] : m_bufferFBOsBack[bufferIdx];
+            QOpenGLFramebufferObject *fbo = bufferReadSurface(bufferIdx, currentBuffer, substep);
             if (fbo && fbo->isValid()) {
                 texId = fbo->texture();
                 // NEAREST for simulation reads, LINEAR for the image pass.
@@ -1962,8 +2078,11 @@ void ShaderEngineRenderer::renderBuffer(int bufferIndex, int substep)
         }
     }
 
-    // Get the correct FBO (ping-pong)
-    auto &fbo = m_pingPong ? m_bufferFBOs[bufferIndex] : m_bufferFBOsBack[bufferIndex];
+    // Target: the substep ping-pong surface, or for a per-frame pass the
+    // surface not holding its latest output.
+    const bool perFrame = m_bufferPerFrame[bufferIndex];
+    const bool writeFront = perFrame ? !m_bufferFrontLatest[bufferIndex] : m_pingPong;
+    auto &fbo = writeFront ? m_bufferFBOs[bufferIndex] : m_bufferFBOsBack[bufferIndex];
 
     if (!fbo || !fbo->isValid()) {
         return;
@@ -1976,16 +2095,6 @@ void ShaderEngineRenderer::renderBuffer(int bufferIndex, int substep)
 
     // Only render if we have a compiled shader
     if (m_bufferPrograms[bufferIndex] && m_bufferPrograms[bufferIndex]->isLinked()) {
-        static bool loggedBufferRender = false;
-        if (!loggedBufferRender) {
-            qDebug() << "renderBuffer" << bufferIndex << "channel mappings:"
-                     << m_bufferChannelMapping[bufferIndex][0]
-                     << m_bufferChannelMapping[bufferIndex][1]
-                     << m_bufferChannelMapping[bufferIndex][2]
-                     << m_bufferChannelMapping[bufferIndex][3];
-            loggedBufferRender = true;
-        }
-
         m_bufferPrograms[bufferIndex]->bind();
         // fragCoord = texCoord * iResolution.xy in the vertex shader,
         // so iResolution MUST match this pass's viewport. Using a stale
@@ -1994,19 +2103,18 @@ void ShaderEngineRenderer::renderBuffer(int bufferIndex, int substep)
         // simulations — mouse coords and texelFetch were wrong.
         m_iResolution = QVector3D(bufSize.width(), bufSize.height(),
                                   float(bufSize.width()) / float(bufSize.height()));
-        updateUniforms(m_bufferPrograms[bufferIndex].get(), m_bufferChannelMapping[bufferIndex],
-                       true, substep, m_bufferSubSteps);
+        // A per-frame pass is one step of the whole frame: iSubstep 0 of 1.
+        updateUniforms(m_bufferPrograms[bufferIndex].get(), m_bufferUniforms[bufferIndex],
+                       m_bufferChannelMapping[bufferIndex], true,
+                       perFrame ? 0 : substep, perFrame ? 1 : m_bufferSubSteps);
 
         // Bind textures based on per-buffer channel mapping
         for (int i = 0; i < 4; i++) {
-            bindChannelInput(i, m_bufferChannelMapping[bufferIndex][i], bufferIndex);
+            bindChannelInput(i, m_bufferChannelMapping[bufferIndex][i], bufferIndex, substep);
         }
 
         f->glBindVertexArray(m_vao);
         f->glDrawArrays(GL_TRIANGLES, 0, 6);
-        f->glBindVertexArray(0);
-
-        m_bufferPrograms[bufferIndex]->release();
     } else {
         static int warnCount = 0;
         if (warnCount++ < 5) {
@@ -2014,7 +2122,11 @@ void ShaderEngineRenderer::renderBuffer(int bufferIndex, int substep)
         }
     }
 
-    fbo->release();
+    // Target, program and VAO stay bound: the next pass binds its own, and
+    // render() unbinds once at the end of the frame.
+    if (perFrame) {
+        m_bufferFrontLatest[bufferIndex] = writeFront;
+    }
 }
 
 void ShaderEngineRenderer::renderMainPass()
@@ -2048,23 +2160,14 @@ void ShaderEngineRenderer::renderMainPass()
     }
 
     m_shaderProgram->bind();
-    updateUniforms(m_shaderProgram.get(), m_effectiveImageMapping, false, 0, 1);
+    updateUniforms(m_shaderProgram.get(), m_mainUniforms, m_effectiveImageMapping, false, 0, 1);
 
-    static int frameCount = 0;
-    if (frameCount++ < 5) {
-        qDebug() << "renderMainPass: Binding channels. Mappings:"
-                 << m_effectiveImageMapping[0] << m_effectiveImageMapping[1]
-                 << m_effectiveImageMapping[2] << m_effectiveImageMapping[3];
-    }
     for (int i = 0; i < 4; i++) {
-        bindChannelInput(i, m_effectiveImageMapping[i], -1);  // -1 = no current buffer (image pass)
+        bindChannelInput(i, m_effectiveImageMapping[i], -1, m_bufferSubSteps - 1);  // -1 = image pass
     }
 
     f->glBindVertexArray(m_vao);
     f->glDrawArrays(GL_TRIANGLES, 0, 6);
-    f->glBindVertexArray(0);
-
-    m_shaderProgram->release();
 }
 
 void ShaderEngineRenderer::uploadAudioTexture()
@@ -2147,7 +2250,7 @@ void ShaderEngineRenderer::render()
 
     beginFrameTiming();
 
-    auto *f = QOpenGLContext::currentContext()->functions();
+    auto *f = QOpenGLContext::currentContext()->extraFunctions();
 
     // (Re)allocate the low-res FBO if the resolution scale changed.
     ensureLowResFBO();
@@ -2166,10 +2269,12 @@ void ShaderEngineRenderer::render()
     // pass per frame — identical to the old behavior; at 60fps it's four.
     // shaderSpeed scales m_iTimeDelta upstream, so it scales the step count
     // too, keeping each step inside the sim's stability budget.
+    // A "// @substeps 1" pass renders on the last substep only.
     m_bufferSubSteps = std::clamp((int)std::lround(m_iTimeDelta * 240.0), 1, 8);
     for (int s = 0; s < m_bufferSubSteps; s++) {
+        const bool lastSubstep = s + 1 == m_bufferSubSteps;
         for (int i = 0; i < 4; i++) {
-            if (m_useBuffers[i]) {
+            if (m_useBuffers[i] && (lastSubstep || !m_bufferPerFrame[i])) {
                 renderBuffer(i, s);
             }
         }
@@ -2188,6 +2293,11 @@ void ShaderEngineRenderer::render()
     if (m_lowResFBO && m_lowResFBO->isValid()) {
         blitLowResToOutput();
     }
+
+    // Passes leave their program and the VAO bound. Qt's output FBO is the
+    // bound framebuffer (renderMainPass, blitLowResToOutput).
+    f->glBindVertexArray(0);
+    f->glUseProgram(0);
 
     endFrameTiming();
 
@@ -2315,11 +2425,12 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
     // resumes don't cause shader time to leap forward (legacy #43, #106).
     engine->accumulateFrame();
 
-    if (m_frameTimeFresh) {
+    // One queued call per frame, none while frameSignals is off.
+    if (engine->frameSignals()) {
+        const qreal frameTime = m_frameTimeFresh ? m_lastFrameTime : -1.0;
         m_frameTimeFresh = false;
-        QMetaObject::invokeMethod(engine, "updatePerformanceStats",
-                                  Qt::QueuedConnection,
-                                  Q_ARG(qreal, m_lastFrameTime));
+        QMetaObject::invokeMethod(engine, [engine, frameTime]() { engine->notifyFrameRendered(frameTime); },
+                                  Qt::QueuedConnection);
     }
 
     // Pull updated timing/mouse uniforms into the renderer copy.
@@ -2373,22 +2484,20 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
     // --- Shader compilation ----------------------------------------------
     // Each pass recompiles only when its (code, common) pair differs from
     // the last attempt, successful or not.
-    QString newCode;
-    QString sharedConsts;
-    splitSharedConsts(engine->shaderCode(), newCode, sharedConsts);
-    const QString commonCode = sharedConsts.isEmpty()
-        ? engine->commonCode()
-        : sharedConsts + QLatin1String("#line 1 1\n") + engine->commonCode();
-
-    static bool loggedOnce = false;
-    if (!loggedOnce) {
-        qDebug() << "=== MAIN SHADER STATUS ===";
-        qDebug() << "newCode length:" << newCode.length();
-        qDebug() << "attempted code length:" << m_mainCompile.code.length();
-        qDebug() << "m_shaderProgram valid:" << (m_shaderProgram != nullptr);
-        qDebug() << "==========================";
-        loggedOnce = true;
+    const QString mainIn = engine->shaderCode();
+    const QString commonIn = engine->commonCode();
+    if (!m_splitValid || !sameText(mainIn, m_splitMainIn) || !sameText(commonIn, m_splitCommonIn)) {
+        QString sharedConsts;
+        splitSharedConsts(mainIn, m_splitMainOut, sharedConsts);
+        m_splitCommonOut = sharedConsts.isEmpty()
+            ? commonIn
+            : sharedConsts + QLatin1String("#line 1 1\n") + commonIn;
+        m_splitMainIn = mainIn;
+        m_splitCommonIn = commonIn;
+        m_splitValid = true;
     }
+    const QString &newCode = m_splitMainOut;
+    const QString &commonCode = m_splitCommonOut;
 
     if (newCode.isEmpty()) {
         static bool warnedEmpty = false;
@@ -2396,10 +2505,10 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
             qWarning() << "Main shader code is EMPTY! This will cause black screen if reading from buffers.";
             warnedEmpty = true;
         }
-    } else if ((!m_mainCompile.attempted || newCode != m_mainCompile.code
-                || commonCode != m_mainCompile.common)
+    } else if ((!m_mainCompile.attempted || !sameText(newCode, m_mainCompile.code)
+                || !sameText(commonCode, m_mainCompile.common))
                && compileAllowed()) {
-        if (newCode != m_mainCompile.code) {
+        if (!sameText(newCode, m_mainCompile.code)) {
             // A different shader package: every buffer's state is now stale.
             m_bufferNeedsClear.fill(true);
         }
@@ -2432,12 +2541,13 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
             }
             // The previous shader's program must not keep running here.
             m_bufferPrograms[i].reset();
+            m_bufferPerFrame[i] = false;
             m_bufferCompile[i] = PassCompileState();
             continue;
         }
         activeBuffers[i] = true;
         const PassCompileState &state = m_bufferCompile[i];
-        if ((!state.attempted || bufferCodes[i] != state.code || commonCode != state.common)
+        if ((!state.attempted || !sameText(bufferCodes[i], state.code) || !sameText(commonCode, state.common))
             && compileAllowed()) {
             compileBufferPass(i, bufferCodes[i], commonCode);
             // New code, so the accumulated state belongs to the old
@@ -2447,18 +2557,6 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
     }
 
     reportCompileStatus(activeBuffers);
-
-    // Debug: log channel mappings
-    static bool loggedMappings = false;
-    if (!loggedMappings && (m_useBuffers[0] || m_useBuffers[1] || m_useBuffers[2] || m_useBuffers[3])) {
-        qDebug() << "Image channel mapping:" << m_imageChannelMapping[0] << m_imageChannelMapping[1] << m_imageChannelMapping[2] << m_imageChannelMapping[3];
-        for (int i = 0; i < 4; i++) {
-            if (m_useBuffers[i]) {
-                qDebug() << "Buffer" << i << "channel mapping:" << m_bufferChannelMapping[i][0] << m_bufferChannelMapping[i][1] << m_bufferChannelMapping[i][2] << m_bufferChannelMapping[i][3];
-            }
-        }
-        loggedMappings = true;
-    }
 
     // --- Channel textures ------------------------------------------------
     const bool enabled[4] = {
@@ -2504,15 +2602,6 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
         engine->bufferCChannels(),
         engine->bufferDChannels()
     };
-
-    static bool loggedBufferChannels = false;
-    if (!loggedBufferChannels) {
-        qDebug() << "Buffer channels from QML:";
-        for (int b = 0; b < 4; b++) {
-            qDebug() << "  Buffer" << b << ":" << bufferChannels[b];
-        }
-        loggedBufferChannels = true;
-    }
 
     for (int b = 0; b < 4; b++) {
         for (int c = 0; c < 4 && c < bufferChannels[b].size(); c++) {
@@ -2562,19 +2651,27 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
     // WindowTracker disabled) can't drift indefinitely.
     m_windowRectsPrev = m_windowRects;
     m_windowsEnabled = engine->windowsEnabled();
-    m_windowCount = engine->windowCount();
+    // The tracker is read in place; the GUI thread is blocked.
+    WindowTracker *windowSource = engine->windowSource();
+    m_windowCount = windowSource ? windowSource->windowCount() : engine->windowCount();
 
     if (m_windowsEnabled) {
-        const qint64 seq = engine->windowRectsSequence();
-        if (seq != m_windowRectsSequenceSeen) {
+        const qint64 seq = windowSource ? qint64(windowSource->changeSerial()) : engine->windowRectsSequence();
+        if (seq != m_windowRectsSequenceSeen || windowSource != m_windowSourceSeen) {
             m_windowRectsSequenceSeen = seq;
-            const QVariantList rects = engine->windowRects();
-            for (int i = 0; i < MAX_WINDOWS * 4; ++i) {
-                m_windowRectsBase[i] = (i < rects.size()) ? rects[i].toFloat() : 0.0f;
-            }
-            const QVariantList velocities = engine->windowVelocities();
-            for (int i = 0; i < MAX_WINDOWS * 2; ++i) {
-                m_windowVelocities[i] = (i < velocities.size()) ? velocities[i].toFloat() : 0.0f;
+            m_windowSourceSeen = windowSource;
+            static_assert(WindowTracker::MAX_WINDOWS == MAX_WINDOWS);
+            if (windowSource) {
+                windowSource->copyFlat(m_windowRectsBase.data(), m_windowVelocities.data());
+            } else {
+                const QVariantList rects = engine->windowRects();
+                for (int i = 0; i < MAX_WINDOWS * 4; ++i) {
+                    m_windowRectsBase[i] = (i < rects.size()) ? rects[i].toFloat() : 0.0f;
+                }
+                const QVariantList velocities = engine->windowVelocities();
+                for (int i = 0; i < MAX_WINDOWS * 2; ++i) {
+                    m_windowVelocities[i] = (i < velocities.size()) ? velocities[i].toFloat() : 0.0f;
+                }
             }
             m_windowRectsBaseTimer.restart();
         }

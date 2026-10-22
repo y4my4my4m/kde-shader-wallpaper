@@ -288,7 +288,7 @@ bool hasImage = iChannelResolution[1].x > 0.0;
 |---------|------|-------------|
 | `iMousePrev` | vec2 | Cursor position one rendered frame earlier |
 | `iWindowCount`, `iWindowRects[16]`, `iWindowRectsPrev[16]`, `iWindowVelocities[16]` | | See [Window Reactive Shaders](#window-reactive-shaders) |
-| `iSubstep`, `iSubsteps` | int | Buffer passes run several substeps per frame (about 240 steps per second). Index of the current substep and the count this frame; 0 and 1 in the image pass |
+| `iSubstep`, `iSubsteps` | int | Buffer passes run several substeps per frame (about 240 steps per second). Index of the current substep and the count this frame; 0 and 1 in the image pass and in a `@substeps 1` buffer pass |
 | `iScreenOffset` | vec2 | This screen's top-left within the whole desktop (multi-monitor) |
 | `iScreenIndex`, `iScreenCount` | int | Screen ordinal and count |
 | `iVirtualDesktop`, `iVirtualDesktopCount` | int | Current virtual desktop and count |
@@ -303,6 +303,18 @@ Comment lines in the first 60 lines of the main `.frag` configure the engine:
 | `// @channels audio, bufferA` | Channel routing, see [Channel Directive](#channel-directive-recommended) |
 | `// @texture0 Resources/Shadertoy_Rusty_Metal.jpg` | Default image for a texture slot (`@texture0`..`@texture3`), path relative to `package/contents/ui`. Applied when the shader is picked; slots the shader does not declare keep the user's images |
 | `// @sim-max-height 600` | Buffer passes render at most this many rows (aspect kept); the image pass samples them with linear filtering. Wave simulations keep the same look and cost on every monitor. The **Simulation resolution** setting overrides it |
+| `// @substeps 1` | Read from a buffer file (`_bufferA.frag` etc.), not the main file. The pass renders once per frame, on the last substep, with `iSubstep` 0, `iSubsteps` 1 and the whole frame's `iTimeDelta`. Other passes see its output as they would see a pass that copies itself on every substep but the last. For passes that step once per frame: same result, without the copy passes |
+
+A pass that steps once per frame and copies itself on the other substeps,
+
+```glsl
+if (iSubstep != iSubsteps - 1) { fragColor = texelFetch(iChannel0, ivec2(fragCoord), 0); return; }
+float frameDt = iTimeDelta * float(iSubsteps);
+```
+
+renders the same image with `// @substeps 1` in its header, and the copy
+branch is then never taken. Only `iSubstep` changes: 0 instead of
+`iSubsteps - 1`, which matters to a pass that hashes it.
 
 ### GLSL Version
 

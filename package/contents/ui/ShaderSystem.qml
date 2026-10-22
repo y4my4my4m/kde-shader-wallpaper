@@ -111,21 +111,22 @@ Item {
         id: windowTracker
         enabled: shaderSystem._allowWindows && shaderEngine.running
         // Poll at the shader's render cadence: a fixed 30Hz reads as visible
-        // steps when dragging windows on high-refresh displays. Idle polls
-        // are nearly free (the tracker skips all X traffic without events),
-        // so the only cost is during actual window motion.
+        // steps when dragging windows on high-refresh displays. The tracker
+        // polls only after X reports window activity, so the cost is during
+        // actual window motion.
         pollInterval: Math.max(4, Math.round(1000 / (shaderEngine.targetFps || 60)))
         referenceWidth: shaderEngine.width
         referenceHeight: shaderEngine.height
         devicePixelRatio: cursorTracker.devicePixelRatio
         screenVirtualX: screenInfo.myGeom ? screenInfo.myGeom.x : 0
         screenVirtualY: screenInfo.myGeom ? screenInfo.myGeom.y : 0
-        
-        onWindowsChanged: {
-            shaderEngine.windowCount = windowTracker.windowCount
-            shaderEngine.windowRects = windowTracker.windowRectsFlat()
-            shaderEngine.windowVelocities = windowTracker.windowVelocitiesFlat()
-        }
+    }
+
+    // Session lock (issue #100). The desktop wallpaper is hidden behind the
+    // lock screen, which draws its own instance (restrictedMode).
+    ScreenLockWatcher {
+        id: screenLock
+        enabled: !shaderSystem.restrictedMode
     }
 
     // ------------------------------------------------------------------
@@ -270,6 +271,8 @@ Item {
             : 0
         hdrPipeline: (wallpaperConfig && wallpaperConfig.experimentalHdrPipeline) || false
         dither: wallpaperConfig ? (wallpaperConfig.dither !== false) : true
+        // Only the performance HUD reads the per-frame signals.
+        frameSignals: performanceLoader.active
 
         // Mouse input — disabled in lock-screen mode.
         mouseEnabled: shaderSystem._allowMouse
@@ -280,8 +283,10 @@ Item {
         audioChannel: (wallpaperConfig && wallpaperConfig.audioChannel) || 0
         audioSource: audioCapture
 
-        // Window tracking — disabled in lock-screen mode.
+        // Window tracking — disabled in lock-screen mode. The renderer reads
+        // the tracker directly, without a QML round trip per poll.
         windowsEnabled: shaderSystem._allowWindows
+        windowSource: windowTracker
 
         // Hot-reload (C8) — disabled in lock-screen mode (dev workflow).
         watchSourceFile: shaderSystem._allowWatchSource
@@ -353,6 +358,7 @@ Item {
         // In lock/login greeter mode force "never pause".
         property bool shouldRun: {
             if (shaderSystem.restrictedMode) return true
+            if (screenLock.locked) return false
             if (!wallpaperConfig) return true
             switch (wallpaperConfig.pauseMode) {
                 case 0: return !windowModel.maximizedExists
@@ -372,7 +378,7 @@ Item {
     }
 
     // Input flows into the engine only via the trackers' own poll timers
-    // (onIMouseChanged / onWindowsChanged above). Do NOT re-poll them from a
+    // (onIMouseChanged, windowSource above). Do NOT re-poll them from a
     // FrameAnimation or similar: a running animation forces the whole window
     // to render at display refresh, which defeats the FPS limit, and the
     // synchronous XCB window poll is too heavy to run per frame.
@@ -414,67 +420,72 @@ Item {
         onWheel: (wheel) => wheel.accepted = false
     }
 
-    // Performance HUD — hidden on greeter surfaces.
-    PerformanceWidget {
-        id: performanceWidget
-        visible: !shaderSystem.restrictedMode && wallpaperConfig != null
+    // Performance HUD — hidden on greeter surfaces. Instantiated only while
+    // shown; the engine's per-frame signals (frameSignals) follow it.
+    Loader {
+        id: performanceLoader
+        active: !shaderSystem.restrictedMode && wallpaperConfig != null
               && (wallpaperConfig.showPerformance || false)
         anchors {
             top: parent.top
             right: parent.right
             margins: 10
         }
-        
-        currentFps: shaderEngine.currentFps
-        frameTime: shaderEngine.frameTime
-        averageFrameTime: shaderEngine.averageFrameTime
-        minFrameTime: shaderEngine.minFrameTime
-        maxFrameTime: shaderEngine.maxFrameTime
-        
-        performanceTier: {
-            var avg = shaderEngine.averageFrameTime
-            if (avg <= 0) return 1
-            if (avg < 4.0) return 0
-            if (avg < 8.0) return 1
-            if (avg < 16.0) return 2
-            return 3
-        }
-        
-        powerCost: {
-            var baseCost = 0
-            var avg = shaderEngine.averageFrameTime
-            
-            if (avg <= 0) baseCost = 50
-            else if (avg < 2.0) baseCost = 10
-            else if (avg < 4.0) baseCost = 20
-            else if (avg < 8.0) baseCost = 35
-            else if (avg < 16.0) baseCost = 50
-            else if (avg < 33.0) baseCost = 70
-            else baseCost = 85
-            
-            var modifier = 0
-            if (wallpaperConfig && (wallpaperConfig.useBufferA || wallpaperConfig.useBufferB ||
-                wallpaperConfig.useBufferC || wallpaperConfig.useBufferD)) {
-                modifier += 15
-            }
-            if (wallpaperConfig && wallpaperConfig.audioEnabled) {
-                modifier += 5
+
+        sourceComponent: PerformanceWidget {
+            id: performanceWidget
+
+            currentFps: shaderEngine.currentFps
+            frameTime: shaderEngine.frameTime
+            averageFrameTime: shaderEngine.averageFrameTime
+            minFrameTime: shaderEngine.minFrameTime
+            maxFrameTime: shaderEngine.maxFrameTime
+
+            performanceTier: {
+                var avg = shaderEngine.averageFrameTime
+                if (avg <= 0) return 1
+                if (avg < 4.0) return 0
+                if (avg < 8.0) return 1
+                if (avg < 16.0) return 2
+                return 3
             }
 
-            return Math.min(100, baseCost + modifier)
-        }
+            powerCost: {
+                var baseCost = 0
+                var avg = shaderEngine.averageFrameTime
 
-        expanded: !wallpaperConfig || wallpaperConfig.performanceExpanded !== false
-        showGraph: !wallpaperConfig || wallpaperConfig.showPerformanceGraph !== false
-        gpuTdp: (wallpaperConfig && wallpaperConfig.gpuTdp) || 75
-    }
-    
-    // Connect frame time updates to the widget
-    Connections {
-        target: shaderEngine
-        function onFrameTimeChanged() {
-            if (performanceWidget.visible) {
-                performanceWidget.addFrameTime(shaderEngine.frameTime)
+                if (avg <= 0) baseCost = 50
+                else if (avg < 2.0) baseCost = 10
+                else if (avg < 4.0) baseCost = 20
+                else if (avg < 8.0) baseCost = 35
+                else if (avg < 16.0) baseCost = 50
+                else if (avg < 33.0) baseCost = 70
+                else baseCost = 85
+
+                var modifier = 0
+                if (wallpaperConfig && (wallpaperConfig.useBufferA || wallpaperConfig.useBufferB ||
+                    wallpaperConfig.useBufferC || wallpaperConfig.useBufferD)) {
+                    modifier += 15
+                }
+                if (wallpaperConfig && wallpaperConfig.audioEnabled) {
+                    modifier += 5
+                }
+
+                return Math.min(100, baseCost + modifier)
+            }
+
+            expanded: !wallpaperConfig || wallpaperConfig.performanceExpanded !== false
+            showGraph: !wallpaperConfig || wallpaperConfig.showPerformanceGraph !== false
+            gpuTdp: (wallpaperConfig && wallpaperConfig.gpuTdp) || 75
+
+            // The history feeds the graph only.
+            Connections {
+                target: shaderEngine
+                function onFrameTimeChanged() {
+                    if (performanceWidget.showGraph) {
+                        performanceWidget.addFrameTime(shaderEngine.frameTime)
+                    }
+                }
             }
         }
     }

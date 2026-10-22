@@ -7,7 +7,8 @@ fragments (version lines, GLES precision block, defines, header, footer) are
 read from that file and assembled as the engine does, including what
 QOpenGLShader inserts after the version line. Buffer passes ping-pong
 between two float FBOs, are substepped N = clamp(round(dt*240), 1, 8) per
-frame (iSubstep / iSubsteps), buffer self-reads are GL_NEAREST and
+frame (iSubstep / iSubsteps) unless they declare "// @substeps 1" (one pass
+on the last substep), buffer self-reads are GL_NEAREST and
 image-pass buffer reads are GL_LINEAR. The image pass is dithered by 1/255
 unless --hdr or --no-dither. Textures are flipped so uv (0,0) is the
 image's bottom-left. fragCoord, iMouse and iWindowRects use GL's
@@ -169,6 +170,14 @@ def qt_shader_source(src, gles, fragment):
 
 TEXTURE_RE = re.compile(r"^[ \t]*//[ \t]*@texture([0-3])[ \t]*:?[ \t]*(\S+)", re.I | re.M)
 SIM_HEIGHT_RE = re.compile(r"^[ \t]*//[ \t]*@sim-max-height[ \t]*:?[ \t]*(\d+)", re.I | re.M)
+SUBSTEPS_RE = re.compile(r"^[ \t]*//[ \t]*@substeps[ \t]*:?[ \t]*(\d+)", re.I | re.M)
+
+
+def per_frame(code):
+    """parsePerFrameDirective() in shaderengine.cpp: "// @substeps 1" in the
+    first 60 lines of a buffer pass."""
+    m = SUBSTEPS_RE.search("\n".join(code.split("\n")[:60]))
+    return bool(m) and int(m.group(1)) == 1
 CHANNEL_RE = re.compile(r"^[ \t]*//[ \t]*@channels?[ \t]*:?[ \t]*([^\r\n]*)", re.I | re.M)
 
 
@@ -462,6 +471,10 @@ class Renderer:
         self.out_h = max(64, round(self.h * args.scale)) if args.scale != 1.0 else self.h
         self.out_fbo, self.out_tex = self._fbo(self.out_w, self.out_h, GL.GL_RGBA16F if args.hdr else GL.GL_RGBA8)
         self.ping = False
+        # "// @substeps 1" passes: index of the FBO holding the latest output
+        # (engine m_bufferFrontLatest; index 0 is m_bufferFBOs).
+        self.per_frame = {l: per_frame(c) for l, c in passes.items()}
+        self.latest = {l: 1 for l in passes}
         self.time = 0.0
         self.frame = 0
         self.prev_mouse = None
@@ -556,7 +569,7 @@ class Renderer:
         GL.glUniform1i(loc("iVirtualDesktopCount"), 1)
         GL.glUniform1f(loc("iVirtualDesktopAnim"), 0.0)
 
-    def _bind(self, slot, input_type, current):
+    def _bind(self, slot, input_type, current, substep):
         GL.glActiveTexture(GL.GL_TEXTURE0 + slot)
         GL.glBindTexture(GL.GL_TEXTURE_2D, 0)
         if 0 <= input_type <= 3:
@@ -566,12 +579,17 @@ class Renderer:
             letter = "ABCD"[input_type - 10]
             if letter not in self.fbo:
                 return
-            if current == letter:
+            # bufferReadSurface() in shaderengine.cpp.
+            if self.per_frame[letter]:
+                idx = self.latest[letter]
+                if current and current < letter and substep == 0:
+                    idx = 1 - idx
+                tex = self.fbo[letter][idx][1]
+            elif current == letter:
                 tex = self.fbo[letter][0 if not self.ping else 1][1]  # the one not being written
-                filt = GL.GL_NEAREST
             else:
                 tex = self.fbo[letter][1 if not self.ping else 0][1]
-                filt = GL.GL_NEAREST if current else GL.GL_LINEAR
+            filt = GL.GL_NEAREST if current else GL.GL_LINEAR
             GL.glBindTexture(GL.GL_TEXTURE_2D, tex)
             GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, filt)
             GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, filt)
@@ -651,18 +669,25 @@ class Renderer:
             for letter in "ABCD":
                 if letter not in self.passes:
                     continue
-                target = self.fbo[letter][1 if not self.ping else 0]
+                pf = self.per_frame[letter]
+                if pf and s + 1 < substeps:
+                    continue
+                widx = 1 - self.latest[letter] if pf else (1 if not self.ping else 0)
+                target = self.fbo[letter][widx]
                 GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, target[0])
                 GL.glViewport(0, 0, sw, sh)
                 GL.glClear(GL.GL_COLOR_BUFFER_BIT)
                 prog = self.programs[letter]
                 GL.glUseProgram(prog)
-                self._set_uniforms(prog, (sw, sh), sdt / substeps, bm, bmp, scale_rects(rects),
+                n = 1 if pf else substeps
+                self._set_uniforms(prog, (sw, sh), sdt / n, bm, bmp, scale_rects(rects),
                                    scale_rects(rects_prev), bvel, True,
-                                   self._ch_res(self.buf_map[letter], (sw, sh)), s, substeps)
+                                   self._ch_res(self.buf_map[letter], (sw, sh)), 0 if pf else s, n)
                 for i in range(4):
-                    self._bind(i, self.buf_map[letter][i], letter)
+                    self._bind(i, self.buf_map[letter][i], letter, s)
                 GL.glDrawArrays(GL.GL_TRIANGLES, 0, 6)
+                if pf:
+                    self.latest[letter] = widx
             if s + 1 < substeps:
                 self.ping = not self.ping
 
@@ -684,7 +709,7 @@ class Renderer:
         self._set_uniforms(prog, (ow, oh), sdt, im_mouse, im_mprev, im_rects, im_rprev, im_vels, False,
                            self._ch_res(self.image_map, (ow, oh)), 0, 1)
         for i in range(4):
-            self._bind(i, self.image_map[i], None)
+            self._bind(i, self.image_map[i], None, substeps - 1)
         GL.glDrawArrays(GL.GL_TRIANGLES, 0, 6)
         self.ping = not self.ping
         self.frame += 1

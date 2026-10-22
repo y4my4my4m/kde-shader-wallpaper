@@ -10,6 +10,7 @@
 #include "input/audiocapture.h"
 #include "input/windowtracker.h"
 #include "input/virtualdesktopwatcher.h"
+#include "input/screenlockwatcher.h"
 #include "import/shadertoyapi.h"
 #include "data/presetmanager.h"
 #include "data/shaderlibrary.h"
@@ -32,6 +33,7 @@ void ShaderWallpaperPlugin::registerTypes(const char *uri)
     qmlRegisterType<AudioCapture>(uri, 1, 0, "AudioCapture");
     qmlRegisterType<WindowTracker>(uri, 1, 0, "WindowTracker");
     qmlRegisterType<VirtualDesktopWatcher>(uri, 1, 0, "VirtualDesktopWatcher");
+    qmlRegisterType<ScreenLockWatcher>(uri, 1, 0, "ScreenLockWatcher");
 
     // Shadertoy import
     qmlRegisterType<ShadertoyAPI>(uri, 1, 0, "ShadertoyAPI");

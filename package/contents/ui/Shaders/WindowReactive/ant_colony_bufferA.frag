@@ -1,5 +1,6 @@
 // Ant Colony — Buffer A: ants, food and colony state.
 // @channels self, bufferC, bufferB
+// @substeps 1
 //
 // Layout in ant_colony_common.frag. iChannel0 is this buffer's previous
 // step; iChannel1 is Buffer C (fields) and iChannel2 Buffer B (nearest

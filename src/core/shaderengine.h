@@ -20,6 +20,7 @@
 #include <QVector2D>
 
 #include "input/audiocapture.h"
+#include "input/windowtracker.h"
 
 class QFileSystemWatcher;
 class QOpenGLTimerQuery;
@@ -75,6 +76,12 @@ class ShaderEngine : public QQuickFramebufferObject
     // Triangular-PDF dither of +-1 LSB on the image pass output when it is
     // 8-bit (issue #76). No effect on buffer passes or the HDR pipeline.
     Q_PROPERTY(bool dither READ dither WRITE setDither NOTIFY ditherChanged)
+
+    // Per-frame change signals: iTimeChanged, iFrameChanged, frameTimeChanged
+    // and performanceStatsChanged. Each rendered frame posts one event to the
+    // GUI thread while on. Off: iTime and iFrame still read current; frame
+    // time statistics stop updating.
+    Q_PROPERTY(bool frameSignals READ frameSignals WRITE setFrameSignals NOTIFY frameSignalsChanged)
     
     // Time control
     Q_PROPERTY(qreal iTime READ iTime NOTIFY iTimeChanged)
@@ -156,6 +163,10 @@ class ShaderEngine : public QQuickFramebufferObject
     Q_PROPERTY(int windowCount READ windowCount WRITE setWindowCount NOTIFY windowCountChanged)
     Q_PROPERTY(QVariantList windowRects READ windowRects WRITE setWindowRects NOTIFY windowRectsChanged)
     Q_PROPERTY(QVariantList windowVelocities READ windowVelocities WRITE setWindowVelocities NOTIFY windowVelocitiesChanged)
+    // When set, the renderer reads window count, rects and velocities from
+    // the tracker at each frame; windowCount, windowRects and
+    // windowVelocities are ignored.
+    Q_PROPERTY(WindowTracker *windowSource READ windowSource WRITE setWindowSource NOTIFY windowSourceChanged)
     
     // Status
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorMessageChanged)
@@ -196,6 +207,7 @@ public:
     }
     bool hdrPipeline() const { return m_hdrPipeline; }
     bool dither() const { return m_dither; }
+    bool frameSignals() const { return m_frameSignals; }
     qreal iTime() const { return m_iTime; }
     int iFrame() const { return m_iFrame; }
     qreal lastTimeDelta() const { return m_lastTimeDelta; }
@@ -266,6 +278,7 @@ public:
     // restart the velocity-extrapolation timer (smooth wake on top of
     // a 30Hz poll feed; see ShaderEngineRenderer::m_windowRectsBase).
     qint64 windowRectsSequence() const { return m_windowRectsSequence; }
+    WindowTracker *windowSource() const { return m_windowSource.data(); }
     
     QString errorMessage() const { return m_errorMessage; }
     bool hasError() const { return !m_errorMessage.isEmpty(); }
@@ -287,6 +300,7 @@ public:
     void setBufferSimulationMaxHeight(int height);
     void setHdrPipeline(bool enabled);
     void setDither(bool enabled);
+    void setFrameSignals(bool enabled);
     void setIMouse(const QVector4D &mouse);
     void setMouseEnabled(bool enabled);
     void setMouseBias(qreal bias);
@@ -334,6 +348,7 @@ public:
     void setWindowCount(int count);
     void setWindowRects(const QVariantList &rects);
     void setWindowVelocities(const QVariantList &velocities);
+    void setWindowSource(WindowTracker *source);
 
     // Methods
     Q_INVOKABLE void resetTime();
@@ -361,6 +376,7 @@ Q_SIGNALS:
     void bufferSimulationMaxHeightChanged();
     void hdrPipelineChanged();
     void ditherChanged();
+    void frameSignalsChanged();
     void iTimeChanged();
     void iFrameChanged();
     void iMouseChanged();
@@ -413,6 +429,7 @@ Q_SIGNALS:
     void windowCountChanged();
     void windowRectsChanged();
     void windowVelocitiesChanged();
+    void windowSourceChanged();
     
     void errorMessageChanged();
     void hasErrorChanged();
@@ -429,6 +446,9 @@ public Q_SLOTS:
     void updatePerformanceStats(qreal frameTimeMs);
     void setCompileLog(const QString &log);
     void setCompileStatus(const QString &log, bool failed);
+    // Queued from synchronize() once per rendered frame while frameSignals.
+    // frameTimeMs < 0: no new GPU time this frame.
+    void notifyFrameRendered(qreal frameTimeMs);
 
 private Q_SLOTS:
     void handleTimeout();
@@ -460,6 +480,7 @@ private:
     int m_bufferSimulationMaxHeight = 0;
     bool m_hdrPipeline = false;
     bool m_dither = true;
+    bool m_frameSignals = true;
     int m_simMaxHeightDirective = 0;
 
     // Timing
@@ -540,6 +561,7 @@ private:
     QVariantList m_windowRects;       // Flat: [x1,y1,w1,h1, x2,y2,w2,h2, ...]
     QVariantList m_windowVelocities;  // Flat: [vx1,vy1, vx2,vy2, ...]
     qint64 m_windowRectsSequence = 0; // bumped on setWindowRects
+    QPointer<WindowTracker> m_windowSource;
 
     // Hot-reload (C8) — QFileSystemWatcher + debounce timer
     bool m_watchSourceFile = false;
@@ -588,9 +610,40 @@ private:
         QString error;  // empty when the attempt succeeded
     };
 
+    // Uniform locations of one linked program; -1 for uniforms the
+    // compiler removed.
+    struct UniformLocations {
+        GLint iResolution = -1;
+        GLint iTime = -1;
+        GLint iTimeDelta = -1;
+        GLint iFrameRate = -1;
+        GLint iFrame = -1;
+        GLint iSubstep = -1;
+        GLint iSubsteps = -1;
+        GLint iMouse = -1;
+        GLint iMousePrev = -1;
+        GLint iDate = -1;
+        GLint iSampleRate = -1;
+        GLint iDitherAmount = -1;
+        GLint iChannelResolution = -1;
+        GLint iChannelTime = -1;
+        GLint iChannel[4] = {-1, -1, -1, -1};
+        GLint iWindowCount = -1;
+        GLint iWindowRects = -1;
+        GLint iWindowRectsPrev = -1;
+        GLint iWindowVelocities = -1;
+        GLint iScreenOffset = -1;
+        GLint iScreenIndex = -1;
+        GLint iScreenCount = -1;
+        GLint iVirtualDesktop = -1;
+        GLint iVirtualDesktopCount = -1;
+        GLint iVirtualDesktopAnim = -1;
+    };
+
     bool ensureContext();
     void releaseGLResources(bool abandon);
     void initializeGL();
+    static UniformLocations locateUniforms(QOpenGLShaderProgram *program);
     CompileResult buildProgram(const QString &common, const QString &code, const QString &passLabel,
                                std::unique_ptr<QOpenGLShaderProgram> &program, QString &error);
     void compileMainPass(const QString &code, const QString &common);
@@ -604,12 +657,13 @@ private:
     void renderMainPass();
     QSize computeBufferSimSize() const;
     QVector3D channelResolution(int inputType) const;
-    void updateUniforms(QOpenGLShaderProgram *program, const std::array<int, 4> &mapping,
-                        bool forBufferPass, int substep, int substeps);
+    void updateUniforms(QOpenGLShaderProgram *program, const UniformLocations &loc,
+                        const std::array<int, 4> &mapping, bool forBufferPass, int substep, int substeps);
     void loadTexture(int channel, const QUrl &url);
     void uploadAudioTexture();
     void createQuadVAO();
-    void bindChannelInput(int channelSlot, int inputType, int currentBuffer);
+    QOpenGLFramebufferObject *bufferReadSurface(int bufferIndex, int reader, int substep) const;
+    void bindChannelInput(int channelSlot, int inputType, int currentBuffer, int substep);
     void ensureLowResFBO();
     void blitLowResToOutput();
     void beginFrameTiming();
@@ -625,7 +679,16 @@ private:
 
     // Main shader
     std::unique_ptr<QOpenGLShaderProgram> m_shaderProgram;
+    UniformLocations m_mainUniforms;
     PassCompileState m_mainCompile;
+
+    // splitSharedConsts() output for the last (main, common) input pair.
+    // Recomputed only when either string changes.
+    QString m_splitMainIn;
+    QString m_splitCommonIn;
+    QString m_splitMainOut;
+    QString m_splitCommonOut;
+    bool m_splitValid = false;
 
     // Transient compile failures (empty log: lost or invalid context) back
     // off instead of retrying every frame.
@@ -639,10 +702,17 @@ private:
     
     // Buffer shaders and FBOs
     std::array<std::unique_ptr<QOpenGLShaderProgram>, 4> m_bufferPrograms;
+    std::array<UniformLocations, 4> m_bufferUniforms;
     std::array<std::unique_ptr<QOpenGLFramebufferObject>, 4> m_bufferFBOs;
     std::array<std::unique_ptr<QOpenGLFramebufferObject>, 4> m_bufferFBOsBack; // Ping-pong
     std::array<bool, 4> m_useBuffers = {false, false, false, false};
     std::array<PassCompileState, 4> m_bufferCompile;
+    // "// @substeps 1" in the code of the running program: the pass renders
+    // once per frame, on the last substep, and owns its ping-pong state:
+    // m_bufferFrontLatest[i] is true when m_bufferFBOs[i] (not ...Back)
+    // holds its latest output.
+    std::array<bool, 4> m_bufferPerFrame = {false, false, false, false};
+    std::array<bool, 4> m_bufferFrontLatest = {false, false, false, false};
     std::array<QElapsedTimer, 4> m_bufferFboFailTimers;
     // A buffer pass feeds its own previous frame, so its FBO is state, not a
     // scratch surface. ensureBufferFBOs() only clears on CREATION, which means
@@ -698,6 +768,7 @@ private:
     std::array<float, MAX_WINDOWS * 4> m_windowRectsPrev = {};  // previous render-frame extrapolation
     std::array<float, MAX_WINDOWS * 2> m_windowVelocities = {}; // vx, vy per window (px/sec)
     qint64 m_windowRectsSequenceSeen = -1;
+    const QObject *m_windowSourceSeen = nullptr;  // source m_windowRectsSequenceSeen counts
     QElapsedTimer m_windowRectsBaseTimer;
 
     // Experimental: multi-monitor + virtual desktop uniforms.

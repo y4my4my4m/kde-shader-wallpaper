@@ -1,5 +1,6 @@
 // Rainy Window — Buffer C: the city behind the glass, out of focus.
 // @channels bufferA, tex1
+// @substeps 1
 //
 // rgb: the street at uv = fragCoord / iResolution with its lights blurred
 // to bokeh; w 1. Only the image pass reads it, so it is drawn on the last

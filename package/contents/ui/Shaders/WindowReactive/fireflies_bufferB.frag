@@ -1,5 +1,6 @@
 // Fireflies — Buffer B: firefly bins.
 // @channels bufferA, self
+// @substeps 1
 //
 // Bin (x, y), x < binCols, y < BINS_PER_H, covers the square
 // [x, x+1] x [y, y+1] / BINS_PER_H (H units). It lists the ids + 1 of up to

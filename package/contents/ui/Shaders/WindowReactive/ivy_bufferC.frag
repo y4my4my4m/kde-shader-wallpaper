@@ -1,5 +1,6 @@
 // Ivy — Buffer C: render hints and leaf rustle.
 // @channels bufferA, bufferB, self
+// @substeps 1
 //
 // Refreshed on the last step of each frame and copied through on the
 // others. One texel per grid cell:

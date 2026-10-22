@@ -1,5 +1,6 @@
 // Aquarium — Buffer B: what each screen tile has to draw.
 // @channels bufferA
+// @substeps 1
 //
 // The texel at the lower-left corner of each tileSpan x tileSpan block holds
 // the sets for the screen fraction the block covers; other texels are 0.

@@ -1,5 +1,6 @@
 // Ant Colony — Buffer C: scent and walking-distance fields.
 // @channels bufferA, bufferB, self
+// @substeps 1
 //
 // One texel per grid cell:
 //   x  "to food" scent, laid by ants carrying food home

@@ -27,6 +27,7 @@ set(SHADER_WALLPAPER_SOURCES
     input/audiocapture.cpp
     input/windowtracker.cpp
     input/virtualdesktopwatcher.cpp
+    input/screenlockwatcher.cpp
     
     # Import
     import/shadertoyapi.cpp
@@ -57,6 +58,7 @@ set(SHADER_WALLPAPER_HEADERS
     input/audiocapture.h
     input/windowtracker.h
     input/virtualdesktopwatcher.h
+    input/screenlockwatcher.h
     
     # Import
     import/shadertoyapi.h

@@ -35,7 +35,8 @@ kde-shader-wallpaper/
 │   ├── input/                  # Input handling
 │   │   ├── cursortracker.*     # Global cursor (XCB/Wayland)
 │   │   ├── audiocapture.*      # PipeWire audio
-│   │   └── windowtracker.*     # Window position tracking
+│   │   ├── windowtracker.*     # Window position tracking
+│   │   └── screenlockwatcher.* # Session lock state (pause)
 │   │
 │   ├── import/                 # Shader import
 │   │   ├── shadertoyapi.*      # Shadertoy REST client
@@ -187,10 +188,13 @@ ShaderLibrary reads two roots with the same layout:
 
 ## Performance Considerations
 
-1. **FPS Limiting**: ShaderEngine uses a timer to limit frame rate
-2. **Pause Detection**: WindowModel monitors for fullscreen/maximized windows
+1. **FPS Limiting**: ShaderEngine uses a timer to limit frame rate. Only that timer calls `update()`; other items animating in the same window do not re-render the shader
+2. **Pause Detection**: WindowModel monitors for fullscreen/maximized windows; the desktop instance also pauses while the session is locked (ScreenLockWatcher, `org.freedesktop.ScreenSaver.ActiveChanged`)
 3. **Audio Processing**: Runs at fixed 60Hz independent of shader FPS
-4. **Buffer Optimization**: Ping-pong buffering reduces GPU stalls
+4. **Buffer Optimization**: Ping-pong buffering reduces GPU stalls. A buffer pass that steps once per frame declares `// @substeps 1` and skips the substep copies
+5. **Window Tracking**: X events gate the polls. An idle desktop costs no timer and no X requests; a moved window costs two requests per tracked candidate; map, unmap, client list and attribute changes re-read every client. The renderer reads the tracker directly (`windowSource`)
+6. **Per-frame Signals**: `iTimeChanged`, `iFrameChanged` and the frame-time statistics reach the GUI thread only while `frameSignals` is on, which follows the performance HUD
+7. **Renderer CPU**: Uniform locations are cached per program, and the `@shared` split of the main file runs only when the code changes
 
 ## Building from Source
 

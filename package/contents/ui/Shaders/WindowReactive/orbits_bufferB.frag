@@ -1,5 +1,6 @@
 // Orbits — Buffer B: trail light.
 // @channels bufferA, self
+// @substeps 1
 //
 // One texel per grid cell: rgb trail light, w unused. Once per frame (last
 // substep) the light decays by exp(-frame dt / TRAIL_SECONDS) and every body

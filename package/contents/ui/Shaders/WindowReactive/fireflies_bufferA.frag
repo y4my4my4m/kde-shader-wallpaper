@@ -1,5 +1,6 @@
 // Fireflies — Buffer A: firefly records and globals.
 // @channels self, bufferC
+// @substeps 1
 //
 // Layout in fireflies_common.frag. iChannel0 is this buffer's previous
 // step, iChannel1 Buffer C (light fields) as of the previous frame. The
