@@ -3,133 +3,94 @@
 //
 // Shader Tweaks Panel
 // ---------------------
-// Lightweight, self-contained component that parses the active shader's
-// source for tweakable top-level constants and exposes them as live UI
-// controls. Inspired by the Plasma 5 ancestor of this project, but with:
+// Parses a shader's source for tweakable top-level constants and exposes
+// them as live controls:
 //
-//   * a real (per-line, brace-aware) parser that skips function bodies,
-//     comments, and operator assignments like `c.r = 0.5;`
-//   * support for optional metadata in trailing line comments:
+//   * per-line, brace-aware parser that skips function bodies, comments,
+//     and operator assignments like `c.r = 0.5;`
+//   * optional metadata in trailing line comments:
 //         float SPEED = 1.0; // @range(0.1, 5.0, 0.1) @label("Animation Speed")
 //         vec3  TINT  = vec3(0.2, 0.4, 1.0); // @color @label("Background tint")
-//   * automatic colour detection for vec3 literals whose components all
-//     fall in [0, 1] (heuristic, can be opted out of with @vec3)
-//   * per-shader persistence in QSettings, keyed by shaderId
-//   * full reset (per-row and all-rows), with non-destructive editing
-//     (the file on disk is never modified)
+//   * colour detection for vec3 literals with all components in [0, 1]
+//     (opt out with @vec3)
 //
-// Output contract: when the user adjusts any control, the panel emits
-// `tweaksChanged(modifiedCode)`. The host wires that into the engine's
-// inline-code path (cfg_selectedShaderCode) to apply changes live.
+// originalSource supplies the declarations and their defaults;
+// currentSource (the code that runs, possibly already tweaked or edited)
+// supplies the current values and is the text that gets rewritten.
+// tweaksChanged(code) carries the rewritten source, or "" when it equals
+// originalSource. Emission is debounced: a slider drag produces one write.
 
-import QtCore
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
-import org.kde.kirigamiaddons.formcard as FormCard
 
 ColumnLayout {
     id: root
 
-    // ------------------------------------------------------------------
-    // Public API
-    // ------------------------------------------------------------------
-    // Original shader source as loaded from disk / pasted. Treat as
-    // immutable — the panel never mutates this string, only re-derives
-    // the modified output from it.
-    property string sourceCode: ""
-    // Stable identifier used as a settings namespace, so tweak values
-    // survive shader switches and config reopens.
-    property string shaderId: ""
-    // When false, the panel is silent and never touches the output.
-    property bool active: false
+    property string originalSource: ""
+    property string currentSource: ""
+    property bool active: true
+    readonly property int count: tweakables.count
+    readonly property bool dirty: _dirty
 
-    // Emitted whenever the modified code differs from sourceCode (or
-    // becomes equal again after a reset).
-    //   modifiedCode == "" -> caller should fall back to the file.
     signal tweaksChanged(string modifiedCode)
-
-    // Emitted when the user asks to commit the current tweaks back to
-    // the on-disk file. Hosts should overwrite the source path with
-    // `modifiedCode`, then call `resetAll()` so the panel re-parses
-    // (the tweaks have effectively become the new defaults).
     signal saveRequested(string modifiedCode)
-
-    // Emitted when the user asks to save the tweaked shader under a
-    // new name. Hosts should prompt for the name and then call the
-    // library's saveShaderAs(...). `modifiedCode` is the full GLSL to
-    // write.
     signal saveAsRequested(string modifiedCode)
 
-    // ------------------------------------------------------------------
-    // Internal model
-    // ------------------------------------------------------------------
-    // Each entry:
-    //   {
-    //     name:    string      symbol name
-    //     kind:    "float" | "color" | "vec3" | "int" | "define-float" | "define-int" | "bool"
-    //     line:    int         0-based index in sourceCode
-    //     declaration: string  the full matched declaration (for tooltip)
-    //     defaults:            kind-specific default value (number or [r,g,b])
-    //     value:               kind-specific current value
-    //     min, max, step:      number, optional (from @range hint)
-    //     label:    string     human-friendly name (from @label hint, else name)
-    //     forceColor: bool     true if @color hint requested
-    //     forceVec3:  bool     true if @vec3 hint suppresses colour heuristic
-    //   }
-    //
-    // dynamicRoles=true lets a single `value` role hold a number for one
-    // row and a 3-element array for the next without ListModel coercing
-    // them to the type it inferred from the very first append.
+    // Entry fields:
+    //   name, kind ("float" | "color" | "vec3" | "int" | "define-float" |
+    //   "define-int" | "bool"), line (0-based in originalSource),
+    //   declaration, defaults, value, min, max, step, label, forceColor,
+    //   forceVec3.
+    // dynamicRoles: `value` holds a number in one row and an array in the
+    // next; a static ListModel would coerce to the first row's type.
     ListModel { id: tweakables; dynamicRoles: true }
 
-    // QSettings-backed persistence. The actual key namespace is set
-    // per-shader inside `_loadPersistedValues()`.
-    Settings {
-        id: persistence
-        category: "ShaderTweaks"
-        // We store one JSON blob per shaderId: { name: value, ... }.
-        // Using a plain string property keeps the QSettings schema flat
-        // and trivially diffable. Empty string means "no tweaks yet".
-        property string allValuesJson: "{}"
-    }
-
-    // Last code we emitted. We use this to dedupe redundant signals
-    // (important: avoids feedback loops when the host writes our output
-    // back into cfg_selectedShaderCode which triggers our re-parse).
+    property bool _dirty: false
+    property string _pending: ""
     property string _lastEmitted: ""
 
-    // ------------------------------------------------------------------
-    // Lifecycle
-    // ------------------------------------------------------------------
-    onSourceCodeChanged: Qt.callLater(_refresh)
-    onShaderIdChanged:   Qt.callLater(_refresh)
-    onActiveChanged:     Qt.callLater(_refresh)
+    Timer {
+        id: emitTimer
+        interval: 300
+        onTriggered: root._emit(root._pending)
+    }
 
+    onOriginalSourceChanged: Qt.callLater(_refresh)
+    onCurrentSourceChanged: if (currentSource !== _lastEmittedFull) Qt.callLater(_refresh)
+    onActiveChanged: Qt.callLater(_refresh)
     Component.onCompleted: _refresh()
 
+    // The full text last handed out (or originalSource for ""), so the
+    // round trip through the host does not re-parse.
+    property string _lastEmittedFull: ""
+
     function _refresh() {
-        if (!active || !sourceCode || sourceCode.length < 8) {
-            tweakables.clear()
-            _emit("")
-            return
-        }
-        const parsed = _parseTweakables(sourceCode)
-        const persisted = _loadPersistedValues()
+        // A pending emission belongs to the source being replaced.
+        emitTimer.stop()
+        _pending = ""
+        _lastEmitted = ""
         tweakables.clear()
+        _dirty = false
+        if (!active || !originalSource || originalSource.length < 8) return
+        const parsed = _parseTweakables(originalSource)
+        const current = currentSource && currentSource !== originalSource
+            ? _parseTweakables(currentSource) : []
+        const currentByName = {}
+        for (const c of current) currentByName[c.name] = c
         for (const t of parsed) {
-            const stored = persisted[t.name]
-            if (stored !== undefined) {
-                // Defend against stale/malformed persisted values from older
-                // panel versions so we never clobber shader defaults with
-                // bad data (e.g. vec3 color becoming numeric 0 -> black).
-                t.value = _coerceStoredValue(t.kind, stored, t.defaults)
-            }
-            tweakables.append(t)
+            const c = currentByName[t.name]
+            if (c && c.kind === t.kind) t.value = _clone(c.value)
+            if (!_valueEquals(t.value, t.defaults)) _dirty = true
+            // append() turns a JS array into a nested ListModel and drops
+            // its numbers; setProperty() stores the array as is.
+            tweakables.append(Object.assign({}, t, { value: 0, defaults: 0 }))
+            tweakables.setProperty(tweakables.count - 1, "value", _clone(t.value))
+            tweakables.setProperty(tweakables.count - 1, "defaults", _clone(t.defaults))
         }
-        _recompute()
+        _lastEmittedFull = currentSource
     }
 
     // ------------------------------------------------------------------
@@ -165,8 +126,7 @@ ColumnLayout {
             }
             work = stripped
 
-            // Strip // line comments BUT remember them — we want to read
-            // optional @range / @label / @color metadata out of them.
+            // Line comments carry the @range / @label / @color metadata.
             let metaComment = ""
             const ci = work.indexOf("//")
             if (ci >= 0) {
@@ -174,8 +134,7 @@ ColumnLayout {
                 work = work.substring(0, ci)
             }
 
-            // Track brace depth on the cleaned line so we never match
-            // declarations that live inside a function body.
+            // Brace depth: declarations inside function bodies are skipped.
             for (const ch of work) {
                 if (ch === "{") braceDepth++
                 else if (ch === "}") braceDepth = Math.max(0, braceDepth - 1)
@@ -350,33 +309,40 @@ ColumnLayout {
     // ------------------------------------------------------------------
     // Code rewriter
     // ------------------------------------------------------------------
+    // Rewrites the declarations in currentSource (located by name, so hand
+    // edits elsewhere in the file survive).
     function _recompute() {
-        if (!active) {
-            _emit("")
-            return
-        }
-        if (tweakables.count === 0) {
-            _emit("")
-            return
-        }
-        const lines = sourceCode.split("\n")
+        const base = currentSource && currentSource.length > 0 ? currentSource : originalSource
+        const lines = base.split("\n")
+        const lineByName = {}
+        for (const d of _parseTweakables(base)) lineByName[d.name] = d.line
         let dirty = false
         for (let i = 0; i < tweakables.count; i++) {
             const t = tweakables.get(i)
-            if (_valueEquals(t.value, t.defaults)) continue
-            dirty = true
-            const lineIdx = t.line
-            if (lineIdx < 0 || lineIdx >= lines.length) continue
+            if (!_valueEquals(t.value, t.defaults)) dirty = true
+            const lineIdx = lineByName[t.name]
+            if (lineIdx === undefined || lineIdx < 0 || lineIdx >= lines.length) continue
             lines[lineIdx] = _rewriteLine(lines[lineIdx], t)
         }
-        _persistValues()
-        _emit(dirty ? lines.join("\n") : "")
+        _dirty = dirty
+        const out = lines.join("\n")
+        _pending = out === originalSource ? "" : out
+        _lastEmittedFull = out
+        emitTimer.restart()
     }
 
     function _emit(code) {
         if (code === _lastEmitted) return
         _lastEmitted = code
         tweaksChanged(code)
+    }
+
+    // Applies any pending change now (e.g. before the dialog closes).
+    function flush() {
+        if (emitTimer.running) {
+            emitTimer.stop()
+            _emit(_pending)
+        }
     }
 
     function _rewriteLine(line, t) {
@@ -437,70 +403,6 @@ ColumnLayout {
         return a === b
     }
 
-    function _coerceStoredValue(kind, stored, fallback) {
-        switch (kind) {
-        case "float":
-        case "define-float":
-            return (typeof stored === "number" && isFinite(stored)) ? stored : fallback
-        case "int":
-        case "define-int":
-            return (typeof stored === "number" && isFinite(stored)) ? Math.round(stored) : fallback
-        case "bool":
-            return (typeof stored === "boolean") ? stored : fallback
-        case "vec3":
-        case "color":
-            if (Array.isArray(stored)
-                    && stored.length === 3
-                    && typeof stored[0] === "number" && isFinite(stored[0])
-                    && typeof stored[1] === "number" && isFinite(stored[1])
-                    && typeof stored[2] === "number" && isFinite(stored[2])) {
-                return [stored[0], stored[1], stored[2]]
-            }
-            return fallback
-        }
-        return fallback
-    }
-
-    // ------------------------------------------------------------------
-    // Persistence
-    // ------------------------------------------------------------------
-    function _key() {
-        return shaderId && shaderId.length > 0 ? shaderId : ""
-    }
-
-    function _loadPersistedValues() {
-        const key = _key()
-        if (!key) return {}
-        try {
-            const all = JSON.parse(persistence.allValuesJson || "{}")
-            return all[key] || {}
-        } catch (e) {
-            return {}
-        }
-    }
-
-    function _persistValues() {
-        const key = _key()
-        if (!key) return
-        let all
-        try { all = JSON.parse(persistence.allValuesJson || "{}") }
-        catch (e) { all = {} }
-        const bucket = {}
-        let anyDirty = false
-        for (let i = 0; i < tweakables.count; i++) {
-            const t = tweakables.get(i)
-            if (_valueEquals(t.value, t.defaults)) continue
-            bucket[t.name] = _clone(t.value)
-            anyDirty = true
-        }
-        if (anyDirty) {
-            all[key] = bucket
-        } else {
-            delete all[key]
-        }
-        persistence.allValuesJson = JSON.stringify(all)
-    }
-
     // ------------------------------------------------------------------
     // Public actions
     // ------------------------------------------------------------------
@@ -530,64 +432,42 @@ ColumnLayout {
     // ------------------------------------------------------------------
     spacing: Kirigami.Units.smallSpacing
 
-    // Header / status row
+    // Full tweaked source, or "" when it matches originalSource.
+    readonly property string modifiedCode: _lastEmittedFull.length > 0 && _lastEmittedFull !== originalSource
+        ? _lastEmittedFull : ""
+
     RowLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Kirigami.Icon {
-            source: "configure"
-            Layout.preferredWidth: Kirigami.Units.iconSizes.small
-            Layout.preferredHeight: Kirigami.Units.iconSizes.small
-            opacity: 0.7
-        }
         Label {
             Layout.fillWidth: true
-            text: tweakables.count === 0
-                ? i18n("No tweakable constants detected in this shader.")
-                : i18np("Detected %1 tweakable value.", "Detected %1 tweakable values.", tweakables.count)
-            opacity: 0.85
+            text: i18np("%1 adjustable value", "%1 adjustable values", tweakables.count)
+            color: Kirigami.Theme.disabledTextColor
             elide: Text.ElideRight
         }
-        // ------------------------------------------------------------
-        // Action buttons. Disabled when nothing has been tweaked so the
-        // user gets clear visual feedback about what they can do.
-        // ------------------------------------------------------------
-        Button {
-            text: i18n("Save")
-            icon.name: "document-save"
-            enabled: tweakables.count > 0 && root._lastEmitted.length > 0
-            ToolTip.visible: hovered
-            ToolTip.text: i18n("Write these tweaks back into the current .frag file. Cannot be undone.")
-            onClicked: root.saveRequested(root._lastEmitted)
-        }
-        Button {
-            text: i18n("Save as…")
-            icon.name: "document-save-as"
-            enabled: tweakables.count > 0 && root._lastEmitted.length > 0
-            ToolTip.visible: hovered
-            ToolTip.text: i18n("Save the tweaked shader as a new file in your Imported library.")
-            onClicked: root.saveAsRequested(root._lastEmitted)
-        }
-        Button {
-            text: i18n("Reset all")
+        ToolButton {
+            text: i18n("Reset All")
             icon.name: "edit-undo"
-            enabled: tweakables.count > 0 && root._lastEmitted.length > 0
+            enabled: root._dirty
             onClicked: root.resetAll()
         }
-    }
-
-    // Hint label, shown only when nothing was found.
-    Label {
-        Layout.fillWidth: true
-        visible: tweakables.count === 0 && root.active
-        opacity: 0.6
-        wrapMode: Text.WordWrap
-        font.pointSize: Kirigami.Theme.smallFont.pointSize
-        text: i18n("Tip: tweakables are top-level `float`, `int`, `bool`, `vec3` "
-                 + "declarations and `#define` literals. Annotate with a trailing "
-                 + "comment like `// @range(0, 5, 0.1) @label(\"Speed\")` for "
-                 + "better control bounds.")
+        ToolButton {
+            text: i18n("Save to File…")
+            icon.name: "document-save"
+            enabled: root.modifiedCode.length > 0
+            ToolTip.visible: hovered
+            ToolTip.text: i18n("Write the tweaked values into the shader file")
+            onClicked: { root.flush(); root.saveRequested(root.modifiedCode) }
+        }
+        ToolButton {
+            text: i18n("Save as New…")
+            icon.name: "document-save-as"
+            enabled: root.modifiedCode.length > 0
+            ToolTip.visible: hovered
+            ToolTip.text: i18n("Save the tweaked shader as a new file in your library")
+            onClicked: { root.flush(); root.saveAsRequested(root.modifiedCode) }
+        }
     }
 
     // The list of detected tweakables.
@@ -599,7 +479,7 @@ ColumnLayout {
             spacing: 2
 
             readonly property var modelRow: tweakables.get(index)
-            readonly property bool isDirty: modelRow && !root._valueEquals(modelRow.value, modelRow.defaults)
+            readonly property bool isDirty: !!modelRow && !root._valueEquals(modelRow.value, modelRow.defaults)
 
             RowLayout {
                 Layout.fillWidth: true
@@ -609,18 +489,19 @@ ColumnLayout {
                 Rectangle {
                     width: 8; height: 8; radius: 4
                     color: row.isDirty ? Kirigami.Theme.highlightColor : "transparent"
-                    border.color: row.isDirty ? Kirigami.Theme.highlightColor : Kirigami.Theme.separatorColor
+                    border.color: row.isDirty ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
                     border.width: 1
                     Layout.alignment: Qt.AlignVCenter
                 }
 
                 Label {
                     text: model.label
-                    font.bold: true
-                    Layout.preferredWidth: Math.max(120, implicitWidth)
+                    Layout.preferredWidth: Math.max(Kirigami.Units.gridUnit * 6,
+                                                    Math.min(implicitWidth, root.width * 0.3))
                     elide: Text.ElideRight
                     ToolTip.visible: labelHover.hovered
-                    ToolTip.text: model.declaration + "  (line " + (model.line + 1) + ")"
+                    ToolTip.text: i18nc("@info:tooltip source declaration and line number", "%1 (line %2)",
+                                        model.declaration.trim(), model.line + 1)
                     HoverHandler { id: labelHover }
                 }
 
@@ -658,19 +539,24 @@ ColumnLayout {
                     spacing: Kirigami.Units.smallSpacing
                     property real _min: model.min !== undefined ? model.min : 0
                     property real _max: model.max !== undefined ? model.max : 1
+                    property real _step: model.step !== undefined && model.step > 0 ? model.step : (_max - _min) / 200
+                    // Snapping is done here: a stepSize on the Slider makes
+                    // the desktop style draw one tick mark per step.
                     Slider {
                         id: slider
                         Layout.fillWidth: true
                         from: parent._min
                         to:   parent._max
-                        stepSize: model.step !== undefined ? model.step : (parent._max - parent._min) / 200
                         value: model.value
-                        onMoved: root.setValue(index, value)
+                        onMoved: {
+                            const st = parent._step
+                            root.setValue(index, st > 0 ? Math.round((value - parent._min) / st) * st + parent._min : value)
+                        }
                     }
                     Label {
                         text: Number(slider.value).toFixed(3)
                         font.family: "monospace"
-                        Layout.preferredWidth: 64
+                        Layout.preferredWidth: Kirigami.Units.gridUnit * 3.5
                         horizontalAlignment: Text.AlignRight
                     }
                 }
@@ -704,9 +590,9 @@ ColumnLayout {
                 RowLayout {
                     id: vecRow
                     spacing: Kirigami.Units.smallSpacing
-                    // We can't bind Repeater children to row.modelRow.value[k]
-                    // directly because ListModel doesn't propagate nested-array
-                    // changes — read via setValue/getValue helpers instead.
+                    // ListModel does not notify nested-array changes, so the
+                    // components go through setValue instead of binding to
+                    // row.modelRow.value[k].
                     Repeater {
                         model: 3
                         delegate: SpinBox {
@@ -745,7 +631,7 @@ ColumnLayout {
                         radius: 4
                         color: colRow.current
                         border.width: 1
-                        border.color: Kirigami.Theme.separatorColor
+                        border.color: Kirigami.Theme.disabledTextColor
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor

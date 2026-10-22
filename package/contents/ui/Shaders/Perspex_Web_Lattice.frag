@@ -1,5 +1,6 @@
 // https://www.shadertoy.com/view/Mld3Rn
 // Credits to Shane
+// @texture0 Resources/Shadertoy_London.jpg
 
 /*
     Perspex Web Lattice
@@ -38,7 +39,6 @@
 
 */
 
-// property Image iChannel0: Image { source: "./Shadertoy_London.jpg" }
 
 #define FAR 2.
 

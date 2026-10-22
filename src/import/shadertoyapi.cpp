@@ -10,6 +10,8 @@
 #include <QRegularExpression>
 #include <QUrlQuery>
 
+#include <utility>
+
 static const QString API_BASE = QStringLiteral("https://www.shadertoy.com/api/v1");
 
 ShadertoyAPI::ShadertoyAPI(QObject *parent)
@@ -157,10 +159,12 @@ void ShadertoyAPI::fetchPopular(int count)
 
 void ShadertoyAPI::cancel()
 {
-    if (m_currentReply) {
-        m_currentReply->abort();
-        m_currentReply->deleteLater();
-        m_currentReply = nullptr;
+    // abort() emits finished() synchronously. The reply is detached first:
+    // no response handler runs, and none clears m_currentReply mid-cancel.
+    if (auto *reply = std::exchange(m_currentReply, nullptr)) {
+        reply->disconnect(this);
+        reply->abort();
+        reply->deleteLater();
     }
     setBusy(false);
 }

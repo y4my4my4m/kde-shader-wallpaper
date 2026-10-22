@@ -1,8 +1,8 @@
 // https://www.shadertoy.com/view/XlfGR4
 // Credits to Nrx
 // Modified to use texture instead of sound input
+// @texture0 Resources/Shadertoy_RGBA_Noise_Small.png
 
-// property Image iChannel0: Image { source: "./Shadertoy_RGBA_Noise_Small.png" }
 
 // Parameters
 #define CAMERA_FOCAL_LENGTH	1.5

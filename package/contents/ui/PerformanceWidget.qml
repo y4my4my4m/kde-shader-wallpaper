@@ -129,9 +129,10 @@ Rectangle {
                 radius: 6
                 color: root.tierColor
                 
-                // Pulse animation for high/extreme tiers
+                // Pulse for high/extreme tiers; gated on visibility because a
+                // running animation forces the window to render every vsync.
                 SequentialAnimation on opacity {
-                    running: root.performanceTier >= 2
+                    running: root.visible && root.performanceTier >= 2
                     loops: Animation.Infinite
                     NumberAnimation { to: 0.5; duration: 500 }
                     NumberAnimation { to: 1.0; duration: 500 }
@@ -241,12 +242,6 @@ Rectangle {
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 6
-                    
-                    // Power icon
-                    Text {
-                        text: "⚡"
-                        font.pixelSize: 12
-                    }
                     
                     Column {
                         spacing: 0

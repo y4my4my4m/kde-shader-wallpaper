@@ -1,5 +1,6 @@
 // url: https://www.shadertoy.com/view/XsSXzV
 // credits: leon
+// @texture0 Resources/wallpaper.jpg
 
 // mod by: y4my4my4m
 

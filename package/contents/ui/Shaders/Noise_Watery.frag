@@ -1,4 +1,5 @@
 // https://www.shadertoy.com/view/MssSRS
+// @texture0 Resources/Shadertoy_Gray_Noise_Medium.png
 
 // Noise animation - Watery by nimitz (twitter: @stormoid)
 // https://www.shadertoy.com/view/MssSRS
@@ -12,7 +13,6 @@
 
 //#define CENTERED
 
-// property Image iChannel0: Image { source: "./Shadertoy_Gray_Noise_Medium.png" }
 
 #define time iTime*0.2
 

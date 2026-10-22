@@ -1,8 +1,8 @@
 // https://www.shadertoy.com/view/XlX3Rj
 // Credits to Kali
 // This content is under the MIT License.
+// @texture1 Shaders/Circuits_iChannel1.jpg
 
-//	property Image iChannel1: Image { source: "./Shader_Circuits_iChannel1.jpg" }
 #define time iTime*.02
 
 #define width .005

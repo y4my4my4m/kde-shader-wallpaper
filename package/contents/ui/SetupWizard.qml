@@ -289,7 +289,7 @@ Item {
                             
                             Label {
                                 id: copyToast
-                                text: "✓ " + i18n("Copied! Paste in terminal with Ctrl+Shift+V")
+                                text: i18n("Copied. Paste it in a terminal with Ctrl+Shift+V.")
                                 color: Kirigami.Theme.positiveTextColor
                                 visible: false
                                 Layout.alignment: Qt.AlignHCenter

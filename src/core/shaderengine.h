@@ -11,6 +11,7 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFramebufferObject>
 #include <QOpenGLTexture>
+#include <QOpenGLContext>
 #include <QElapsedTimer>
 #include <QTimer>
 #include <QUrl>
@@ -18,13 +19,16 @@
 #include <QVector3D>
 #include <QVector2D>
 
+#include "input/audiocapture.h"
+
 class QFileSystemWatcher;
+class QOpenGLTimerQuery;
 #include <memory>
 #include <array>
 #include <deque>
+#include <vector>
 
 class CursorTracker;
-class AudioCapture;
 
 /**
  * @brief Main shader rendering engine using QQuickFramebufferObject
@@ -67,6 +71,10 @@ class ShaderEngine : public QQuickFramebufferObject
     // cannot light up an HDR monitor by itself — the ceiling is the shell's
     // surface format, not this plugin.
     Q_PROPERTY(bool hdrPipeline READ hdrPipeline WRITE setHdrPipeline NOTIFY hdrPipelineChanged)
+
+    // Triangular-PDF dither of +-1 LSB on the image pass output when it is
+    // 8-bit (issue #76). No effect on buffer passes or the HDR pipeline.
+    Q_PROPERTY(bool dither READ dither WRITE setDither NOTIFY ditherChanged)
     
     // Time control
     Q_PROPERTY(qreal iTime READ iTime NOTIFY iTimeChanged)
@@ -113,6 +121,9 @@ class ShaderEngine : public QQuickFramebufferObject
     Q_PROPERTY(bool audioEnabled READ audioEnabled WRITE setAudioEnabled NOTIFY audioEnabledChanged)
     Q_PROPERTY(int audioChannel READ audioChannel WRITE setAudioChannel NOTIFY audioChannelChanged)
     Q_PROPERTY(QVariantList audioData READ audioData WRITE setAudioData NOTIFY audioDataChanged)
+    // When set, the renderer copies the 512x2 RGBA float texture straight
+    // from the capture object and audioData is ignored.
+    Q_PROPERTY(AudioCapture *audioSource READ audioSource WRITE setAudioSource NOTIFY audioSourceChanged)
     
     // Multi-monitor uniforms (experimental). When set, the shader gets:
     //   uniform vec2 iScreenOffset; // this screen's top-left in pixels
@@ -150,10 +161,11 @@ class ShaderEngine : public QQuickFramebufferObject
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorMessageChanged)
     Q_PROPERTY(bool hasError READ hasError NOTIFY hasErrorChanged)
 
-    // Most recent GL compile/link log (read-only, for the config UI's
-    // compile-error pane). Populated by the renderer via a queued
-    // invocation whenever compileShader / compileBufferShader fails.
+    // GL compile/link logs of the passes that currently fail, joined;
+    // empty when every active pass compiled. errorMessage / hasError cover
+    // file-load errors only.
     Q_PROPERTY(QString compileLog READ compileLog NOTIFY compileLogChanged)
+    Q_PROPERTY(bool compileFailed READ compileFailed NOTIFY compileFailedChanged)
     
     // Performance metrics
     Q_PROPERTY(qreal frameTime READ frameTime NOTIFY frameTimeChanged)
@@ -176,7 +188,14 @@ public:
     int currentFps() const { return m_currentFps; }
     qreal resolutionScale() const { return m_resolutionScale; }
     int bufferSimulationMaxHeight() const { return m_bufferSimulationMaxHeight; }
+    // bufferSimulationMaxHeight when > 0, else the main shader's
+    // "// @sim-max-height N" header directive, else 0 (native).
+    int effectiveBufferSimulationMaxHeight() const
+    {
+        return m_bufferSimulationMaxHeight > 0 ? m_bufferSimulationMaxHeight : m_simMaxHeightDirective;
+    }
     bool hdrPipeline() const { return m_hdrPipeline; }
+    bool dither() const { return m_dither; }
     qreal iTime() const { return m_iTime; }
     int iFrame() const { return m_iFrame; }
     qreal lastTimeDelta() const { return m_lastTimeDelta; }
@@ -188,6 +207,12 @@ public:
     QUrl iChannel1() const { return m_iChannel1; }
     QUrl iChannel2() const { return m_iChannel2; }
     QUrl iChannel3() const { return m_iChannel3; }
+    // Channel URL with a scheme-less relative path resolved against the
+    // shader library root.
+    QUrl resolvedChannelUrl(int channel) const
+    {
+        return (channel >= 0 && channel < 4) ? m_resolvedChannelUrls[channel] : QUrl();
+    }
     
     bool iChannel0Enabled() const { return m_iChannel0Enabled; }
     bool iChannel1Enabled() const { return m_iChannel1Enabled; }
@@ -214,6 +239,7 @@ public:
     bool audioEnabled() const { return m_audioEnabled; }
     int audioChannel() const { return m_audioChannel; }
     QVariantList audioData() const { return m_audioData; }
+    AudioCapture *audioSource() const { return m_audioSource.data(); }
     
     bool watchSourceFile() const { return m_watchSourceFile; }
     void setWatchSourceFile(bool enabled);
@@ -244,6 +270,7 @@ public:
     QString errorMessage() const { return m_errorMessage; }
     bool hasError() const { return !m_errorMessage.isEmpty(); }
     QString compileLog() const { return m_compileLog; }
+    bool compileFailed() const { return m_compileFailed; }
     
     qreal frameTime() const { return m_frameTime; }
     qreal averageFrameTime() const { return m_averageFrameTime; }
@@ -259,6 +286,7 @@ public:
     void setResolutionScale(qreal scale);
     void setBufferSimulationMaxHeight(int height);
     void setHdrPipeline(bool enabled);
+    void setDither(bool enabled);
     void setIMouse(const QVector4D &mouse);
     void setMouseEnabled(bool enabled);
     void setMouseBias(qreal bias);
@@ -293,6 +321,7 @@ public:
     void setAudioEnabled(bool enabled);
     void setAudioChannel(int channel);
     void setAudioData(const QVariantList &data);
+    void setAudioSource(AudioCapture *source);
     
     void setScreenOffset(const QVector2D &offset);
     void setScreenIndex(int index);
@@ -331,6 +360,7 @@ Q_SIGNALS:
     void resolutionScaleChanged();
     void bufferSimulationMaxHeightChanged();
     void hdrPipelineChanged();
+    void ditherChanged();
     void iTimeChanged();
     void iFrameChanged();
     void iMouseChanged();
@@ -367,6 +397,7 @@ Q_SIGNALS:
     void audioEnabledChanged();
     void audioChannelChanged();
     void audioDataChanged();
+    void audioSourceChanged();
     
     void watchSourceFileChanged();
     void sourceFileReloaded();  // fired when hot-reload triggered a reload
@@ -386,6 +417,7 @@ Q_SIGNALS:
     void errorMessageChanged();
     void hasErrorChanged();
     void compileLogChanged();
+    void compileFailedChanged();
     void frameTimeChanged();
     void performanceStatsChanged();
     
@@ -396,6 +428,7 @@ Q_SIGNALS:
 public Q_SLOTS:
     void updatePerformanceStats(qreal frameTimeMs);
     void setCompileLog(const QString &log);
+    void setCompileStatus(const QString &log, bool failed);
 
 private Q_SLOTS:
     void handleTimeout();
@@ -409,6 +442,10 @@ private:
     void setError(const QString &error);
     void clearError();
     void applyVisibilityState(bool visible);
+    void updateSimMaxHeightDirective();
+    void restartFrameCount();
+    void requestRepaintIfPaused();
+    static QUrl resolveTextureUrl(const QUrl &url);
 
     // Shader sources
     QUrl m_shaderSource;
@@ -422,10 +459,14 @@ private:
     qreal m_resolutionScale = 1.0;
     int m_bufferSimulationMaxHeight = 0;
     bool m_hdrPipeline = false;
+    bool m_dither = true;
+    int m_simMaxHeightDirective = 0;
 
     // Timing
     qreal m_iTime = 0.0;
-    int m_iFrame = 0;
+    // accumulateFrame() increments before each rendered frame, so -1 makes
+    // the first frame of a shader iFrame 0 (Shadertoy semantics).
+    int m_iFrame = -1;
     qreal m_lastTimeDelta = 1.0 / 60.0; // Shader-time delta of the last rendered frame.
     QElapsedTimer m_frameTimer;       // Per-frame delta for iTime accumulation.
     QTimer *m_renderTimer = nullptr;
@@ -455,6 +496,7 @@ private:
     bool m_iChannel1Enabled = true;
     bool m_iChannel2Enabled = true;
     bool m_iChannel3Enabled = false;
+    std::array<QUrl, 4> m_resolvedChannelUrls;
     
     // Buffers
     bool m_useBufferA = false;
@@ -480,6 +522,7 @@ private:
     bool m_audioEnabled = false;
     int m_audioChannel = 0;
     QVariantList m_audioData;
+    QPointer<AudioCapture> m_audioSource;
     
     // Experimental: multi-monitor screen uniforms
     QVector2D m_screenOffset;
@@ -509,6 +552,7 @@ private:
     // Error handling
     QString m_errorMessage;
     QString m_compileLog;
+    bool m_compileFailed = false;
     
     // Performance metrics
     qreal m_frameTime = 0.0;
@@ -533,36 +577,73 @@ public:
     void synchronize(QQuickFramebufferObject *item) override;
 
 private:
+    enum class CompileResult { Ok, Failed, Transient };
+
+    // Last compile attempt of one pass. A pass is recompiled only when its
+    // (code, common) pair differs from the attempted one.
+    struct PassCompileState {
+        QString code;
+        QString common;
+        bool attempted = false;
+        QString error;  // empty when the attempt succeeded
+    };
+
+    bool ensureContext();
+    void releaseGLResources(bool abandon);
     void initializeGL();
-    void compileShader(const QString &code);
-    void compileBufferShader(int bufferIndex, const QString &code);
-    void reportCompileFailure(const QString &stage, const QString &log);
-    void reportCompileSuccess();
+    CompileResult buildProgram(const QString &common, const QString &code, const QString &passLabel,
+                               std::unique_ptr<QOpenGLShaderProgram> &program, QString &error);
+    void compileMainPass(const QString &code, const QString &common);
+    void compileBufferPass(int bufferIndex, const QString &code, const QString &common);
+    void compileFallbackProgram();
+    bool compileAllowed() const;
+    void noteTransientCompileFailure();
+    void reportCompileStatus(const std::array<bool, 4> &activeBuffers);
     void ensureBufferFBOs(int bufferIndex);
-    void renderBuffer(int bufferIndex);
+    void renderBuffer(int bufferIndex, int substep);
     void renderMainPass();
     QSize computeBufferSimSize() const;
-    void updateUniforms(QOpenGLShaderProgram *program, bool forBufferPass = false);
+    QVector3D channelResolution(int inputType) const;
+    void updateUniforms(QOpenGLShaderProgram *program, const std::array<int, 4> &mapping,
+                        bool forBufferPass, int substep, int substeps);
     void loadTexture(int channel, const QUrl &url);
+    void uploadAudioTexture();
     void createQuadVAO();
     void bindChannelInput(int channelSlot, int inputType, int currentBuffer);
     void ensureLowResFBO();
     void blitLowResToOutput();
+    void beginFrameTiming();
+    void endFrameTiming();
 
     bool m_initialized = false;
-    bool m_needsRecompile = false;
-    
+
+    // Context the GL objects below belong to.
+    QPointer<QOpenGLContext> m_glContext;
+    bool m_hadContext = false;
+    bool m_isGles = false;
+    bool m_contextWarned = false;
+
     // Main shader
     std::unique_ptr<QOpenGLShaderProgram> m_shaderProgram;
-    QString m_currentShaderCode;
-    QString m_currentCommonCode;  // Common code to prepend to all shaders
+    PassCompileState m_mainCompile;
+
+    // Transient compile failures (empty log: lost or invalid context) back
+    // off instead of retrying every frame.
+    QElapsedTimer m_compileBackoffTimer;
+    int m_compileBackoffMs = 0;
+    bool m_fallbackFailed = false;
+
+    QString m_reportedCompileLog;
+    bool m_reportedCompileFailed = false;
+    bool m_compileStatusReported = false;
     
     // Buffer shaders and FBOs
     std::array<std::unique_ptr<QOpenGLShaderProgram>, 4> m_bufferPrograms;
     std::array<std::unique_ptr<QOpenGLFramebufferObject>, 4> m_bufferFBOs;
     std::array<std::unique_ptr<QOpenGLFramebufferObject>, 4> m_bufferFBOsBack; // Ping-pong
     std::array<bool, 4> m_useBuffers = {false, false, false, false};
-    std::array<QString, 4> m_bufferCodes;
+    std::array<PassCompileState, 4> m_bufferCompile;
+    std::array<QElapsedTimer, 4> m_bufferFboFailTimers;
     // A buffer pass feeds its own previous frame, so its FBO is state, not a
     // scratch surface. ensureBufferFBOs() only clears on CREATION, which means
     // that state used to survive a shader switch: load a new shader and it
@@ -577,10 +658,11 @@ private:
     // Channel textures
     std::array<std::unique_ptr<QOpenGLTexture>, 4> m_channelTextures;
     std::array<QUrl, 4> m_channelUrls;
-    // Last URL on each channel that failed to load. Lets us skip retrying
-    // every frame (was producing "Failed to load texture:" spam at 60+ Hz
-    // whenever a channel was enabled but pointed at a missing file).
+    // Last URL on each channel that failed to load, and when. A failed URL
+    // is retried every kTextureRetryMs; only its first failure is logged.
     std::array<QUrl, 4> m_channelFailedUrls;
+    std::array<QElapsedTimer, 4> m_channelRetryTimers;
+    static constexpr qint64 kTextureRetryMs = 2000;
     std::array<bool, 4> m_channelEnabled = {true, true, true, false};
     
     // Per-pass channel mapping
@@ -592,6 +674,11 @@ private:
         {-1, -1, -1, -1}   // Buffer D
     }};
     
+    // Image-pass mapping with the legacy audio slot applied: when audio is
+    // enabled and no active pass routes 20, audio replaces image slot
+    // m_audioChannel.
+    std::array<int, 4> m_effectiveImageMapping = {0, 1, 2, 3};
+
     // Audio texture
     GLuint m_audioTexId = 0;   // raw GL: QOpenGLTexture's cached bind state desyncs against the raw glBindTexture calls used for buffer FBO textures
     std::vector<float> m_audioData;
@@ -629,6 +716,7 @@ private:
     // at a fixed ~240 steps/sec independent of render FPS.
     int m_bufferSubSteps = 1;
     float m_iFrameRate = 60.0f;
+    bool m_dither = true;
     int m_iFrame = 0;
     QVector4D m_iMouse;
     QVector4D m_iDate;
@@ -643,9 +731,10 @@ private:
     // FBO size (the Qt-provided output FBO size, == item size).
     QSize m_fboSize;
 
-    // Buffer-pass simulation size. When bufferSimulationMaxHeight > 0 the
-    // buffer FBOs are rendered at this smaller size (aspect preserved) so
-    // wave simulations have Shadertoy-scale cell counts on big monitors.
+    // Buffer-pass simulation size. When the effective sim max height is
+    // > 0 the buffer FBOs are rendered at this smaller size (aspect
+    // preserved) so wave simulations have Shadertoy-scale cell counts on
+    // big monitors.
     int m_bufferSimulationMaxHeight = 0;
     QSize m_bufferSimSize;
 
@@ -655,6 +744,8 @@ private:
     qreal m_resolutionScale = 1.0;
     QSize m_lowResSize;
     std::unique_ptr<QOpenGLFramebufferObject> m_lowResFBO;
+    QElapsedTimer m_lowResFailTimer;
+    QSize m_lowResFailSize;
 
     // Experimental HDR pipeline: main-pass + low-res FBOs use GL_RGBA16F.
     bool m_hdrPipeline = false;
@@ -664,9 +755,20 @@ private:
     // Ping-pong state
     bool m_pingPong = false;
     
-    // Performance measurement
+    // Frame time: GL_TIME_ELAPSED queries read back once available, a few
+    // frames late. Without timer queries (GLES), CPU submit time.
+    static constexpr int kTimerQueryCount = 4;
+#if !QT_CONFIG(opengles2)
+    std::array<std::unique_ptr<QOpenGLTimerQuery>, kTimerQueryCount> m_timerQueries;
+#endif
+    int m_timerQueryHead = 0;
+    int m_timerQueryPending = 0;
+    bool m_timerQueryActive = false;
+    bool m_timerQueriesProbed = false;
+    bool m_timerQueriesSupported = false;
     QElapsedTimer m_perfTimer;
     qreal m_lastFrameTime = 0.0;
+    bool m_frameTimeFresh = false;
 
     // Cached pointer to the ShaderEngine for queued cross-thread invocations
     // (compile log reporting). Set in synchronize().

@@ -14,8 +14,9 @@
 //   wax border sparkle<- treble flash, hash-gated per cell
 //   global glow gain  <- pressure
 //   comb swell        <- kick envelope (gentle zoom)
-//   bees              <- 27 striped workers read from the BUFFER BEE TABLE
-//                        (columns 6..32: pos, heading, fade) — positions are
+//   wax caps          <- per-cell depth below the honey line
+//   bees              <- 54 striped workers read from the BUFFER BEE TABLE
+//                        (columns 6..59: pos, heading, fade) — positions are
 //                        per-frame constants, so the buffer computes each
 //                        once and this pass does one texel read + a gaussian
 //                        per bee instead of 2 beePath + ~5 hashes per PIXEL
@@ -43,16 +44,14 @@ vec3 pal(float t){
     return vec3(.55,.40,.25) + vec3(.45,.42,.38) *
            cos(TAU * (vec3(1.,.95,.9)*t + vec3(.05,.32,.6)));
 }
-// honey gamut (v19): a RAMP between two golds — dark amber and pale gold.
-// The earlier cosine palette left the family at phase extremes (red-brown,
-// greenish-gold, user-visible); a two-point ramp cannot leave it, ever.
+// honey gamut (v19): a ramp between two ambers; a two-point ramp cannot
+// leave the honey family. Linear light: sRGB ~(.74,.44,.13) .. (.97,.75,.30).
+// Phases past ring 5 saturate at .52, where k sits on its .18 floor (v21),
+// so the dark end is a red amber, not brown; depth shading supplies the
+// darks.
 vec3 honeyGold(float t){
-    // k is FLOORED at .18 and the dark endpoint is lifted (v21): the outer
-    // rings' saturated phase parked the cos at the dark end, turning the
-    // upper half of a full comb into flat mud-brown — the darkest legal
-    // honey must still read as amber
     float k = .18 + .82*(.5 + .5*cos(6.2831*t));
-    return mix(vec3(.60,.38,.11), vec3(.95,.70,.26), k);
+    return mix(vec3(.50, .16, .014), vec3(.93, .52, .075), k);
 }
 #define COLS 60.
 // pointy-top hex distance in units of circumradius (edge at .866)
@@ -109,99 +108,99 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     float wave = exp(-abs(ring - ripple) * .9) * step(ripple, 8.5);
 
     // ---- compose ----
+    // Colours below are linear light; the tone stage gamma-encodes once.
+    // pal() is sRGB-picked and squared into linear here: fed through the
+    // encode as-is it lifts the wax gaps to ~.24 grey and pales the honey.
     float hd = hexD(l);
-    // pixel-scaled edges (v14): the old constant-width smoothsteps spanned
-    // ~13-16 px on screen and read as an upscaled low-res image. The cell
-    // RIM now resolves in ~3 px (analytic footprint — dFdx kills the whole
-    // program in this engine), while wax bevel and interior dome keep their
-    // soft shading. aa = one screen pixel expressed in hd units.
+    // cell rim resolves in ~3 px (analytic footprint; dFdx is unavailable
+    // in this engine). aa = one screen pixel in hd units.
     float aa = 2. / (R * iResolution.y);
     float rim = smoothstep(.80 - 1.5*aa, .80 + 1.5*aa, hd);
-    float inner  = (1. - rim) * (1. - .30*smoothstep(.40, .80, hd));
+    float inner  = 1. - rim;
+    float dome   = 1. - smoothstep(.0, .80, hd);       // 1 at cell center
     float border = smoothstep(.72, .866, hd);
 
-    vec3 col = vec3(.045, .028, .012);                 // dark wax background
+    vec3 col = vec3(.010, .006, .0025);                // wax gap
     float lvlLine = (p.y + 1.) * .5;                   // 0 bottom .. 1 top
-    // shade shimmer (v17): the ORIGINAL identity stays — rose crown, amber
-    // honey (v16's explicit rose/blue ramp read as a green/yellow core with
-    // pink honey and was reverted by the user). The life comes from a hue
-    // WAVE instead: a small pal-phase modulation (±.09, ±.16 at the crown)
-    // TRAVELS OUTWARD through the rings (-ring*.55 = propagation), clocked
-    // by the bee clock (music pace; 1.7017 = 2pi*26/96, seamless at the
-    // wrap), staggered per cell (h*2) — every cell flickers within its own
-    // shade family and the flicker ripples across the whole comb. honeyPal
-    // inherits tArg, so the honey shimmers within the AMBER gamut for free.
+    // shade shimmer (v17): a small pal-phase wave travels outward through
+    // the rings (-ring*.55), clocked by the bee clock (1.7017 = 2pi*26/96,
+    // seamless at the wrap), staggered per cell (h*2). Crown swing biased
+    // negative (toward magenta); the positive direction runs to orange.
     float coreW = smoothstep(3.5, .5, ring);
-    // outward phase SATURATES at .52 (v20): unbounded ring*.06 (+ a high
-    // centroid) ran the palette past green into YELLOW at rings 10-14 —
-    // screen corners read "honeyed" above the honey line. Capping the
-    // ring+centroid sum ends the outward gradient on green/teal for any
-    // music; the per-cell jitter is added AFTER the cap so the corners
-    // stay multifloral instead of collapsing to one uniform tone
-    float tBase = min(ring*.06 + centS*.45, .52) + h*.06; // unshimmed phase —
-    // the honey keeps THIS one (v18): honeyPal was tuned for it, and the
-    // wave pushed the honey out of the amber gamut into green; the field
-    // wave is also halved (.05) so dry greens stay green — the crown keeps
-    // the stronger swing (.14) where the life belongs
-    // crown swing is biased NEGATIVE (toward magenta): the positive palette
-    // direction runs rose->orange->yellow (probed), and the user ruled out
-    // an orange center; kick/treble phase flicks removed for the same reason
-    float shim = (.05 + .04*coreW)
-               * sin((s4.z + s4.w)*1.7017 - ring*.55 + h*2.)
-               - .04*coreW;
+    // outward phase saturates at .52 (v20): past it the palette runs into
+    // yellow at rings 10-14. Per-cell jitter is added after the cap.
+    float tBase = min(ring*.06 + centS*.45, .52) + h*.06;
+    float shW = sin((s4.z + s4.w)*1.7017 - ring*.55 + h*2.);
+    float shim = (.05 + .04*coreW) * shW - .04*coreW;
     float tArg = tBase + shim;                         // cell palette phase
-    vec3 cellCol = pal(tArg);                          // walls borrow it too
+    vec3 cellCol = pal(tArg);
+    cellCol *= cellCol;                                // sRGB-picked -> linear
 
-    // every cell-interior term below carries a factor of `inner`, so wax
-    // border pixels (inner == 0, spatially coherent bands) skip it exactly
+    // honey: rises bottom-up across the whole comb (per-cell offset)
+    float surf = fill + (h - .5)*.06;
+    float honeyIn = step(lvlLine, surf);
+
+    // every cell-interior term carries `inner`; wall pixels skip the block
     if (inner > 0.){
-        // cell glow: ring+centroid palette, pressure gain, ripple boost
-        // concentric low-end choreography (v30): the BEAT shakes the seven
-        // core cells (fast brightness flutter, per-cell phase so they don't
-        // tremble in lockstep, alive only while the kick envelope rings),
-        // and the BASS swell lifts the ring around them (rings 2-5) — the
-        // dry-disk extension of the honey's bass breath
+        // concentric low end (v30): the beat flutters the seven core cells
+        // (per-cell phase), the bass swell lifts rings 2-5
         float crown7 = smoothstep(1.5, .5, ring);
         float diskW  = smoothstep(1.5, 2.5, ring) * smoothstep(5.5, 4., ring);
-        col += cellCol * inner * (g * (.22 + .80*press) + wave*.40 + .008
+        // idle floor breathes with the shimmer wave, so the comb stays
+        // alive in silence; the crown holds a brighter idle glow
+        float lift = g * (.22 + .80*press) + wave*.40
+                   + (.050 + .040*coreW) * (1. + .55*shW)
                    + crown7 * kick * .22 * sin(iTime*70. + h*40.)
-                   + diskW * .20 * bass);
+                   + diskW * .20 * bass;
+        // backlit cell: bright center, dark toward the wall
+        col += cellCol * inner * (.30 + 1.10*dome) * lift * 1.7;
 
-        // honey: rises bottom-up across the whole comb (per-cell hash offset).
-        // MULTIFLORAL: each cell's nectar keeps the hue of its flower (the
-        // same palette the dry comb shows — rose/green/blue), anchored to
-        // amber so it still reads as honey; per-cell maturity varies depth
-        float honeyIn = step(lvlLine, fill + (h - .5)*.06);
-        // empty cells: a whisper of SKY shows through the dry comb
-        col += vec3(.05, .09, .17) * inner * .55 * (1. - honeyIn)
+        // empty cells: a whisper of sky through the dry comb
+        col += vec3(.008, .016, .040) * inner * (1. - honeyIn)
                * smoothstep(.0, .4, lvlLine);
-        // nectar shade = the cell's palette phase mapped into the honey gamut
-        vec3 honeyBase = honeyGold(tBase) * (.75 + .45*h); // always gold —
-        // no shim: the amber gamut is not to be modulated
-        // the COMB CENTER is always RICH WARM GOLD (v29): the ramp's pale
-        // end happens to land at the central phases, which drained the
-        // warm golden heart the old palette had there ("znikł złocisto
-        // miodowy w środku") — coreW pulls it back, ramp variety survives
-        // outward
-        honeyBase = mix(honeyBase, vec3(.88, .52, .10) * (.80 + .40*h),
+        // multifloral nectar: the cell's unshimmed phase mapped into the
+        // amber gamut (no shim: the gamut is not modulated)
+        vec3 honeyBase = honeyGold(tBase) * (.75 + .45*h);
+        // comb center stays rich warm gold (v29)
+        honeyBase = mix(honeyBase, vec3(.80, .30, .022) * (.80 + .40*h),
                         coreW * .65);
-        // (per-cell maturity)
-        // the whole honey mass BREATHES with the bass envelope (v21) — the
-        // per-cell bass pulse was invisible under the .85 honey mix, so the
-        // bass gets its own explicit axis here
-        vec3 honey = honeyBase * (.14 + .45*g + .25*wave + .30*bass);
-        col = mix(col, honey * inner + col * .25, honeyIn * inner * .85);
-        // meniscus: bright line, tinted by the local nectar
-        col += mix(vec3(1., .75, .25), honeyBase, .45) * inner *
-               exp(-abs(lvlLine - (fill + (h - .5)*.06)) * 130.)
-               * (.18 + .60*bass) * step(.02, fill);   // meniscus rides bass
+        // depth: old honey at the bottom is dark amber, fresh honey under
+        // the surface glows; 0 at the surface, 1 at ~.6 screen below it
+        float depth = clamp((surf - lvlLine) * 1.6, 0., 1.);
+        // the honey mass breathes with the bass swell (v21)
+        float glow = .40 + .55*g + .25*wave + .45*bass;
+        vec3 honey = honeyBase * glow * mix(1., .42, depth)
+                   * (.22 + 1.25*dome);
+        // fresh honey under the surface glows
+        honey += honeyBase * glow * .50 * exp(-depth * 6.) * dome;
+        // refraction ring inside the wall and a gloss spot (upper left)
+        honey += honeyBase * glow * .30 * exp(-abs(hd - .72) * 34.);
+        vec2 sl = l - vec2(-.25, .30);
+        float gloss = exp(-dot(sl, sl) * 30.);
+        honey += vec3(1., .78, .45) * gloss * (.05 + .14*bass) * (1. - .5*depth);
+        // capped cells: matured honey under a dark wax cap, decided per CELL
+        // (center depth) so a cap never splits along the scan line; the
+        // share grows with depth (none near the surface, ~45% at the bottom)
+        float cDepth = clamp((surf - (cen.y + 1.)*.5) * 1.6, 0., 1.);
+        float h2 = hash12(id + 31.7);
+        float cap = step(h2, cDepth*.60 - .15);
+        vec2 cl = l - vec2(-.22, .26);
+        vec3 capCol = vec3(.20, .085, .012) * (.80 + .40*h2)
+                    * (.35 + .80*dome) * (.75 + .45*glow)
+                    + vec3(.55, .36, .14) * exp(-dot(cl, cl) * 16.) * .22;
+        honey = mix(honey, capCol, cap);
+        col = mix(col, honey, honeyIn * inner);
+        // meniscus: bright line tinted by the nectar, rides the bass
+        col += mix(vec3(1., .55, .12), honeyBase, .40) * inner *
+               exp(-abs(lvlLine - surf) * 130.)
+               * (.22 + .75*bass) * step(.02, fill);
     }
 
     // CRACK: golden flash + exact-voronoi fissure network + honey vapors
     if (crackT < .999){
         float seed = s4.y * 17.31;
         float low = smoothstep(1., .2, lvlLine);       // honey region weight
-        col += vec3(1., .78, .28) * inner * crackE * .35 * low;
+        col += vec3(1., .55, .08) * inner * crackE * .30 * low;
 
         // fissures: exact border distance (T14), sites seeded per crack
         vec2 vp = p * 2.6;
@@ -224,7 +223,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             if (dot(mr - r, mr - r) > 1e-5)
                 bd = min(bd, dot(.5*(mr + r), normalize(r - mr)));
         }
-        col += vec3(1., .58, .12) * exp(-bd * 26.) * exp(-crackT * 2.5) * low;
+        col += vec3(1., .40, .03) * exp(-bd * 26.) * exp(-crackT * 2.5) * low;
 
         // honey vapors: four puffs rise from the old surface and thin out
         for (int i = 0; i < 4; i++){
@@ -235,87 +234,82 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
             float r2v = dot(p - vc, p - vc) / (vr*vr);
             if (r2v < 1.){
                 float prof = (1. - r2v); prof *= prof;   // (1-r^2)^2 density
-                col += vec3(.95, .78, .45) * prof * (1. - crackT) * .35;
+                col += vec3(.90, .52, .14) * prof * (1. - crackT) * .25;
             }
         }
     }
 
-    // bees: 54 striped workers (v24) — FOURTEEN convoys (3 bees each;
-    // convoy 0 = the queen's, always the pink core; the rest draw random
-    // central flower homes; landings fanned along the honey line, routes
-    // weave) + 12 lone scouts roaming the whole comb. All path/mission math lives in
-    // the buffer's BEE TABLE now; here each bee is one (cached) texel read,
-    // a distance cull, and a stripe gaussian.
+    // bees: 54 workers from the buffer's BEE TABLE (columns 6..59: pos,
+    // heading, fade) — one cached texel read, a distance cull, then a drop
+    // shadow, flapping wings and a striped body. The shadow keeps a gold
+    // bee legible over gold honey.
     for (int k = 0; k < 54; k++){
         vec4 B = texture(iChannel1, vec2((float(k) + 6.5)/COLS, .5));
         vec2 d = p - B.xy;
-        if (dot(d,d) < .002){                          // skip far pixels
+        if (dot(d,d) < .0036){                         // skip far pixels
             vec2 dirB = vec2(cos(B.z), sin(B.z));      // stored heading
             vec2 nB = vec2(-dirB.y, dirB.x);
             float lu = dot(d, dirB), lv = dot(d, nB);
-            // striped body: yellow ellipse, dark bands across the axis
-            float body = exp(-(lu*lu/1.1e-4 + lv*lv/3.5e-5));
-            float stripes = .18 + .82*smoothstep(-.25,.25, sin(lu*700.));
-            vec3 beeCol = vec3(1., .80, .22) * stripes;
-            col = mix(col, beeCol, min(body*1.5, 1.)*B.w);
-            // soft warm halo, treble-lifted
-            col += vec3(1.,.85,.35) * exp(-dot(d,d)*800.)
-                   * .16 * B.w * (.6 + .6*treF);
+            vec2 ds = d - vec2(.008, -.012);
+            col *= 1. - .60 * B.w * exp(-dot(ds, ds) * 1500.);
+            float flap = .55 + .45*sin(iTime*95. + float(k)*1.7);
+            vec2 wv = vec2(lu + .004, abs(lv) - .0100*flap);
+            float wing = exp(-(wv.x*wv.x/5.5e-5 + wv.y*wv.y/2.2e-5));
+            col = mix(col, vec3(.55, .60, .66), wing * .40 * B.w);
+            float body = exp(-(lu*lu/2.2e-4 + lv*lv/6.5e-5));
+            float stripes = .06 + .94*smoothstep(-.3, .3, sin(lu*500.));
+            vec3 beeCol = vec3(.95, .52, .05) * stripes;
+            col = mix(col, beeCol, min(body*1.6, 1.) * B.w);
+            // warm halo, treble-lifted
+            col += vec3(1., .62, .18) * exp(-dot(d,d)*900.)
+                   * .08 * B.w * (.6 + .6*treF);
         }
     }
 
-    // wax borders: warm amber TINTED by the owning cell (walls two-tone at
-    // cell boundaries — restores the color variation the crisp v14 rim took
-    // away), treble sparkle gated PER WALL SEGMENT (edge index from the
-    // local angle), not per cell — glints run along individual walls
+    // wax walls: amber tinted by the owning cell (two-tone at boundaries),
+    // bevelled: the inner face whose normal (-l) points up-left catches
+    // the light. Treble sparkle is gated per wall segment (edge index from
+    // the local angle).
     float eI = floor(mod(atan(l.y, l.x)*.9549297 + .5, 6.)); // /60deg
-    // second half of the v27 saturation: loud music also shrinks the SHARE
-    // of wall segments eligible per flash (.62 calm -> ~.77 at full press).
-    // v28: the segment set reshuffles 10x per flash unit, not 60x — the
-    // fast reshuffle strobed the whole lattice ("explosion"); and glints
-    // PREFER quiet cells (x 1-.7g): the tremble lives where the colors are
-    // changing weakly, active cells stay clean
-    // v32: the glints form a TRAVELING HALO — the flash is born at the
-    // core (treF=1 -> radius 0) and the ring of sparkle moves OUTWARD as
-    // the flash fades, so glints never cover the whole screen at once,
-    // they wash across it ("błyskające halo")
+    // saturation (v27-v28): loud music shrinks the eligible share of wall
+    // segments (.62 -> ~.77), the set reshuffles 10x per flash unit, and
+    // glints prefer quiet cells (x 1-.7g).
+    // v32: the glints form a halo born at the core that travels outward
+    // as the flash fades
     float haloR = (1. - treF) * 9.;
     float haloW = exp(-abs(ring - haloR) * .55);
     float spark = step(.62 + .15*press, hash12(id + eI*vec2(3.7, 9.1)
                                    + floor(vec2(0., 10.*treF))))
                 * treF * haloW * (1. - .70*g);
-    vec3 waxCol = mix(vec3(.85, .55, .18), cellCol, .25);
-    col += waxCol * border * (.05 + .16*press);
-    // glint REPLACES the wall color (additive died in tanh on bright cells)
-    // and picks its tone from the wall's brightness (v26): dark honey on a
-    // bright wall, light gold on a dark one — contrast on ANY background,
-    // always inside the honey family
+    vec3 waxCol = mix(vec3(.55, .26, .045), cellCol, .25 - .25*honeyIn);
+    float bev = .45 + .55*dot(-normalize(l + 1e-5), vec2(-.6, .8));
+    col += waxCol * border * (.05 + .20*press) * max(bev, .15);
+    // glint replaces the wall colour (additive saturates in tanh on bright
+    // cells), tone picked from the wall brightness (v26): dark honey on a
+    // bright wall, light gold on a dark one
     float wl = dot(col, vec3(.33, .5, .17));
-    vec3 glintCol = mix(vec3(1., .82, .38), vec3(.58, .38, .10),
-                        smoothstep(.22, .58, wl));
-    col = mix(col, glintCol, min(border * spark, 1.) * .50);
+    vec3 glintCol = mix(vec3(1., .66, .16), vec3(.34, .14, .012),
+                        smoothstep(.10, .40, wl));
+    col = mix(col, glintCol, min(border * spark, 1.) * .55);
 
-    // edge FOG OF WAR (v31, experimental): a mist band ~1.5 cells deep at
-    // the top/bottom and ~3.5 cells at the sides, thickening with the BASS
-    // swell — Ysin_Ring_Spectrum's mist idea on a rectangular rim. The
-    // billow drifts on the bee clock; shallow by design (cap .70), every
-    // effect underneath stays readable.
+    // edge smoke (v31 fog of war): a band ~1.5 cells deep at the top and
+    // bottom and ~3.5 cells at the sides, thickening with the bass swell,
+    // billowing on the bee clock. Dark smoke, not v31's light veil
+    // (.70,.63,.50), which greys every edge cell.
     {
         float asp = iResolution.x / iResolution.y;
         float fogM = max(smoothstep(.25, 0., 1. - abs(p.y)),
                          smoothstep(.67, 0., asp - abs(p.x)));
         float bil = .80 + .20*sin(p.x*6.3 + (s4.z + s4.w)*.9)
                         * sin(p.y*8.1 - (s4.z + s4.w)*.6);
-        // gated by PRESENCE (v31b): the normalized swell parks at .5 in
-        // silence (zero deviation = mid-scale), so without the press gate
-        // the fog would hang there forever — silence = no fog, quiet music
-        // = a faint veil, each bass swell thickens it
+        // gated by presence (v31b): the swell parks at .5 in silence
         float fogD = (.10 + .50*bass) * smoothstep(.02, .10, press);
-        col = mix(col, vec3(.70, .63, .50), min(fogM * bil * fogD, .70));
+        vec3 smoke = vec3(.014, .008, .003) * (.6 + .8*bil);
+        col = mix(col, smoke, min(fogM * bil * fogD, .70));
     }
 
-    // vignette + tone
-    col *= 1. - .22 * dot(p, p);
+    // vignette (clamped: 21:9 and wider would go negative) + tone
+    col *= max(1. - .20 * dot(p, p), .05);
     col = tanh(col);
     col = pow(col, vec3(1./2.2));
     col += (ign(fragCoord) - .5) / 255.;

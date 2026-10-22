@@ -19,8 +19,7 @@ kde-shader-wallpaper/
 │   │       ├── PresetPanel.qml # Preset save/load
 │   │       ├── PerformanceWidget.qml
 │   │       ├── WindowModel.qml # Pause detection
-│   │       ├── Shaders/        # Source .frag files
-│   │       ├── Shaders6/       # Compiled .qsb shaders
+│   │       ├── Shaders/        # Source .frag files (compiled at runtime)
 │   │       ├── Resources/      # Images and icons
 │   │       └── shaderwallpaper/ # C++ plugin
 │   └── metadata.json           # Package metadata
@@ -56,8 +55,8 @@ kde-shader-wallpaper/
 │
 ├── scripts/                    # Build and utility scripts
 │   ├── build.sh                # Build script
-│   ├── shader_processor.py     # Shader preprocessing
-│   ├── shader_compiler.py      # Batch shader compilation
+│   ├── dev.sh                  # Sandbox build + dev harness (qml6)
+│   ├── dev/render_shader.py    # Headless renderer / compile check
 │   └── migrate_shaders.py      # Library indexing
 │
 ├── docs/                       # Documentation
@@ -159,13 +158,28 @@ Frame N:
                                         └───────────────┘
 ```
 
+### Shader Library Data
+
+ShaderLibrary reads two roots with the same layout:
+
+| Root | Location | Contents |
+|------|----------|----------|
+| Package | `<prefix>/share/plasma/wallpapers/online.knowmad.shaderwallpaper/contents/ui` | Bundled shaders, `shader_index.json` (ids, metadata), `thumbnails/`. Read-only for system-wide installs; replaced on upgrade. |
+| User | `~/.local/share/shaderwallpaper` | `shader_index.json` overlay, generated `thumbnails/`, `Shaders/Imported/`, `Shaders/Packages/`, `presets/`. |
+
+- Paths in configs and indexes are contents/ui-relative (`Shaders/X.frag`). They resolve in the user root first, then the package.
+- The user index holds user-owned shaders in full and, for bundled shaders, only favorite and thumbnail state. A bundled shader absent from it is in its bundled state. Overlay entries match bundled ones by id, then by path, so favorites survive an upgrade that re-mints bundled ids.
+- A user-root file at the same relative path as a bundled file replaces it.
+- On first start without a user index, user data from a writable package directory (favorites, `Shaders/Imported`, `Shaders/Packages`, their thumbnails) is copied into the user root. The package directory is not modified.
+- Several processes (plasmashell, System Settings, greeters) share the user index: writes are atomic (`QSaveFile`) and each process merges external writes through a `QFileSystemWatcher`.
+
 ## Key Technologies
 
 | Component | Technology |
 |-----------|------------|
 | UI Framework | Qt 6 / QML with Kirigami |
 | Rendering | OpenGL via QQuickFramebufferObject |
-| Shader Format | SPIR-V (compiled with qsb) |
+| Shader Format | GLSL source, compiled at runtime (`#version 330 core`, or `300 es` on OpenGL ES) |
 | Audio | PipeWire |
 | Cursor (X11) | XCB |
 | Build System | CMake with Extra CMake Modules |

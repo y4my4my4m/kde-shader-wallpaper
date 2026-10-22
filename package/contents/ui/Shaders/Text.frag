@@ -1,5 +1,6 @@
 // url: https://www.shadertoy.com/view/3dVfDz
 // credits: leon
+// @texture0 Resources/Font_Set.png
 
 // HOW TO USE:
 // apply: Font_Set.png to iChannel0

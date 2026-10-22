@@ -1,194 +1,205 @@
-// Aperture Science — desktop test chamber.
+// Sciencelab — portals on your desktop.
+// @channels bufferA, tex1
+// @sim-max-height 64
 //
-// Theme: clean, sterile, scientific. Portal palette (cyan / orange).
-//   * Subtle test-chamber tile background — wallpaper visible through it.
-//   * Each window has a thin glowing border + soft halo.
-//     Idle windows pulse cyan; MOVING windows flash safety orange
-//     (Aperture's "active surface" colour).
-//   * Energy beams between adjacent windows: clean lines with a single
-//     pulse travelling along them (NOT chaotic lightning).
-//   * Mouse cursor = portal ring opening at the pointer position.
-//   * Cool tint + vignette to sell the lab feel.
+// Rest the cursor on the bare desktop and a portal opens there; the next rest
+// opens the other colour, and firing a colour again moves it. Once both exist
+// they are linked: each one shows what is around the other — the wallpaper,
+// the outlines of nearby windows, and the cursor itself, which steps out of
+// one portal when it moves into the other. A lone portal shows a swirl, as in
+// the game. Click a portal to close it.
 //
-// All effects are analytical / single-pass — no feedback buffer, no PDE,
-// no chance of the simulation going unstable.
+// iChannel0  Buffer A: portal gun state on row 0 (see the buffer file).
+// iChannel1  Wallpaper ("Image 2" in the settings). Without one a soft
+//            backdrop is drawn.
+//
+// Lengths are in units of u = one thousandth of the screen height.
 
-// -------------------- palette (Aperture Science) --------------------
-const vec3 APERTURE_CYAN   = vec3(0.20, 0.70, 1.00);   // portal blue
-const vec3 APERTURE_ORANGE = vec3(1.00, 0.55, 0.10);   // portal orange
-const vec3 LAB_TINT        = vec3(0.85, 0.95, 1.05);   // cool wallpaper grade
-const vec3 TILE_GROUT      = vec3(0.04, 0.05, 0.07);   // dark seams between tiles
-const vec3 TILE_HIGHLIGHT  = vec3(1.00, 1.00, 1.00);   // subtle tile light edge
+const vec3  PORTAL_BLUE   = vec3(0.10, 0.55, 1.00); // @color @label("Blue portal")
+const vec3  PORTAL_ORANGE = vec3(1.00, 0.48, 0.05); // @color @label("Orange portal")
+const float PORTAL_SIZE   = 1.0;  // @range(0.4, 2.5, 0.05) @label("Portal size")
+const float LIGHT_SPILL   = 1.0;  // @range(0.0, 2.0, 0.05) @label("Portal light on the desktop")
+const float FLIP_VIEW     = 0.0;  // @range(0.0, 1.0, 1.0) @label("Mirror the view through a portal")
+const vec3  BACKDROP_TOP  = vec3(0.86, 0.89, 0.92); // @color @label("Backdrop top (no wallpaper)")
+const vec3  BACKDROP_LOW  = vec3(0.55, 0.59, 0.64); // @color @label("Backdrop bottom (no wallpaper)")
 
-// -------------------- tuning ----------------------------------------
-const float TILE_SIZE_PX   = 96.0;   // chamber tile size in screen pixels
-const float TILE_LINE_PX   = 1.2;    // grout line thickness
-const float BORDER_REACH   = 70.0;   // how far the window halo extends
-const float BEAM_RANGE_PX  = 420.0;  // beam connection max gap
-const float MOUSE_RING_R   = 42.0;   // portal ring radius in px
-const float MOUSE_RING_W   = 6.0;    // ring thickness
+// ------------------------------------------------------------- utilities
 
-// -------------------- helpers ---------------------------------------
-float sdRoundedBox(vec2 p, vec2 center, vec2 halfSize, float cornerR) {
-    vec2 q = abs(p - center) - halfSize + cornerR;
-    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - cornerR;
+float hash12(vec2 p)
+{
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
 }
 
-// Anti-aliased line: 1.0 at edge, 0.0 inside / far outside.
-float aaLine(float dist, float halfWidth) {
-    float pxScale = max(1.0, length(fwidth(vec2(dist))));
-    return 1.0 - smoothstep(halfWidth - pxScale, halfWidth + pxScale, abs(dist));
+float vnoise(vec2 p)
+{
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 w = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash12(i), hash12(i + vec2(1, 0)), w.x),
+               mix(hash12(i + vec2(0, 1)), hash12(i + vec2(1, 1)), w.x), w.y);
 }
 
-// Tile grid: returns intensity of grout line at this pixel.
-// float chamberTiles(vec2 fragCoord) {
-//     vec2 t = fragCoord / TILE_SIZE_PX;
-//     vec2 f = abs(fract(t) - 0.5);
-//     vec2 d = 0.5 - f;                       // distance to nearest cell edge
-//     float edge = min(d.x, d.y) * TILE_SIZE_PX;
-//     return 1.0 - smoothstep(0.0, TILE_LINE_PX, edge);
-// }
-
-// Window border + soft outer halo. Returns vec2(line, halo) for separate tinting.
-vec2 windowFrame(vec2 fragCoord, vec4 r) {
-    vec2 center   = r.xy + r.zw * 0.5;
-    vec2 halfSize = r.zw * 0.5;
-    float d = sdRoundedBox(fragCoord, center, halfSize, 4.0);
-
-    // Crisp 2px line right at the edge (works both inside & outside).
-    float line = exp(-abs(d) * 0.55);
-    line = pow(line, 2.0);
-
-    // Soft outward halo only — doesn't bleed into the window interior.
-    float halo = exp(-max(d, 0.0) / BORDER_REACH * 4.0);
-    halo *= step(0.0, d);   // outside only
-
-    return vec2(line, halo);
+float sdRoundBox(vec2 p, vec2 center, vec2 halfSize, float r)
+{
+    vec2 q = abs(p - center) - halfSize + r;
+    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
 
-// Closest-point on a rounded-rect perimeter to a target point — used to
-// pick where to anchor a beam (cleaner than rect centers, especially
-// for big windows that are close at one corner).
-vec2 nearestBoxPoint(vec2 target, vec4 r) {
-    vec2 center = r.xy + r.zw * 0.5;
-    vec2 halfSize = r.zw * 0.5;
-    return center + clamp(target - center, -halfSize, halfSize);
-}
+// ------------------------------------------------------------- scene
 
-// Sterile beam between two anchor points: a constant soft line with ONE
-// pulse travelling end-to-end on a slow loop. Looks like a scanning probe.
-vec2 beam(vec2 p, vec2 a, vec2 b, float pulseSeed) {
-    vec2 ab = b - a;
-    float lenAB = length(ab);
-    if (lenAB < 1.0) return vec2(0.0);
-
-    vec2 dir = ab / lenAB;
-    vec2 ap = p - a;
-    float t = dot(ap, dir);
-    if (t < -2.0 || t > lenAB + 2.0) return vec2(0.0);
-
-    float tc = clamp(t, 0.0, lenAB);
-    vec2 closest = a + dir * tc;
-    float perp = distance(p, closest);
-
-    // Base beam: thin glow line.
-    float beam = exp(-perp * 0.18);
-
-    // Single travelling pulse — period ~3.5 sec, seeded per pair so they
-    // don't all fire in sync.
-    float period = 3.5;
-    float pulseT = fract((iTime + pulseSeed) / period);
-    float pulsePos = pulseT * lenAB;
-    // Gaussian along the beam, tight in the perpendicular direction.
-    float along = exp(-pow(tc - pulsePos, 2.0) * 0.0012);
-    float across = exp(-perp * 0.35);
-    float pulse = along * across;
-
-    return vec2(beam, pulse);  // x=line, y=pulse
-}
-
-// Portal ring at the mouse cursor. Two coaxial rings cross-fading
-// orange (outer) -> cyan (inner) for the Aperture portal feel.
-// vec2 portalRing(vec2 p, vec2 center) {
-//     float d = distance(p, center);
-//     float ring = exp(-pow(d - MOUSE_RING_R, 2.0) / (MOUSE_RING_W * MOUSE_RING_W));
-//     float core = exp(-d * 0.08);
-//     return vec2(ring, core);
-// }
-
-// -------------------- main ------------------------------------------
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = fragCoord / iResolution.xy;
-    vec3 wallpaper = texture(iChannel1, uv).rgb;
-
-    // 1) Lab grade: pull toward a cool tint, hold luminance.
-    float luma = dot(wallpaper, vec3(0.2126, 0.7152, 0.0722));
-    vec3 lab = mix(wallpaper, luma * LAB_TINT, 0.25);
-    lab *= 0.78;   // overall darken for "monitor" vibe
-
-    // 2) Test-chamber tile overlay. Dark grout + faint bright edge ridge
-    // so it reads as physical tile rather than a flat grid.
-    // float grout = chamberTiles(fragCoord);
-    // lab = mix(lab, TILE_GROUT, grout * 0.65);
-    // lab += TILE_HIGHLIGHT * grout * 0.03;
-
-    // 3) Window frames + halos. Cyan when idle, orange when moving.
-    // Track "any window moving" so the mouse ring matches the mood.
-    vec3 borderAdd = vec3(0.0);
-    bool anyMoving = false;
-    for (int i = 0; i < iWindowCount && i < 16; i++) {
-        vec2 lh = windowFrame(fragCoord, iWindowRects[i]);
-        float vmag = length(iWindowVelocities[i]);
-        float motion = smoothstep(40.0, 400.0, vmag);
-        if (vmag > 30.0) anyMoving = true;
-
-        vec3 col = mix(APERTURE_CYAN, APERTURE_ORANGE, motion);
-        // Crisp edge brighter than the halo; motion intensifies both.
-        borderAdd += col * (lh.x * (1.4 + motion * 0.6)
-                          + lh.y * (0.55 + motion * 0.4));
+// The desktop behind the windows at pixel p: the wallpaper (cover-fitted)
+// or the procedural backdrop.
+vec3 backdrop(vec2 p)
+{
+    vec2 uv = p / iResolution.xy;
+    if (iChannelResolution[1].x > 0.0) {
+        vec2 texRes = iChannelResolution[1].xy;
+        float sa = iResolution.x / iResolution.y;
+        float ta = texRes.x / texRes.y;
+        vec2 fit = sa > ta ? vec2(1.0, ta / sa) : vec2(sa / ta, 1.0);
+        return texture(iChannel1, clamp((uv - 0.5) * fit + 0.5, 0.0, 1.0)).rgb;
     }
-    lab += borderAdd;
+    // Soft studio backdrop: vertical gradient, a broad light from the upper
+    // left and faint mottling, so a portal's view has something to show.
+    vec2 q = p / iResolution.y;
+    vec3 col = mix(BACKDROP_LOW, BACKDROP_TOP, smoothstep(0.0, 1.0, uv.y));
+    col *= 0.88 + 0.16 * exp(-length(q - vec2(0.35, 1.05)) * 1.3);
+    col *= 0.97 + 0.04 * vnoise(q * 9.0) + 0.02 * vnoise(q * 40.0);
+    return col;
+}
 
-    // 4) Scanning beams between adjacent windows. We anchor at the
-    // closest point on each rect (perimeter clamp) so beams visually
-    // connect to the window edges, not floating centers.
-    vec3 beamAdd = vec3(0.0);
+// What a portal shows at scene point p: the backdrop, the windows there as
+// frosted panes (their contents are not available to a wallpaper) and the
+// cursor as a small arrow.
+vec3 viewOf(vec2 p, float u)
+{
+    vec3 col = backdrop(p);
     for (int i = 0; i < iWindowCount && i < 16; i++) {
-        for (int j = i + 1; j < iWindowCount && j < 16; j++) {
-            vec4 ri = iWindowRects[i];
-            vec4 rj = iWindowRects[j];
-            vec2 ci = ri.xy + ri.zw * 0.5;
-            vec2 cj = rj.xy + rj.zw * 0.5;
-            // Anchor closest perimeter point of each rect toward the other.
-            vec2 ai = nearestBoxPoint(cj, ri);
-            vec2 aj = nearestBoxPoint(ci, rj);
-
-            float gap = distance(ai, aj);
-            if (gap > BEAM_RANGE_PX) continue;
-
-            float w = smoothstep(BEAM_RANGE_PX, BEAM_RANGE_PX * 0.25, gap);
-            vec2 bm = beam(fragCoord, ai, aj, float(i * 7 + j) * 0.41);
-            // Line stays cyan; the travelling pulse brightens toward white.
-            beamAdd += APERTURE_CYAN * bm.x * 0.25 * w;
-            beamAdd += mix(APERTURE_CYAN, vec3(1.0), 0.55) * bm.y * 0.9 * w;
+        vec4 r = iWindowRects[i];
+        if (r.z < 2.0 || r.w < 2.0) continue;
+        float d = sdRoundBox(p, r.xy + r.zw * 0.5, r.zw * 0.5, 6.0 * u);
+        if (d < 0.0) {
+            float title = step(r.y + r.w - 28.0 * u, p.y);
+            vec3 pane = mix(vec3(0.93, 0.94, 0.96), vec3(0.84, 0.86, 0.89), title);
+            col = mix(col, pane, 0.92);
+            col *= 1.0 - 0.25 * exp(d / (2.0 * u));
+        } else {
+            col *= 1.0 - 0.3 * exp(-d / (10.0 * u));
         }
     }
-    lab += beamAdd;
+    // Cursor arrow, tip at the cursor, 18 u tall.
+    if (iMouse.x > 1.0 || iMouse.y > 1.0) {
+        vec2 q = (p - iMouse.xy) / (18.0 * u);
+        q.y = -q.y;
+        bool body = q.x >= 0.0 && q.y >= 0.0 && q.y <= 1.0 && q.x <= q.y * 0.62
+                    && !(q.y > 0.72 && q.x > 0.2 && q.x < 0.55);
+        bool tail = q.x > 0.22 && q.x < 0.42 && q.y > 0.6 && q.y < 1.25
+                    && q.x > (q.y - 0.6) * 0.35 + 0.18;
+        if (body || tail) {
+            bool edge = q.x < 0.07 || q.x > q.y * 0.62 - 0.07 || q.y > 0.93;
+            col = (edge && body) ? vec3(0.05) : vec3(0.98);
+        }
+    }
+    return col;
+}
 
-    // 5) Portal ring under the cursor. Guard the (0,0) sentinel.
-    // if (iMouse.x > 1.0 || iMouse.y > 1.0) {
-    //     vec2 pr = portalRing(fragCoord, iMouse.xy);
-    //     vec3 ringCol = mix(APERTURE_ORANGE, APERTURE_CYAN, anyMoving ? 0.0 : 1.0);
-    //     lab += ringCol * pr.x * 1.1;
-    //     lab += APERTURE_CYAN * pr.y * 0.06;
-    // }
+// ------------------------------------------------------------- portals
 
-    // 6) Subtle vignette to focus attention center-screen.
-    float vig = smoothstep(1.35, 0.55, length(uv - 0.5) * 1.6);
-    lab *= mix(0.55, 1.0, vig);
+struct Portal {
+    vec2 c;        // centre, pixels
+    vec2 radii;    // half width, half height, pixels
+    float age;     // seconds since fired, or since closing began
+    bool exists;
+    bool closing;
+};
 
-    // Tone down extreme highlights so beams/borders don't clip ugly.
-    lab = lab / (1.0 + lab * 0.25);
+Portal portalFrom(vec4 state, float u)
+{
+    Portal p;
+    p.exists = state.w > 0.5;
+    p.closing = state.w > 1.5;
+    p.c = state.xy * iResolution.xy;
+    p.age = max(state.z, 0.0);
+    // Opens over 0.45 s with a small overshoot; collapses over 0.35 s.
+    float k = clamp(p.age / 0.45, 0.0, 1.0);
+    float open = clamp(1.0 + 0.12 * sin(k * 3.14159) - (1.0 - k) * (1.0 - k) * (1.0 - k), 0.0, 1.15);
+    if (p.closing) {
+        float c = clamp(p.age / 0.35, 0.0, 1.0);
+        open = (1.0 - c * c) * (1.0 + 0.15 * sin(c * 3.14159));
+    }
+    float h = 95.0 * u * PORTAL_SIZE * open;
+    p.radii = vec2(h * 0.58, h);
+    return p;
+}
 
-    fragColor = vec4(lab, 1.0);
+// Rim and halo colour in rgb, interior coverage in a.
+vec4 portalRim(Portal p, vec2 fc, vec3 rimCol, float u, float t, float lift)
+{
+    if (!p.exists || p.radii.y < 0.5) return vec4(0.0);
+    vec2 q = fc - p.c;
+    if (abs(q.x) > p.radii.x + 90.0 * u || abs(q.y) > p.radii.y + 90.0 * u) return vec4(0.0);
+    float r = length(q / p.radii);
+    float ang = atan(q.y, q.x);
+    float flick = vnoise(vec2(ang * 3.0 + t * 1.7, t * 2.3)) - 0.5;
+    float flick2 = vnoise(vec2(ang * 9.0 - t * 4.0, r * 3.0)) - 0.5;
+    float d = (r - 1.0 - 0.03 * flick - 0.018 * flick2) * p.radii.y;
+
+    float rim = exp(-abs(d) / (3.4 * u));
+    float rimHot = exp(-abs(d) / (1.3 * u));
+    float halo = exp(-max(d, 0.0) / (18.0 * u));
+    // Brighter tongues travelling around the edge.
+    rim *= 0.75 + 0.5 * vnoise(vec2(ang * 5.0 - t * 3.0, t * 1.5));
+    float inside = 1.0 - smoothstep(-1.5 * u, 0.5 * u, d);
+    vec3 add = rimCol * (rim * 1.35 + halo * 0.45 * LIGHT_SPILL) * lift + vec3(1.0) * rimHot * 0.55;
+    add += rimCol * exp(-p.age * 6.0) * 0.8 * exp(-length(q) / (45.0 * u));
+    return vec4(add, inside);
+}
+
+// The interior: the view through to the partner, or a swirl when unlinked.
+vec3 portalInterior(Portal self, Portal other, vec2 fc, vec3 rimCol, float u, float t)
+{
+    vec2 q = fc - self.c;
+    float r = length(q / max(self.radii, vec2(1e-3)));
+    if (other.exists && !other.closing && !self.closing && other.radii.y > 0.5) {
+        vec2 off = q;
+        if (FLIP_VIEW > 0.5) off.x = -off.x;
+        vec3 view = viewOf(other.c + off, u);
+        float edge = smoothstep(0.55, 1.0, r);
+        return mix(view, view * 0.6 + rimCol * 0.55, edge * 0.8);
+    }
+    float ang = atan(q.y, q.x);
+    float swirl = vnoise(vec2(ang * 2.5 + r * 5.0 - t * 1.2, r * 4.0 - t * 0.8));
+    return rimCol * (0.12 + 0.55 * smoothstep(0.2, 1.0, r) + 0.2 * swirl);
+}
+
+// ------------------------------------------------------------- main
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord)
+{
+    float u = iResolution.y / 1000.0;
+    float t = iTime;
+
+    vec3 col = backdrop(fragCoord);
+
+    Portal blue = portalFrom(texelFetch(iChannel0, ivec2(1, 0), 0), u);
+    Portal orange = portalFrom(texelFetch(iChannel0, ivec2(2, 0), 0), u);
+
+    // A cursor over or near a portal makes its rim flare.
+    bool mouseOn = iMouse.x > 1.0 || iMouse.y > 1.0;
+    float nearB = (mouseOn && blue.exists && blue.radii.y > 0.5)
+        ? exp(-max(length((iMouse.xy - blue.c) / blue.radii) - 1.0, 0.0) * 3.0) : 0.0;
+    float nearO = (mouseOn && orange.exists && orange.radii.y > 0.5)
+        ? exp(-max(length((iMouse.xy - orange.c) / orange.radii) - 1.0, 0.0) * 3.0) : 0.0;
+
+    vec4 rb = portalRim(blue, fragCoord, PORTAL_BLUE, u, t, 1.0 + 0.6 * nearB);
+    vec4 ro = portalRim(orange, fragCoord, PORTAL_ORANGE, u, t + 7.0, 1.0 + 0.6 * nearO);
+
+    if (rb.a > 0.0) col = mix(col, portalInterior(blue, orange, fragCoord, PORTAL_BLUE, u, t), rb.a);
+    if (ro.a > 0.0) col = mix(col, portalInterior(orange, blue, fragCoord, PORTAL_ORANGE, u, t + 7.0), ro.a);
+
+    vec3 add = rb.rgb + ro.rgb;
+    col += add / (1.0 + 0.5 * add);
+    fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

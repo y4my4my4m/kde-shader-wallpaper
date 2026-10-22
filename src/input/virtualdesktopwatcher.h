@@ -7,7 +7,7 @@
 #include <QString>
 #include <QStringList>
 
-class QDBusInterface;
+class QDBusServiceWatcher;
 
 /**
  * @brief Tracks the user's current virtual desktop via KWin's D-Bus API.
@@ -22,6 +22,8 @@ class QDBusInterface;
  * Listens to org.kde.KWin.VirtualDesktopManager's currentChanged /
  * desktopsChanged signals via D-Bus (with a low-frequency fallback poll
  * in case the signal doesn't arrive on a particular Plasma build).
+ * Every D-Bus call is asynchronous, and nothing touches the bus while
+ * disabled.
  */
 class VirtualDesktopWatcher : public QObject
 {
@@ -30,7 +32,7 @@ class VirtualDesktopWatcher : public QObject
     Q_PROPERTY(int currentDesktop READ currentDesktop NOTIFY currentDesktopChanged)
     Q_PROPERTY(int desktopCount READ desktopCount NOTIFY desktopCountChanged)
     Q_PROPERTY(qreal transitionProgress READ transitionProgress NOTIFY transitionProgressChanged)
-    Q_PROPERTY(bool available READ available CONSTANT)
+    Q_PROPERTY(bool available READ available NOTIFY availableChanged)
 
 public:
     explicit VirtualDesktopWatcher(QObject *parent = nullptr);
@@ -40,7 +42,7 @@ public:
     int currentDesktop() const { return m_currentDesktop; }
     int desktopCount() const { return m_desktopCount; }
     qreal transitionProgress() const { return m_transitionProgress; }
-    bool available() const;
+    bool available() const { return m_available; }
 
     void setEnabled(bool enabled);
 
@@ -49,6 +51,7 @@ Q_SIGNALS:
     void currentDesktopChanged();
     void desktopCountChanged();
     void transitionProgressChanged();
+    void availableChanged();
     /// Emitted once per actual desktop change, AFTER currentDesktop has been
     /// updated. The QML side can use this to start the parallax animation.
     void desktopSwitched(int previous, int current);
@@ -58,6 +61,11 @@ private Q_SLOTS:
     void animateStep();
 
 private:
+    void applyEnabled();
+    void start();
+    void stop();
+    void setAvailable(bool available);
+    void requestAvailability();
     void requestDesktopCount();
     void requestCurrentDesktop();
     void applyCurrentDesktop(int newIdx);
@@ -75,7 +83,9 @@ private:
     bool m_countInFlight = false;
     bool m_currentInFlight = false;
 
-    QDBusInterface *m_iface = nullptr; // kept only for available()
+    bool m_started = false;
+    bool m_available = false;
+    QDBusServiceWatcher *m_serviceWatcher = nullptr;
     QTimer m_pollTimer;       // 2s fallback poll
     QTimer m_animTimer;       // ~60Hz transition animation
     qreal m_animStartMs = 0.0;

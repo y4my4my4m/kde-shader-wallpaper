@@ -81,7 +81,15 @@ WallpaperItem {
     Component.onCompleted: {
         if (pluginAvailable) {
             console.log("Shader Wallpaper: Plugin found!")
-            pluginLoader.active = true
+            // Initial properties: the config map is present when
+            // ShaderSystem's bindings first evaluate. A Binding applies only
+            // after completion; the first evaluation would see null and load
+            // the main.xml default shader from disk (issue #114).
+            pluginLoader.setSource("ShaderSystem.qml", {
+                wallpaperConfig: main.effectiveConfiguration,
+                lockScreenMode: main.lockScreenMode,
+                loginScreenMode: main.loginScreenMode
+            })
         } else {
             console.log("Shader Wallpaper: Plugin not installed -", pluginStatus.message)
         }
@@ -120,6 +128,7 @@ WallpaperItem {
             }
             
             SequentialAnimation on scale {
+                running: glowOrb.visible
                 loops: Animation.Infinite
                 NumberAnimation { to: 1.1; duration: 3000; easing.type: Easing.InOutSine }
                 NumberAnimation { to: 0.9; duration: 3000; easing.type: Easing.InOutSine }
@@ -171,26 +180,24 @@ WallpaperItem {
     Loader {
         id: pluginLoader
         anchors.fill: parent
-        active: false
-        source: "ShaderSystem.qml"
     }
 
     Binding {
         target: pluginLoader.item
         property: "wallpaperConfig"
         value: main.effectiveConfiguration
-        when: pluginLoader.item
+        when: pluginLoader.item !== null
     }
     Binding {
         target: pluginLoader.item
         property: "lockScreenMode"
         value: main.lockScreenMode
-        when: pluginLoader.item
+        when: pluginLoader.item !== null
     }
     Binding {
         target: pluginLoader.item
         property: "loginScreenMode"
         value: main.loginScreenMode
-        when: pluginLoader.item
+        when: pluginLoader.item !== null
     }
 }

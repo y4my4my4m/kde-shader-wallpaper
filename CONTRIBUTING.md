@@ -145,14 +145,14 @@ Fixes #42
    // Source: URL (if from Shadertoy or elsewhere)
    // License: CC-BY or similar
    ```
-3. Compile with `python scripts/shader_compiler.py`
-4. Test that it works without errors
+3. Check it compiles: `python3 scripts/dev/render_shader.py --check package/contents/ui/Shaders`
+4. Render it headless (`python3 scripts/dev/render_shader.py <file> --at 2 --out /tmp/x.png`) or in the dev harness (`./scripts/dev.sh`) and confirm it looks right
 5. Submit a PR
 
 ### Shader Guidelines
 
 - **Performance**: Test on mid-range hardware
-- **Compatibility**: Must work with qsb compilation
+- **Compatibility**: Must compile with `scripts/dev/render_shader.py --check` on desktop GL and with `--gles`
 - **Attribution**: Always credit original authors
 - **License**: Prefer permissively licensed shaders
 

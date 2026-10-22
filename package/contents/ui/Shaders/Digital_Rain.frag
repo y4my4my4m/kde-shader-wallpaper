@@ -1,5 +1,7 @@
 // url: https://www.shadertoy.com/view/ldccW4
 // credits: WillKirkby
+// @texture0 Resources/Font_Set.png
+// @texture1 Resources/Shadertoy_RGBA_Noise_Small.png
 
 float text(vec2 fragCoord)
 {

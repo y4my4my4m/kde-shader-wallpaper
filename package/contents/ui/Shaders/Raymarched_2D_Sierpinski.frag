@@ -1,4 +1,4 @@
-// property Image iChannel0: Image { source: "./Shadertoy_Rusty_Metal.jpg" }
+// @texture0 Resources/Shadertoy_Rusty_Metal.jpg
 
 // https://www.shadertoy.com/view/MsySWK
 // Credits to Shane

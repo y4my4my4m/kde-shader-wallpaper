@@ -197,6 +197,19 @@ void PlmGreeterSetup::enableLoginScreen()
                 }
             });
 
+    // finished() never fires when the process fails to start.
+    connect(m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+        if (error != QProcess::FailedToStart || !m_process) {
+            return;
+        }
+        const QString reason = m_process->errorString();
+        m_process->deleteLater();
+        m_process = nullptr;
+        m_busy = false;
+        Q_EMIT busyChanged();
+        Q_EMIT enableFinished(false, tr("Could not start pkexec: %1").arg(reason));
+    });
+
     m_process->start(QStringLiteral("pkexec"), {helper});
 }
 

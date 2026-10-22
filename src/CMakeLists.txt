@@ -29,6 +29,7 @@ set(SHADER_WALLPAPER_SOURCES
     data/shadermetadata.cpp
     data/shaderlibrary.cpp
     data/plmgreetersetup.cpp
+    data/wallpapersync.cpp
     
     # Models
     models/shaderlistmodel.cpp
@@ -58,6 +59,7 @@ set(SHADER_WALLPAPER_HEADERS
     data/shadermetadata.h
     data/shaderlibrary.h
     data/plmgreetersetup.h
+    data/wallpapersync.h
     
     # Models
     models/shaderlistmodel.h
@@ -96,7 +98,6 @@ target_link_libraries(shaderwallpaperplugin PRIVATE
     Qt6::Gui
     Qt6::OpenGL
     Qt6::Network
-    Qt6::Multimedia
     Qt6::DBus
     Plasma::Plasma
     Plasma::PlasmaQuick

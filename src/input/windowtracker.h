@@ -1,6 +1,9 @@
 #pragma once
 
 #include <QObject>
+#include <QElapsedTimer>
+#include <QMap>
+#include <QSet>
 #include <QTimer>
 #include <QRect>
 #include <QVariantList>
@@ -24,7 +27,7 @@ class WindowTracker : public QObject
     Q_PROPERTY(int windowCount READ windowCount NOTIFY windowsChanged)
     Q_PROPERTY(QVariantList windowRects READ windowRects NOTIFY windowsChanged)
     Q_PROPERTY(QVariantList windowVelocities READ windowVelocities NOTIFY windowsChanged)
-    Q_PROPERTY(bool available READ available CONSTANT)
+    Q_PROPERTY(bool available READ available NOTIFY availableChanged)
     // Match CursorTracker / ShaderEngine FBO space (OpenGL Y, device pixels).
     Q_PROPERTY(qreal referenceWidth READ referenceWidth WRITE setReferenceWidth NOTIFY referenceSizeChanged)
     Q_PROPERTY(qreal referenceHeight READ referenceHeight WRITE setReferenceHeight NOTIFY referenceSizeChanged)
@@ -76,6 +79,7 @@ Q_SIGNALS:
     void referenceSizeChanged();
     void devicePixelRatioChanged();
     void screenVirtualChanged();
+    void availableChanged();
 
 private Q_SLOTS:
     void pollWindows();
@@ -112,18 +116,30 @@ private:
     qreal m_screenVirtualX = 0.0;
     qreal m_screenVirtualY = 0.0;
     
-    // Event-driven gating: X notifies us (SubstructureNotify on the root)
-    // when any top-level window is created/destroyed/moved/mapped. Between
-    // notifications an idle desktop costs zero X round trips.
+    // Event-driven gating: X notifies us when a top-level window is
+    // created/destroyed/moved/mapped (SubstructureNotify on the root), when a
+    // root property such as _NET_SHOWING_DESKTOP changes, and when a tracked
+    // client's _NET_WM_STATE changes (PropertyChange). Between notifications
+    // an idle desktop costs zero X round trips.
     bool m_windowsDirty = true;   // X reported window activity since last poll
     bool m_hadMotion = false;     // a tracked window still has nonzero velocity
 
 #ifdef HAVE_XCB
     void *m_xcbConnection = nullptr;  // xcb_connection_t*
     QSocketNotifier *m_xcbNotifier = nullptr;
-    void initXcb();
+    // Atoms are per X server: cleared on reconnect.
+    QMap<QByteArray, uint32_t> m_atomCache;
+    // Client windows whose PropertyNotify (_NET_WM_STATE) this connection
+    // has selected. Cleared on reconnect.
+    QSet<uint32_t> m_watchedClients;
+    // Reconnect backoff after the X connection broke (X / XWayland restart).
+    QElapsedTimer m_reconnectTimer;
+    int m_reconnectDelayMs = 0;
+    bool m_connectFailureLogged = false;
+    bool initXcb();
     void cleanupXcb();
     void processXcbEvents();
+    bool ensureXcbConnection();
 #endif
 };
 

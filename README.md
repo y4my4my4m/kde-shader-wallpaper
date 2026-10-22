@@ -24,14 +24,16 @@
 
 ## ✨ Features
 
-- **200+ Built-in Shaders** - Curated collection of beautiful effects
+- **240+ Built-in Shaders** - Curated collection with previews, search, categories and favourites
 - **Shadertoy Import** - Import shaders directly from shadertoy.com
 - **Multi-Pass Rendering** - Full buffer support (A, B, C, D) for complex effects
 - **Audio Reactive** - Shaders that respond to system audio via PipeWire
 - **Mouse Interaction** - Full iMouse support on X11 and Wayland
-- **Window Tracking** - Shaders can react to window positions
-- **Performance Monitoring** - Real-time FPS and power consumption estimates
-- **Preset System** - Save and share your configurations
+- **Window Reactive** - Shaders react to your windows: water ripples and wakes, plasma arcs, a test-chamber HUD
+- **Automatic Shader Changes** - Rotate through a playlist, your favourites or the whole library, in order or shuffled
+- **Multi-Monitor** - Apply one configuration to every screen; screen offset uniforms for spanning shaders
+- **Performance Monitoring** - Real-time FPS, GPU frame time and power estimates
+- **Preset System** - Save and share complete configurations, including channel routing
 
 ## 📦 Installation
 
@@ -83,7 +85,7 @@ sudo apt install cmake extra-cmake-modules build-essential \
 
 ```bash
 sudo dnf install cmake extra-cmake-modules gcc-c++ \
-    qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtmultimedia-devel \
+    qt6-qtbase-devel qt6-qtdeclarative-devel \
     libplasma-devel kf6-kconfig-devel kf6-kcoreaddons-devel \
     kf6-ki18n-devel kf6-kpackage-devel \
     pipewire-devel libxcb-devel
@@ -95,7 +97,7 @@ sudo dnf install cmake extra-cmake-modules gcc-c++ \
 
 ```bash
 sudo zypper install cmake kf6-extra-cmake-modules gcc-c++ \
-    qt6-base-devel qt6-declarative-devel qt6-multimedia-devel \
+    qt6-base-devel qt6-declarative-devel \
     libplasma6-devel kf6-kconfig-devel kf6-kcoreaddons-devel \
     kf6-ki18n-devel kf6-kpackage-devel \
     pipewire-devel libxcb-devel
@@ -117,6 +119,8 @@ sudo zypper install wayland-devel wayland-protocols-devel shaderc-devel
 rm -rf ~/.local/share/plasma/wallpapers/online.knowmad.shaderwallpaper/
 pkill plasmashell && plasmashell &
 ```
+
+Favorites, generated thumbnails, imported shaders, saved packages and presets live in `~/.local/share/shaderwallpaper/` and survive upgrades and reinstalls. Delete that directory to remove them.
 
 ### Login screen (Plasma Login Manager)
 
@@ -167,8 +171,10 @@ sudo ./scripts/install-plm-greeter.sh --uninstall
 
 1. Right-click your desktop → **Configure Desktop and Wallpaper**
 2. Select **Shader Wallpaper** as the wallpaper type
-3. Click **Browse Gallery** to select a shader
-4. Adjust settings like speed, FPS target, and input options
+3. Pick a shader in the **Gallery** tab (search with Ctrl+F, right-click a card for more), or press **Shuffle**
+4. **Playback** sets speed, frame rate, resolution, when to pause and automatic shader changes
+5. **Inputs** turns on mouse, sound and window reactivity and assigns images to shaders that use them
+6. **Advanced** holds buffers and channel routing, the code editor, presets and packages
 
 ## 🔧 Troubleshooting
 

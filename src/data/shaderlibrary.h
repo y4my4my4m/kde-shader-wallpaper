@@ -11,6 +11,8 @@
 #include <QUrl>
 #include <QList>
 #include <QMap>
+#include <QHash>
+#include <QJsonObject>
 #include <memory>
 
 #include "shadermetadata.h"
@@ -48,6 +50,11 @@ class ShaderLibrary : public QObject
     // returning ShaderLibrary::instance() so there's exactly one of us.
 
     Q_PROPERTY(QString libraryPath READ libraryPath WRITE setLibraryPath NOTIFY libraryPathChanged)
+    // Per-user writable root (GenericDataLocation/shaderwallpaper). Holds the
+    // index overlay, generated thumbnails, Shaders/Imported and
+    // Shaders/Packages. Mirrors the contents/ui layout: a contents/ui-relative
+    // path resolves here first, then in the package directory.
+    Q_PROPERTY(QString userDataPath READ userDataPath CONSTANT)
     Q_PROPERTY(int shaderCount READ shaderCount NOTIFY shaderCountChanged)
     Q_PROPERTY(QStringList categories READ categories NOTIFY categoriesChanged)
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
@@ -71,6 +78,7 @@ public:
 
     // Property getters
     QString libraryPath() const { return m_libraryPath; }
+    QString userDataPath() const { return m_userDataPath; }
     QString greeterPath() const { return m_greeterPath; }
     bool greeterPathPresent() const { return !m_greeterPath.isEmpty(); }
     int shaderCount() const { return m_shaders.count(); }
@@ -113,14 +121,28 @@ public:
     /**
      * @brief Convert an absolute shader path under any known install
      *        prefix (~/.local/share/.../contents/ui, /usr/share/.../contents/ui)
-     *        into a path relative to the plugin's UI dir
-     *        (e.g. "Shaders/AlienVoxel.frag"). Paths outside any known
-     *        install dir are returned unchanged. Used before writing
+     *        or under the user data root into a path relative to the plugin's
+     *        UI dir (e.g. "Shaders/AlienVoxel.frag"). Paths outside any known
+     *        root are returned unchanged. Used before writing
      *        selectedShaderPath to the wallpaper config so the saved value
      *        is portable across the desktop and the PLM greeter, neither of
      *        which can read each other's home directories.
      */
     Q_INVOKABLE QString toRelativeShaderPath(const QString &input) const;
+
+    /**
+     * @brief File URL of a contents/ui-relative path inside the user data
+     *        root; empty string when the user root has no such file or the
+     *        path is absolute. Callers fall back to the package directory.
+     */
+    Q_INVOKABLE QString userFileUrl(const QString &relativePath) const;
+
+    /**
+     * @brief Absolute path of a contents/ui-relative path: the user data
+     *        root when the file exists there, the package directory
+     *        otherwise. Absolute paths are returned unchanged.
+     */
+    QString resolveLibraryFile(const QString &path) const;
     
     /**
      * @brief Add a shader to the library
@@ -299,14 +321,38 @@ Q_SIGNALS:
     void error(const QString &message);
 
 private:
+    // Index layering: the package's shader_index.json is the read-only base
+    // (bundled shaders, their ids and thumbnails). The user index in
+    // m_userDataPath is an overlay holding user-owned shaders in full and,
+    // for bundled shaders, only favorite and thumbnail state.
     void loadIndex();
     void saveIndex();
-    // shader_index.json is shared by several processes (plasmashell, System
+    QString userIndexPath() const;
+    // Copies user data out of a writable package directory once, before the
+    // user index exists. The source is left untouched.
+    void migrateUserData();
+    // Index entry form: toJson() with paths collapsed to contents/ui-relative.
+    QJsonObject indexEntry(const ShaderMetadata &shader) const;
+    // True when the shader has no bundled entry or differs from it, i.e. the
+    // user index carries it.
+    bool inOverlay(const ShaderMetadata &shader) const;
+    // The user index is shared by several processes (plasmashell, System
     // Settings, the greeters), each with its own ShaderLibrary. A long-lived
     // instance must fold external index writes back into memory before its
     // own next save, or its stale state overwrites theirs.
     void watchIndexFile();
     void mergeIndexFromDisk();
+    // An index path value ("Shaders/X.frag", "thumbnails/<id>.png" or an
+    // absolute file:// URL) resolved the way loadIndex() stores it.
+    QUrl resolveIndexUrl(const QUrl &url) const;
+    // Collapsed form for comparing two path values of the same file;
+    // ignores URL queries (thumbnail cache busters).
+    QString comparablePath(const QUrl &url) const;
+    // contents/ui-relative thumbnail path named after the id.
+    QString thumbnailFileForId(const QString &shaderId) const;
+    // Package-directory file with a user-root file at the same relative path;
+    // the user file replaces it.
+    bool isShadowed(const QString &absolutePath) const;
     void scanDirectory(const QString &path, const QString &category);
     ShaderMetadata* createMetadataFromFile(const QString &path, const QString &category);
     ShaderMetadata* createMetadataFromPackage(const QString &packagePath, const QString &category);
@@ -322,7 +368,14 @@ private:
     // Symlink-resolved m_libraryPath — lets toRelativeShaderPath() collapse
     // paths that hosts hand us in canonical form (symlinked dev installs).
     QString m_canonicalLibraryRoot;
+    QString m_userDataPath;
+    QString m_canonicalUserDataPath;
     QString m_greeterPath;  // /usr/share/.../contents/ui or empty
+    // Bundled index entries in indexEntry() form by id, and bundled ids by
+    // collapsed shader path. A shader equal to its bundled entry stays out of
+    // the user index.
+    QHash<QString, QJsonObject> m_bundledEntries;
+    QHash<QString, QString> m_bundledIdByPath;
     QList<std::shared_ptr<ShaderMetadata>> m_shaders;
     QMap<QString, std::shared_ptr<ShaderMetadata>> m_shaderMap; // By ID
     QMap<QString, std::shared_ptr<ShaderMetadata>> m_pathMap;   // By path

@@ -50,6 +50,11 @@ float waveAmp(){
 }
 
 void mainImage(out vec4 C, in vec2 U){
+    // row-band early-out: every read of this buffer is at y=.5; rows
+    // outside +-4 px skip the ~35 audio taps (1080p frame .60 -> .27 ms,
+    // RTX 4090, four substeps)
+    if (abs(U.y - .5*iResolution.y) > 4.){ C = vec4(0.); return; }
+
     vec4 s0 = texture(iChannel1, vec2(.0833,.5));  // phases 0-3
     vec4 s1 = texture(iChannel1, vec2(.25,  .5));  // ph4, ph5, press, fine
     vec4 s2 = texture(iChannel1, vec2(.4167,.5));  // kickEnv, prevGate, shocks

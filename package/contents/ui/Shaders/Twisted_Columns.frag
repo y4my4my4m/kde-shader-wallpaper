@@ -1,5 +1,6 @@
 // https://www.shadertoy.com/view/Xl2GRc
 // Credits to inigo quilez - iq/2015
+// @texture0 Resources/Shadertoy_Rusty_Metal.jpg
 
 // Created by inigo quilez - iq/2015
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
@@ -8,7 +9,6 @@
 // this effect since around 1999. Only now it's antialiased, motion blurred, texture
 // filtered and high resolution. Uncomment line 40 to see the columns.
 
-// property Image iChannel0: Image { source: "./Shadertoy_Rusty_Metal.jpg" }
 
 vec4 segment( float x0, float x1, vec2 uv, float id, float time, float f )
 {

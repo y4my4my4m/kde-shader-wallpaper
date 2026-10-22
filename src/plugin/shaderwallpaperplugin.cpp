@@ -14,6 +14,7 @@
 #include "data/presetmanager.h"
 #include "data/shaderlibrary.h"
 #include "data/plmgreetersetup.h"
+#include "data/wallpapersync.h"
 #include "models/shaderlistmodel.h"
 #include "models/categorymodel.h"
 
@@ -50,6 +51,14 @@ void ShaderWallpaperPlugin::registerTypes(const char *uri)
             Q_UNUSED(scriptEngine)
             static PlmGreeterSetup instance;
             return &instance;
+        });
+
+    // The engine owns the instance.
+    qmlRegisterSingletonType<WallpaperSync>(uri, 1, 0, "WallpaperSync",
+        [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
+            Q_UNUSED(engine)
+            Q_UNUSED(scriptEngine)
+            return new WallpaperSync();
         });
 
     // Register singletons
