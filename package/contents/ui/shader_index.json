@@ -4799,6 +4799,26 @@
             ],
             "thumbnailPath": "thumbnails/a1f6d3b8-2e94-4c07-b5a1-9f8e0c4d6b72.png",
             "views": 0
+        },
+        {
+            "addedIn": "4.2.0",
+            "author": "",
+            "category": "Window Reactive",
+            "description": "A gravity sandbox where every window is a massive body: moons orbit your windows trailing light, and dragging a window slingshots them or shatters them on its edges. Press and pull back on the desktop to launch a planet along a dotted preview, or click to place a moon; with no windows a star gathers them into rosette orbits. Uses Image 2 as the sky.",
+            "favorite": false,
+            "hasBuffers": true,
+            "id": "aa35869a-379a-418c-9c09-b6f3cf8daf10",
+            "likes": 0,
+            "name": "Orbits",
+            "needsAudio": false,
+            "needsTextures": false,
+            "shaderPath": "Shaders/WindowReactive/orbits.frag",
+            "source": "local",
+            "sourceId": "",
+            "tags": [
+            ],
+            "thumbnailPath": "thumbnails/aa35869a-379a-418c-9c09-b6f3cf8daf10.png",
+            "views": 0
         }
     ],
     "version": 1
