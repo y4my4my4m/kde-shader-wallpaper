@@ -289,7 +289,7 @@ bool hasImage = iChannelResolution[1].x > 0.0;
 | `iMousePrev` | vec2 | Cursor position one rendered frame earlier |
 | `iWindowCount`, `iWindowRects[16]`, `iWindowRectsPrev[16]`, `iWindowVelocities[16]` | | See [Window Reactive Shaders](#window-reactive-shaders) |
 | `iSubstep`, `iSubsteps` | int | Buffer passes run several substeps per frame (about 240 steps per second). Index of the current substep and the count this frame; 0 and 1 in the image pass and in a `@substeps 1` buffer pass |
-| `iScreenOffset` | vec2 | This screen's top-left within the whole desktop (multi-monitor) |
+| `iScreenOffset`, `iDesktopResolution` | vec2 | Multi-monitor (experimental setting): this screen's bottom-left within the bounding box of all screens, and that box's size, in output pixels with the GL origin. `fragCoord + iScreenOffset` is a desktop-wide pixel position; `iDesktopResolution` equals `iResolution.xy` on a single screen |
 | `iScreenIndex`, `iScreenCount` | int | Screen ordinal and count |
 | `iVirtualDesktop`, `iVirtualDesktopCount` | int | Current virtual desktop and count |
 | `iVirtualDesktopAnim` | float | 0..1 progress of a desktop switch |

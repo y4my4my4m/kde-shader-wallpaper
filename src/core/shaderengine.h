@@ -133,12 +133,14 @@ class ShaderEngine : public QQuickFramebufferObject
     Q_PROPERTY(AudioCapture *audioSource READ audioSource WRITE setAudioSource NOTIFY audioSourceChanged)
     
     // Multi-monitor uniforms (experimental). When set, the shader gets:
-    //   uniform vec2 iScreenOffset; // this screen's top-left in pixels
-    //                                // within the virtual desktop
-    //   uniform int  iScreenIndex;  // 0-based ordinal
-    //   uniform int  iScreenCount;  // total screens
-    // Useful for shaders that span all monitors as one continuous canvas.
+    //   uniform vec2 iScreenOffset;      // this screen's bottom-left in
+    //                                     // desktop pixels, GL origin
+    //   uniform vec2 iDesktopResolution; // bounding box of all screens
+    //   uniform int  iScreenIndex;       // 0-based, left to right
+    //   uniform int  iScreenCount;       // total screens
+    // Device pixels of the output; scaled per pass like iMouse.
     Q_PROPERTY(QVector2D screenOffset READ screenOffset WRITE setScreenOffset NOTIFY screenOffsetChanged)
+    Q_PROPERTY(QVector2D desktopResolution READ desktopResolution WRITE setDesktopResolution NOTIFY desktopResolutionChanged)
     Q_PROPERTY(int screenIndex READ screenIndex WRITE setScreenIndex NOTIFY screenIndexChanged)
     Q_PROPERTY(int screenCount READ screenCount WRITE setScreenCount NOTIFY screenCountChanged)
 
@@ -263,6 +265,7 @@ private:
 public:
 
     QVector2D screenOffset() const { return m_screenOffset; }
+    QVector2D desktopResolution() const { return m_desktopResolution; }
     int screenIndex() const { return m_screenIndex; }
     int screenCount() const { return m_screenCount; }
     int virtualDesktop() const { return m_virtualDesktop; }
@@ -338,6 +341,7 @@ public:
     void setAudioSource(AudioCapture *source);
     
     void setScreenOffset(const QVector2D &offset);
+    void setDesktopResolution(const QVector2D &size);
     void setScreenIndex(int index);
     void setScreenCount(int count);
     void setVirtualDesktop(int desktop);
@@ -419,6 +423,7 @@ Q_SIGNALS:
     void sourceFileReloaded();  // fired when hot-reload triggered a reload
 
     void screenOffsetChanged();
+    void desktopResolutionChanged();
     void screenIndexChanged();
     void screenCountChanged();
     void virtualDesktopChanged();
@@ -547,6 +552,7 @@ private:
     
     // Experimental: multi-monitor screen uniforms
     QVector2D m_screenOffset;
+    QVector2D m_desktopResolution;
     int m_screenIndex = 0;
     int m_screenCount = 1;
 
@@ -633,6 +639,7 @@ private:
         GLint iWindowRectsPrev = -1;
         GLint iWindowVelocities = -1;
         GLint iScreenOffset = -1;
+        GLint iDesktopResolution = -1;
         GLint iScreenIndex = -1;
         GLint iScreenCount = -1;
         GLint iVirtualDesktop = -1;
@@ -773,6 +780,7 @@ private:
 
     // Experimental: multi-monitor + virtual desktop uniforms.
     QVector2D m_screenOffset;
+    QVector2D m_desktopResolution;
     int m_screenIndex = 0;
     int m_screenCount = 1;
     int m_virtualDesktop = 0;

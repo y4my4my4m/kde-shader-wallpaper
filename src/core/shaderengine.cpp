@@ -98,12 +98,15 @@ uniform vec4 iWindowRectsPrev[16];
 uniform vec2 iWindowVelocities[16];
 
 // Multi-monitor (experimental). All zero when the feature is off.
-//   iScreenOffset: this screen's top-left in pixels, within the full
-//                  virtual-desktop bounding box. Add it to fragCoord
-//                  to get global "desktop pixel" coordinates.
+//   iScreenOffset: this screen's bottom-left in pixels within the
+//                  bounding box of all screens, GL origin (Y up). Add it
+//                  to fragCoord for desktop-wide pixel coordinates.
+//   iDesktopResolution: size of that bounding box in pixels; the
+//                  screen's own size when the feature is off.
 //   iScreenIndex:  0-based index of this screen.
 //   iScreenCount:  total number of screens.
 uniform vec2 iScreenOffset;
+uniform vec2 iDesktopResolution;
 uniform int  iScreenIndex;
 uniform int  iScreenCount;
 
@@ -962,6 +965,14 @@ void ShaderEngine::setScreenOffset(const QVector2D &offset)
     requestRepaintIfPaused();
 }
 
+void ShaderEngine::setDesktopResolution(const QVector2D &size)
+{
+    if (m_desktopResolution == size) return;
+    m_desktopResolution = size;
+    Q_EMIT desktopResolutionChanged();
+    requestRepaintIfPaused();
+}
+
 void ShaderEngine::setScreenIndex(int index)
 {
     if (m_screenIndex == index) return;
@@ -1562,6 +1573,7 @@ ShaderEngineRenderer::UniformLocations ShaderEngineRenderer::locateUniforms(QOpe
     loc.iWindowRectsPrev = at("iWindowRectsPrev");
     loc.iWindowVelocities = at("iWindowVelocities");
     loc.iScreenOffset = at("iScreenOffset");
+    loc.iDesktopResolution = at("iDesktopResolution");
     loc.iScreenIndex = at("iScreenIndex");
     loc.iScreenCount = at("iScreenCount");
     loc.iVirtualDesktop = at("iVirtualDesktop");
@@ -1802,6 +1814,10 @@ void ShaderEngineRenderer::updateUniforms(QOpenGLShaderProgram *program, const U
     std::array<float, MAX_WINDOWS * 4> windowRects = m_windowRects;
     std::array<float, MAX_WINDOWS * 4> windowRectsPrev = m_windowRectsPrev;
     std::array<float, MAX_WINDOWS * 2> windowVelocities = m_windowVelocities;
+    QVector2D screenOffset = m_screenOffset;
+    // Zero means a single screen: the output's own size.
+    QVector2D desktopResolution = (m_desktopResolution.x() > 0.0f && m_desktopResolution.y() > 0.0f)
+        ? m_desktopResolution : QVector2D(m_fboSize.width(), m_fboSize.height());
 
     // Mouse and window inputs are in output-FBO pixels. A pass that renders
     // into a smaller target (buffer simulation grid, or the low-res main
@@ -1824,6 +1840,8 @@ void ShaderEngineRenderer::updateUniforms(QOpenGLShaderProgram *program, const U
         mouse.setW(mouse.w() * sy);
         mousePrev.setX(mousePrev.x() * sx);
         mousePrev.setY(mousePrev.y() * sy);
+        screenOffset *= QVector2D(sx, sy);
+        desktopResolution *= QVector2D(sx, sy);
 
         for (int i = 0; i < MAX_WINDOWS; ++i) {
             windowRects[i * 4 + 0] *= sx;
@@ -1891,7 +1909,8 @@ void ShaderEngineRenderer::updateUniforms(QOpenGLShaderProgram *program, const U
     // Multi-monitor / virtual-desktop uniforms — always set (zeroed if
     // the feature is off in config). The cost is trivial and shaders
     // can sample them freely without needing a feature flag.
-    program->setUniformValue(loc.iScreenOffset, m_screenOffset);
+    program->setUniformValue(loc.iScreenOffset, screenOffset);
+    program->setUniformValue(loc.iDesktopResolution, desktopResolution);
     program->setUniformValue(loc.iScreenIndex,  m_screenIndex);
     program->setUniformValue(loc.iScreenCount,  m_screenCount);
     program->setUniformValue(loc.iVirtualDesktop,      m_virtualDesktop);
@@ -2696,6 +2715,7 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
     // Mirror experimental screen/desktop state into the renderer
     // so renderMainPass / renderBuffer can plug them in as uniforms.
     m_screenOffset        = engine->screenOffset();
+    m_desktopResolution   = engine->desktopResolution();
     m_screenIndex         = engine->screenIndex();
     m_screenCount         = engine->screenCount();
     m_virtualDesktop      = engine->virtualDesktop();

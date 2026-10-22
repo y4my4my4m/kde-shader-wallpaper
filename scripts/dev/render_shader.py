@@ -563,6 +563,7 @@ class Renderer:
         GL.glUniform4fv(loc("iWindowRectsPrev"), MAX_WINDOWS, np.array(rects_prev, np.float32))
         GL.glUniform2fv(loc("iWindowVelocities"), MAX_WINDOWS, np.array(vels, np.float32))
         GL.glUniform2f(loc("iScreenOffset"), 0.0, 0.0)
+        GL.glUniform2f(loc("iDesktopResolution"), float(res[0]), float(res[1]))
         GL.glUniform1i(loc("iScreenIndex"), 0)
         GL.glUniform1i(loc("iScreenCount"), 1)
         GL.glUniform1i(loc("iVirtualDesktop"), 0)

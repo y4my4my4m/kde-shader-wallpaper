@@ -172,10 +172,27 @@ Item {
                 y = Math.min(y, screens[i].virtualY);
             return isFinite(y) ? y : 0;
         }
+        property real virtualX1: {
+            var x = Number.NEGATIVE_INFINITY;
+            for (var i = 0; i < screens.length; i++)
+                x = Math.max(x, screens[i].virtualX + screens[i].width);
+            return isFinite(x) ? x : myGeom.width;
+        }
+        property real virtualY1: {
+            var y = Number.NEGATIVE_INFINITY;
+            for (var i = 0; i < screens.length; i++)
+                y = Math.max(y, screens[i].virtualY + screens[i].height);
+            return isFinite(y) ? y : myGeom.height;
+        }
+        // Left to right, then top to bottom: independent of the order Qt
+        // lists screens in.
         property int myIndex: {
-            for (var i = 0; i < screens.length; i++) {
-                if (screens[i].virtualX === myGeom.x
-                 && screens[i].virtualY === myGeom.y) return i;
+            var order = [];
+            for (var i = 0; i < screens.length; i++) order.push(screens[i]);
+            order.sort(function(a, b) { return (a.virtualX - b.virtualX) || (a.virtualY - b.virtualY) });
+            for (var j = 0; j < order.length; j++) {
+                if (order[j].virtualX === myGeom.x
+                 && order[j].virtualY === myGeom.y) return j;
             }
             return 0;
         }
@@ -184,17 +201,26 @@ Item {
         target: screenInfo
         function onMyGeomChanged() { _pushScreenUniforms() }
         function onMyIndexChanged() { _pushScreenUniforms() }
+        function onVirtualX1Changed() { _pushScreenUniforms() }
+        function onVirtualY1Changed() { _pushScreenUniforms() }
     }
     function _pushScreenUniforms() {
         if (!shaderSystem._allowExperimentalScreens) {
             shaderEngine.screenOffset = Qt.vector2d(0, 0)
+            shaderEngine.desktopResolution = Qt.vector2d(0, 0)
             shaderEngine.screenIndex  = 0
             shaderEngine.screenCount  = 1
             return
         }
+        // Logical screen geometry to output pixels, GL origin (Y up).
+        const dpr = shaderSystem.Screen.devicePixelRatio || 1
+        const g = screenInfo.myGeom
         shaderEngine.screenOffset = Qt.vector2d(
-            screenInfo.myGeom.x - screenInfo.virtualX0,
-            screenInfo.myGeom.y - screenInfo.virtualY0)
+            (g.x - screenInfo.virtualX0) * dpr,
+            (screenInfo.virtualY1 - (g.y + g.height)) * dpr)
+        shaderEngine.desktopResolution = Qt.vector2d(
+            (screenInfo.virtualX1 - screenInfo.virtualX0) * dpr,
+            (screenInfo.virtualY1 - screenInfo.virtualY0) * dpr)
         shaderEngine.screenIndex = screenInfo.myIndex
         shaderEngine.screenCount = screenInfo.screens.length
     }
@@ -388,7 +414,9 @@ Item {
     MouseArea {
         id: mouseArea
         anchors.fill: parent
-        enabled: !shaderSystem.restrictedMode
+        // Absent unless the shader follows the mouse: nothing in the
+        // wallpaper then takes part in desktop input (issue #72).
+        enabled: !shaderSystem.restrictedMode && shaderSystem._allowMouse
         visible: enabled
         hoverEnabled: shaderSystem._allowMouse
         propagateComposedEvents: true
@@ -568,6 +596,7 @@ Item {
     }
 
     Component.onCompleted: {
+        _pushScreenUniforms()
         console.log("Shader Wallpaper initialized")
         _migrateConfig()
         if (!wallpaperConfig) {
