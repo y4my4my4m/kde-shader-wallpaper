@@ -4859,6 +4859,26 @@
             ],
             "thumbnailPath": "thumbnails/ac1c08fa-2d9e-41a7-8c07-af24285f7df8.png",
             "views": 0
+        },
+        {
+            "addedIn": "4.2.0",
+            "author": "",
+            "category": "Window Reactive",
+            "description": "Thousands of starlings wheel and fold over a lake shore at golden hour while birds line your window tops like a power line, hopping, preening and bursting into flight when you move a window. A fast cursor is a falcon that sends a wave of alarm through the flock; click the sky for a falcon stoop. The sky follows your clock. Uses Image 2 as the sky.",
+            "favorite": false,
+            "hasBuffers": true,
+            "id": "b9485197-1099-4f49-989b-3dd7603d1634",
+            "likes": 0,
+            "name": "Murmuration",
+            "needsAudio": false,
+            "needsTextures": false,
+            "shaderPath": "Shaders/WindowReactive/murmuration.frag",
+            "source": "local",
+            "sourceId": "",
+            "tags": [
+            ],
+            "thumbnailPath": "thumbnails/b9485197-1099-4f49-989b-3dd7603d1634.png",
+            "views": 0
         }
     ],
     "version": 1
