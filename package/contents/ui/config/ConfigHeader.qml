@@ -6,6 +6,7 @@ import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import QtQuick.Window
 import org.kde.kirigami as Kirigami
+import ".."
 import "../shaderwallpaper"
 
 // Persistent header: live preview, current shader, primary actions and the
@@ -207,12 +208,21 @@ Item {
                     maximumLineCount: 1
                 }
                 QQC2.ToolButton {
+                    id: favButton
                     visible: root.currentShaderId.length > 0
                     readonly property bool fav: root.currentShader !== null && root.currentShader.favorite === true
-                    icon.name: "love"
-                    icon.color: fav ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.disabledTextColor
-                    checked: fav
                     display: QQC2.AbstractButton.IconOnly
+                    contentItem: Item {
+                        implicitWidth: Kirigami.Units.iconSizes.smallMedium
+                        implicitHeight: Kirigami.Units.iconSizes.smallMedium
+                        HeartIcon {
+                            anchors.centerIn: parent
+                            width: Kirigami.Units.iconSizes.smallMedium
+                            height: width
+                            filled: favButton.fav
+                            color: favButton.fav ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.disabledTextColor
+                        }
+                    }
                     text: fav ? i18n("Remove from favourites") : i18n("Add to favourites")
                     QQC2.ToolTip.text: text
                     QQC2.ToolTip.visible: hovered

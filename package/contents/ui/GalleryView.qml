@@ -84,6 +84,16 @@ FocusScope {
     property bool hasCostData: false
     readonly property string sortKey: sortModes[Math.min(gallerySettings.sortMode, sortModes.length - 1)].key
 
+    // Session-only filter: shaders new in this version.
+    property bool newOnly: false
+    onNewOnlyChanged: scheduleSync()
+    Connections {
+        target: ShaderLibrarySingleton
+        function onNewCountChanged() {
+            if (ShaderLibrarySingleton.newCount === 0) gallery.newOnly = false
+        }
+    }
+
     property bool _syncQueued: false
     function scheduleSync() {
         if (_syncQueued) return
@@ -106,6 +116,7 @@ FocusScope {
             if (!m) continue
             // The source model filters favourites on reset only.
             if (gallerySettings.favouritesOnly && m.favorite !== true) continue
+            if (gallery.newOnly && m.isNew !== true) continue
             const path = String(m.shaderPath)
             const avg = Number(m.averageFrameTime) || 0
             if (avg > 0) cost = true
@@ -119,6 +130,7 @@ FocusScope {
                 // Index entries can name a thumbnail file that is gone.
                 thumbnailPath: lib.needsThumbnail(m.id) ? "" : String(m.thumbnailPath || ""),
                 favorite: m.favorite === true,
+                isNew: m.isNew === true,
                 hasBuffers: m.hasBuffers === true,
                 needsAudio: m.needsAudio === true,
                 performanceTier: m.performanceTier === undefined ? -1 : m.performanceTier,
@@ -236,17 +248,42 @@ FocusScope {
                 }
                 onAccepted: if (items.count > 0) gallery.apply(0)
             }
-            QQC2.ToolButton {
-                icon.name: "love"
-                icon.color: checked ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
-                checkable: true
-                checked: gallerySettings.favouritesOnly
-                display: toolbar.wide ? QQC2.AbstractButton.TextBesideIcon : QQC2.AbstractButton.IconOnly
-                text: i18n("Favourites")
-                QQC2.ToolTip.text: i18n("Show favourites only")
-                QQC2.ToolTip.visible: hovered
-                QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
-                onToggled: gallerySettings.favouritesOnly = checked
+            RowLayout {
+                spacing: 0
+                QQC2.ToolButton {
+                    icon.name: "love"
+                    icon.color: checked ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
+                    checkable: true
+                    checked: gallerySettings.favouritesOnly
+                    display: toolbar.wide ? QQC2.AbstractButton.TextBesideIcon : QQC2.AbstractButton.IconOnly
+                    text: i18n("Favourites")
+                    QQC2.ToolTip.text: i18n("Show favourites only")
+                    QQC2.ToolTip.visible: hovered
+                    QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+                    onToggled: gallerySettings.favouritesOnly = checked
+                }
+                QQC2.ToolButton {
+                    id: newToggle
+                    objectName: "newToggle"
+                    visible: ShaderLibrarySingleton.newCount > 0 || gallery.newOnly
+                    checkable: true
+                    checked: gallery.newOnly
+                    // IconOnly: the style's background draws the text otherwise.
+                    display: QQC2.AbstractButton.IconOnly
+                    text: i18np("%1 new shader", "%1 new shaders", ShaderLibrarySingleton.newCount)
+                    contentItem: RowLayout {
+                        spacing: Kirigami.Units.smallSpacing
+                        NewBadge {}
+                        QQC2.Label {
+                            text: ShaderLibrarySingleton.newCount
+                            visible: ShaderLibrarySingleton.newCount > 0
+                        }
+                    }
+                    QQC2.ToolTip.text: newToggle.checked ? i18n("Show all shaders") : i18n("Show shaders new in this version")
+                    QQC2.ToolTip.visible: hovered
+                    QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+                    onToggled: gallery.newOnly = checked
+                }
             }
             QQC2.ComboBox {
                 id: categoryCombo
@@ -348,6 +385,7 @@ FocusScope {
                 required property string relPath
                 required property string thumbnailPath
                 required property bool favorite
+                required property bool isNew
                 required property bool hasBuffers
                 required property bool needsAudio
                 required property int performanceTier
@@ -369,6 +407,7 @@ FocusScope {
                     author: cell.author
                     thumbnailPath: cell.thumbnailPath
                     isFavorite: cell.favorite
+                    isNew: cell.isNew
                     hasBuffers: cell.hasBuffers
                     needsAudio: cell.needsAudio
                     performanceTier: cell.performanceTier
@@ -596,6 +635,13 @@ FocusScope {
             icon.name: "view-media-playlist"
             enabled: cardMenu.row !== null && (gallery.root.cfg_playlistShaders || []).indexOf(cardMenu.row.relPath) < 0
             onTriggered: if (cardMenu.row) gallery.root.addToPlaylist(cardMenu.row.shaderPath)
+        }
+        QQC2.MenuItem {
+            text: i18n("Mark All New Shaders as Seen")
+            icon.name: "checkmark"
+            visible: ShaderLibrarySingleton.newCount > 0
+            height: visible ? implicitHeight : 0
+            onTriggered: ShaderLibrarySingleton.markAllSeen()
         }
         QQC2.MenuItem {
             text: i18n("Regenerate Thumbnail")

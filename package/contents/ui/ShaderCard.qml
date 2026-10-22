@@ -16,6 +16,7 @@ Item {
     property string author
     property url thumbnailPath
     property bool isFavorite: false
+    property bool isNew: false
     property bool hasBuffers: false
     property bool needsAudio: false
     property bool greeterAvailable: true
@@ -85,6 +86,15 @@ Item {
                 visible: thumbnail.status !== Image.Ready
             }
 
+            NewBadge {
+                anchors {
+                    left: parent.left
+                    bottom: parent.bottom
+                    margins: Kirigami.Units.smallSpacing
+                }
+                visible: card.isNew
+            }
+
             // Badges, top right.
             Row {
                 anchors {
@@ -142,11 +152,15 @@ Item {
                 visible: card.isFavorite || card.hovered
                 implicitWidth: Kirigami.Units.iconSizes.small + Kirigami.Units.smallSpacing * 2
                 implicitHeight: implicitWidth
-                padding: Kirigami.Units.smallSpacing / 2
-                icon.name: "love"
-                icon.color: card.isFavorite ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
+                padding: Kirigami.Units.smallSpacing
                 display: QQC2.AbstractButton.IconOnly
                 text: card.isFavorite ? i18n("Remove from favourites") : i18n("Add to favourites")
+                // The style's icon slot needs more room than the badge gives it
+                // and draws nothing.
+                contentItem: HeartIcon {
+                    filled: card.isFavorite
+                    color: card.isFavorite ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
+                }
                 QQC2.ToolTip.text: text
                 QQC2.ToolTip.visible: hovered
                 QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay

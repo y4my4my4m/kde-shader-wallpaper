@@ -147,6 +147,8 @@ ColumnLayout {
     }
 
     readonly property string currentShaderId: currentShader ? currentShader.id : ""
+    // Opening a shader clears its "new" mark.
+    onCurrentShaderIdChanged: if (currentShaderId.length > 0) ShaderLibrarySingleton.markSeen(currentShaderId)
     readonly property bool inlineOverride: cfg_selectedShaderCode.length > 0
     readonly property bool fileBacked: cfg_selectedShaderPath.length > 0
     // A library shader running from an edited in-config copy (tweaks or

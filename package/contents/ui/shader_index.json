@@ -1,6 +1,7 @@
 {
     "categories": [
     ],
+    "release": "4.2.0",
     "shaders": [
         {
             "author": "",
@@ -4620,6 +4621,7 @@
             "views": 0
         },
         {
+            "addedIn": "4.2.0",
             "author": "",
             "category": "Noise",
             "description": "",
@@ -4639,6 +4641,7 @@
             "views": 0
         },
         {
+            "addedIn": "4.2.0",
             "author": "",
             "category": "Window Reactive",
             "description": "Sunlit lagoon seen from above. The cursor drags a wake, clicks splash, dragged windows push bow waves and resting windows are walls that ripples bounce off; every window floats and casts a soft shadow. Put your own wallpaper under the water with Image 2.",
@@ -4658,6 +4661,7 @@
             "views": 0
         },
         {
+            "addedIn": "4.2.0",
             "author": "",
             "category": "Window Reactive",
             "description": "Blocky side-view world with a day and night cycle that follows your clock. Animals wander, come and go, and walk along window tops. Hold the mouse to mine blocks, click an animal to make it happy, keep the cursor away from creepers. Water and lava flow into what you dig, and the world slowly heals.",
@@ -4677,6 +4681,7 @@
             "views": 0
         },
         {
+            "addedIn": "4.2.0",
             "author": "",
             "category": "Window Reactive",
             "description": "A virtual pet on a giant LCD. It hatches from an egg, grows up, gets hungry at mealtimes, poops, naps and goes to bed at night by your clock. Click it for hearts, use the icons to feed, play, clean and heal it, hover it for its status. It hides from fast windows and rides the ones you drag.",
@@ -4696,6 +4701,7 @@
             "views": 0
         },
         {
+            "addedIn": "4.2.0",
             "author": "",
             "category": "Window Reactive",
             "description": "A cosy planted tank: neon tetras school among swaying plants while angelfish, a pufferfish, corydoras and shrimp go about their day. Click to sprinkle food, poke the pufferfish, rush the cursor past to send everyone hiding behind your windows. Dims to moonlight at night. Uses Image 2 as the back wall.",
@@ -4715,6 +4721,7 @@
             "views": 0
         },
         {
+            "addedIn": "4.2.0",
             "author": "",
             "category": "Window Reactive",
             "description": "Snow falls over your desktop and piles into soft drifts along the bottom and on top of every window. Move a window gently and it carries its snow; yank it and the snow slides off in clumps that burst into powder. The warm cursor melts steaming paths, clicks throw up powder. Uses Image 2 as the backdrop.",
@@ -4734,6 +4741,7 @@
             "views": 0
         },
         {
+            "addedIn": "4.2.0",
             "author": "",
             "category": "Window Reactive",
             "description": "An ant colony forages across sandy ground seen from above, laying scent trails to food and carrying it home crumb by crumb. Click to drop crumbs; windows are walls the ants walk around, a fast cursor scatters them, and at night most of them go home. Uses Image 2 as the ground.",
@@ -4753,6 +4761,7 @@
             "views": 0
         },
         {
+            "addedIn": "4.2.0",
             "author": "",
             "category": "Window Reactive",
             "description": "Pixel dunes, a little pond and flowers along the bottom of the desktop. Hold the mouse to pour sand, water, seeds, stone or snow from the palette in the corner; seeds sprout on wet sand, windows catch the piles and shove them aside, and now and then rain or a trickle of sand drifts through. Uses Image 2 as the sky.",
@@ -4772,6 +4781,7 @@
             "views": 0
         },
         {
+            "addedIn": "4.2.0",
             "author": "",
             "category": "Window Reactive",
             "description": "Ivy and morning glories climb a garden wall and frame your windows, unfurling, yellowing and regrowing through the day, while moonflowers glow at night. Drag a window to tear its vines away and watch them grow back, rustle the leaves with the cursor, click to plant a seed. Uses Image 2 as the wall.",

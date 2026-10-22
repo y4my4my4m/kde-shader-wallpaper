@@ -984,6 +984,10 @@ void ShaderLibrary::loadIndex()
     readIndexObject(m_libraryPath + QStringLiteral("/shader_index.json"), &bundled);
     QJsonObject user;
     readIndexObject(userIndexPath(), &user);
+    m_release = bundled[QStringLiteral("release")].toString();
+    for (const auto &id : user[QStringLiteral("seen")].toArray()) {
+        m_seenNew.insert(id.toString());
+    }
 
     const auto load = [this](const QJsonObject &obj) {
         auto shader = std::make_shared<ShaderMetadata>(obj, this);
@@ -1040,7 +1044,62 @@ void ShaderLibrary::loadIndex()
         }
     }
 
+    updateNewFlags();
     Q_EMIT shaderCountChanged();
+}
+
+namespace {
+// "4.2.1" -> "4.2"
+QString majorMinor(const QString &version)
+{
+    const QStringList parts = version.split(QLatin1Char('.'));
+    return parts.size() >= 2 ? parts[0] + QLatin1Char('.') + parts[1] : version;
+}
+} // namespace
+
+void ShaderLibrary::updateNewFlags()
+{
+    const QString release = majorMinor(m_release);
+    int count = 0;
+    for (const auto &shader : std::as_const(m_shaders)) {
+        const bool isNew = !release.isEmpty() && !shader->addedIn().isEmpty()
+            && majorMinor(shader->addedIn()) == release
+            && !m_seenNew.contains(shader->id());
+        if (shader->isNew() != isNew) {
+            shader->setIsNew(isNew);
+            Q_EMIT shaderUpdated(shader->id());
+        }
+        count += isNew ? 1 : 0;
+    }
+    if (m_newCount != count) {
+        m_newCount = count;
+        Q_EMIT newCountChanged();
+    }
+}
+
+void ShaderLibrary::markSeen(const QString &id)
+{
+    const auto shader = getShader(id);
+    if (!shader || !shader->isNew()) {
+        return;
+    }
+    m_seenNew.insert(id);
+    updateNewFlags();
+    saveIndex();
+}
+
+void ShaderLibrary::markAllSeen()
+{
+    if (m_newCount == 0) {
+        return;
+    }
+    for (const auto &shader : std::as_const(m_shaders)) {
+        if (shader->isNew()) {
+            m_seenNew.insert(shader->id());
+        }
+    }
+    updateNewFlags();
+    saveIndex();
 }
 
 void ShaderLibrary::saveIndex()
@@ -1062,10 +1121,23 @@ void ShaderLibrary::saveIndex()
         }
     }
 
+    // Ids of shaders no longer marked with a release drop out.
+    QStringList seen;
+    for (const QString &id : std::as_const(m_seenNew)) {
+        const auto shader = m_shaderMap.value(id);
+        if (shader && !shader->addedIn().isEmpty()) {
+            seen.append(id);
+        }
+    }
+    seen.sort();
+
     QJsonObject root;
     root[QStringLiteral("shaders")] = shadersArray;
     root[QStringLiteral("categories")] = categoriesArray;
     root[QStringLiteral("version")] = 1;
+    if (!seen.isEmpty()) {
+        root[QStringLiteral("seen")] = QJsonArray::fromStringList(seen);
+    }
 
     if (!QDir().mkpath(m_userDataPath)) {
         Q_EMIT error(QStringLiteral("Failed to create %1").arg(m_userDataPath));
@@ -1148,6 +1220,17 @@ void ShaderLibrary::mergeIndexFromDisk()
     QJsonObject root;
     if (!readIndexObject(userIndexPath(), &root)) {
         return;  // missing or partial write: in-memory state stands, the next save rewrites it
+    }
+
+    bool seenGrew = false;
+    for (const auto &id : root[QStringLiteral("seen")].toArray()) {
+        if (!m_seenNew.contains(id.toString())) {
+            m_seenNew.insert(id.toString());
+            seenGrew = true;
+        }
+    }
+    if (seenGrew) {
+        updateNewFlags();
     }
 
     // Disk state is the bundled index with the overlay applied, layered as

@@ -12,6 +12,7 @@
 #include <QList>
 #include <QMap>
 #include <QHash>
+#include <QSet>
 #include <QJsonObject>
 #include <memory>
 
@@ -58,6 +59,8 @@ class ShaderLibrary : public QObject
     Q_PROPERTY(int shaderCount READ shaderCount NOTIFY shaderCountChanged)
     Q_PROPERTY(QStringList categories READ categories NOTIFY categoriesChanged)
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
+    // Shaders added in the installed release that the user has not opened.
+    Q_PROPERTY(int newCount READ newCount NOTIFY newCountChanged)
 
     // /usr/share/.../contents/ui if it exists and has shader files. Empty
     // string otherwise. UI uses greeterPathPresent to gate the "won't show
@@ -163,6 +166,13 @@ public:
      * @brief Toggle favorite status
      */
     Q_INVOKABLE void toggleFavorite(const QString &id);
+
+    /**
+     * @brief Clear the "new" mark of one shader, or of all of them
+     */
+    Q_INVOKABLE void markSeen(const QString &id);
+    Q_INVOKABLE void markAllSeen();
+    int newCount() const { return m_newCount; }
     
     /**
      * @brief Get favorite shaders
@@ -317,6 +327,7 @@ Q_SIGNALS:
     void shaderAdded(const QString &id);
     void shaderRemoved(const QString &id);
     void shaderUpdated(const QString &id);
+    void newCountChanged();
     void thumbnailGenerated(const QString &id, const QUrl &thumbnailPath);
     void error(const QString &message);
 
@@ -327,6 +338,9 @@ private:
     // for bundled shaders, only favorite and thumbnail state.
     void loadIndex();
     void saveIndex();
+    // isNew = addedIn shares major.minor with the bundled index's "release"
+    // and the id is not in the user index's "seen" list.
+    void updateNewFlags();
     QString userIndexPath() const;
     // Copies user data out of a writable package directory once, before the
     // user index exists. The source is left untouched.
@@ -376,6 +390,9 @@ private:
     // the user index.
     QHash<QString, QJsonObject> m_bundledEntries;
     QHash<QString, QString> m_bundledIdByPath;
+    QString m_release;            // bundled index "release", e.g. "4.2.0"
+    QSet<QString> m_seenNew;      // user index "seen": ids opened while new
+    int m_newCount = 0;
     QList<std::shared_ptr<ShaderMetadata>> m_shaders;
     QMap<QString, std::shared_ptr<ShaderMetadata>> m_shaderMap; // By ID
     QMap<QString, std::shared_ptr<ShaderMetadata>> m_pathMap;   // By path
