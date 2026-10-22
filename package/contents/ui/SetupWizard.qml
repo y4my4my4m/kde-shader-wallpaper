@@ -302,9 +302,11 @@ Item {
                     Layout.fillWidth: true
                     spacing: Kirigami.Units.largeSpacing * 2
 
-                    EngineLogo {
+                    Kirigami.Icon {
                         Layout.alignment: Qt.AlignTop
-                        implicitWidth: Kirigami.Units.gridUnit * 3.5
+                        implicitWidth: Kirigami.Units.iconSizes.huge
+                        implicitHeight: Kirigami.Units.iconSizes.huge
+                        source: "preferences-desktop-wallpaper"
                     }
 
                     ColumnLayout {
