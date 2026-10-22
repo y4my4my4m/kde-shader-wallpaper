@@ -4819,6 +4819,46 @@
             ],
             "thumbnailPath": "thumbnails/aa35869a-379a-418c-9c09-b6f3cf8daf10.png",
             "views": 0
+        },
+        {
+            "addedIn": "4.2.0",
+            "author": "",
+            "category": "Window Reactive",
+            "description": "Your desktop becomes a rain-streaked windowpane: beads gather, drops merge and zig-zag down, each holding a tiny upside-down view of the street, while condensation fogs the glass for your cursor to wipe clear. Water collects on window tops and drips from their corners; click to tap the glass. Uses Image 2 as the view outside.",
+            "favorite": false,
+            "hasBuffers": true,
+            "id": "2925230f-870f-4ad1-9093-1d7bf72dbb45",
+            "likes": 0,
+            "name": "Rainy Window",
+            "needsAudio": false,
+            "needsTextures": false,
+            "shaderPath": "Shaders/WindowReactive/rainy_window.frag",
+            "source": "local",
+            "sourceId": "",
+            "tags": [
+            ],
+            "thumbnailPath": "thumbnails/2925230f-870f-4ad1-9093-1d7bf72dbb45.png",
+            "views": 0
+        },
+        {
+            "addedIn": "4.2.0",
+            "author": "",
+            "category": "Window Reactive",
+            "description": "A raked Japanese dry garden where every window is a rock ringed by gravel lines. Move a window and a rake draws fresh rings around it while the old ones smooth away; your cursor carves furrows, clicks drop stones, and a quiet gardener re-rakes over the minutes that follow. Light follows the clock, leaves follow the season.",
+            "favorite": false,
+            "hasBuffers": true,
+            "id": "ac1c08fa-2d9e-41a7-8c07-af24285f7df8",
+            "likes": 0,
+            "name": "Zen Garden",
+            "needsAudio": false,
+            "needsTextures": false,
+            "shaderPath": "Shaders/WindowReactive/zen_garden.frag",
+            "source": "local",
+            "sourceId": "",
+            "tags": [
+            ],
+            "thumbnailPath": "thumbnails/ac1c08fa-2d9e-41a7-8c07-af24285f7df8.png",
+            "views": 0
         }
     ],
     "version": 1
