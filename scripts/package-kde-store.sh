@@ -92,7 +92,7 @@ fi
 # The engine-missing path: without it a store install shows nothing.
 for required in metadata.json contents/ui/main.qml contents/ui/config.qml contents/config/main.xml \
                 contents/ui/EngineStatus.qml contents/ui/EngineProbe.qml contents/ui/EngineMissing.qml \
-                contents/ui/EngineLogo.qml contents/ui/SetupWizard.qml \
+                contents/ui/SetupWizard.qml \
                 contents/scripts/build.sh contents/source/CMakeLists.txt \
                 contents/source/src/CMakeLists.txt contents/source/scripts/enable-plm-greeter.sh; do
     [ -f "$ROOT/$required" ] || die "Staged package lacks $required."
