@@ -46,9 +46,36 @@ Item {
         ? String(wallpaperConfig.selectedShaderCode || "") : ""
     readonly property bool _inlineActive: _inlineCode.length > 0
 
+    // Shader Wallpaper 3.x stored compiled Qt shaders: "Shaders6/<Name>.frag.qsb"
+    // or an absolute .qsb path. Returns the bundled 4.x shader of the same base
+    // name, "" for none (bundled default), null for a path that is not 3.x.
+    // 3.x base names that 4.x ships rewritten or superseded under another name:
+    readonly property var _legacyQsbRenames: ({ "clouds": "2d_clouds", "dvd": "dvd_bounce", "ps3menu": "ps3_home",
+                                                "wave_propagation": "water_ripple_windows" })
+    function _legacyQsbTarget(path) {
+        const match = /([^\/]+)\.frag\.qsb$/i.exec(path)
+        if (!match) return null
+        const base = match[1].toLowerCase()
+        const wanted = (_legacyQsbRenames[base] || base) + ".frag"
+        const shaders = ShaderLibrarySingleton.allShaders()
+        for (let i = 0; i < shaders.length; i++) {
+            const rel = ShaderLibrarySingleton.toRelativeShaderPath(String(shaders[i].shaderPath))
+            if (rel.substring(rel.lastIndexOf("/") + 1).toLowerCase() === wanted) return rel
+        }
+        return ""
+    }
+
     function _migrateConfig() {
         if (!wallpaperConfig || !_legacyConfig) return
         try {
+            const qsbTarget = _legacyQsbTarget(_shaderPath)
+            if (qsbTarget === "") {
+                wallpaperConfig.selectedShaderPath = ""
+            } else if (qsbTarget !== null) {
+                const state = ShaderApply.collect(wallpaperConfig, ShaderApply.TEXTURE_STATE_KEYS, "")
+                ShaderApply.applyMap(wallpaperConfig,
+                                     ShaderApply.withoutInputs(ShaderApply.forPath(ShaderLibrarySingleton, qsbTarget, state)), "")
+            }
             if (_shaderPath.length > 0 && String(wallpaperConfig.selectedShaderCode || "").length > 0) {
                 wallpaperConfig.selectedShaderCode = ""
                 wallpaperConfig.commonCode = ""
@@ -72,6 +99,15 @@ Item {
                                 Screen.width, Screen.height)
     }
 
+    // Output pixels per logical pixel: the FBO's own ratio; before the
+    // engine has a window, the item-attached Screen's. Under Wayland
+    // fractional scaling Screen.devicePixelRatio is the output scale rounded
+    // up and differs from the FBO's.
+    readonly property real _pixelRatio: shaderEngine.devicePixelRatio > 0 ? shaderEngine.devicePixelRatio
+                                      : shaderSystem.Screen.devicePixelRatio > 0
+                                          ? shaderSystem.Screen.devicePixelRatio : 1.0
+    on_PixelRatioChanged: _pushScreenUniforms()
+
     // Cursor tracker for global mouse position. `screen` is this wallpaper's
     // QScreen* (plasmashell's DesktopView is a C++ QQuickWindow), so the Y
     // flip follows this screen. It is undefined until the window is mapped,
@@ -88,9 +124,10 @@ Item {
         // Same pixel space as fragCoord / iResolution (ShaderEngine FBO).
         referenceWidth: shaderEngine.width
         referenceHeight: shaderEngine.height
-        // Item-attached Screen: valid before the item has a window.
-        devicePixelRatio: shaderSystem.Screen.devicePixelRatio > 0
-                            ? shaderSystem.Screen.devicePixelRatio : 1.0
+        devicePixelRatio: shaderSystem._pixelRatio
+        // Wayland: no global pointer; the desktop window's own pointer
+        // events, in the same coordinates as mouseArea below.
+        hoverItem: shaderSystem
 
         onIMouseChanged: {
             shaderEngine.iMouse = iMouse
@@ -112,8 +149,8 @@ Item {
         enabled: shaderSystem._allowWindows && shaderEngine.running
         // Poll at the shader's render cadence: a fixed 30Hz reads as visible
         // steps when dragging windows on high-refresh displays. The tracker
-        // polls only after X reports window activity, so the cost is during
-        // actual window motion.
+        // polls only after X (or Plasma's window list on Wayland) reports
+        // window activity, so the cost is during actual window motion.
         pollInterval: Math.max(4, Math.round(1000 / (shaderEngine.targetFps || 60)))
         referenceWidth: shaderEngine.width
         referenceHeight: shaderEngine.height
@@ -213,7 +250,7 @@ Item {
             return
         }
         // Logical screen geometry to output pixels, GL origin (Y up).
-        const dpr = shaderSystem.Screen.devicePixelRatio || 1
+        const dpr = shaderSystem._pixelRatio
         const g = screenInfo.myGeom
         shaderEngine.screenOffset = Qt.vector2d(
             (g.x - screenInfo.virtualX0) * dpr,
@@ -409,8 +446,10 @@ Item {
     // to render at display refresh, which defeats the FPS limit, and the
     // synchronous XCB window poll is too heavy to run per frame.
 
-    // Mouse tracking area (fallback for Wayland). Disabled on greeter
-    // surfaces, whose UI needs the events.
+    // Mouse tracking area, for hover and presses that no item above takes.
+    // X11 polls the global pointer and Wayland filters the window's events
+    // (CursorTracker.hoverItem). Disabled on greeter surfaces, whose UI
+    // needs the events.
     MouseArea {
         id: mouseArea
         anchors.fill: parent

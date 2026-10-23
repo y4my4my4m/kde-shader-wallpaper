@@ -183,6 +183,9 @@ ShaderLibrary reads two roots with the same layout:
 | Shader Format | GLSL source, compiled at runtime (`#version 330 core`, or `300 es` on OpenGL ES) |
 | Audio | PipeWire |
 | Cursor (X11) | XCB |
+| Cursor (Wayland) | The desktop window's own pointer events |
+| Windows (X11) | XCB |
+| Windows (Wayland) | Plasma's window list (libtaskmanager) |
 | Build System | CMake with Extra CMake Modules |
 | Package Format | Plasma Wallpaper Package |
 
@@ -192,7 +195,7 @@ ShaderLibrary reads two roots with the same layout:
 2. **Pause Detection**: WindowModel monitors for fullscreen/maximized windows; the desktop instance also pauses while the session is locked (ScreenLockWatcher, `org.freedesktop.ScreenSaver.ActiveChanged`)
 3. **Audio Processing**: Runs at fixed 60Hz independent of shader FPS
 4. **Buffer Optimization**: Ping-pong buffering reduces GPU stalls. A buffer pass that steps once per frame declares `// @substeps 1` and skips the substep copies
-5. **Window Tracking**: X events gate the polls. An idle desktop costs no timer and no X requests; a moved window costs two requests per tracked candidate; map, unmap, client list and attribute changes re-read every client. The renderer reads the tracker directly (`windowSource`)
+5. **Window Tracking**: X events (Wayland: changes in Plasma's window list) gate the polls. An idle desktop costs no timer and no X requests; a moved window costs two requests per tracked candidate; map, unmap, client list and attribute changes re-read every client. On Wayland a poll reads the window list locally. The renderer reads the tracker directly (`windowSource`)
 6. **Per-frame Signals**: `iTimeChanged`, `iFrameChanged` and the frame-time statistics reach the GUI thread only while `frameSignals` is on, which follows the performance HUD
 7. **Renderer CPU**: Uniform locations are cached per program, and the `@shared` split of the main file runs only when the code changes
 

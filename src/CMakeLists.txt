@@ -127,8 +127,9 @@ if(XCB_FOUND)
     target_link_libraries(shaderwallpaperplugin PRIVATE ${XCB_LIBRARIES})
 endif()
 
-if(Wayland_FOUND)
-    target_link_libraries(shaderwallpaperplugin PRIVATE Wayland::Client)
+# KF6::WindowSystem arrives with Plasma (find_dependency in PlasmaConfig).
+if(LibTaskManager_FOUND)
+    target_link_libraries(shaderwallpaperplugin PRIVATE PW::LibTaskManager KF6::WindowSystem)
 endif()
 
 if(SHADERC_FOUND)

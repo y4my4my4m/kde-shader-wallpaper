@@ -2,7 +2,7 @@
 #   spectool -g -R plasma-wallpaper-shader.spec && rpmbuild -ba plasma-wallpaper-shader.spec
 
 Name:           plasma-wallpaper-shader
-Version:        4.2.0
+Version:        4.2.1
 Release:        1%{?dist}
 Summary:        Run GLSL shaders as your KDE Plasma 6 wallpaper
 License:        GPL-3.0-or-later
@@ -26,10 +26,11 @@ BuildRequires:  cmake(Qt6Quick)
 BuildRequires:  cmake(KF6Config)
 BuildRequires:  cmake(KF6I18n)
 BuildRequires:  cmake(KF6Package)
+BuildRequires:  cmake(KF6WindowSystem)
+BuildRequires:  cmake(LibTaskManager)
 BuildRequires:  cmake(Plasma)
 BuildRequires:  cmake(PlasmaQuick)
 BuildRequires:  pkgconfig(libpipewire-0.3)
-BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(xcb)
 
 %if 0%{?suse_version}
@@ -65,5 +66,8 @@ Shadertoy import.
 %{_libexecdir}/shaderwallpaper/
 
 %changelog
+* Fri Oct 23 2026 y4my4my4m <y4my4m@protonmail.com> - 4.2.1-1
+- Release 4.2.1
+
 * Thu Oct 22 2026 y4my4my4m <y4my4m@protonmail.com> - 4.2.0-1
 - Release 4.2.0

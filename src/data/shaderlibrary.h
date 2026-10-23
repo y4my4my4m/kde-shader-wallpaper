@@ -36,19 +36,10 @@ class QTimer;
 class ShaderLibrary : public QObject
 {
     Q_OBJECT
-    // NOTE: deliberately NOT using QML_SINGLETON / QML_ELEMENT here.
-    //
-    // Those macros tell qmltyperegistrar to register the class as a QML
-    // singleton named "ShaderLibrary", which Qt instantiates via its own
-    // default-constructor factory. That ends up creating a SECOND copy
-    // alongside the one ShaderLibrary::instance() returns, and the two
-    // singletons silently desynchronise (different m_shaders, different
-    // categories, etc.) — which manifested as "getShaderByPath is not a
-    // function" because the QML-engine-managed singleton hasn't had its
-    // metaobject fully wired up yet at first access.
-    //
-    // We register the singleton manually in shaderwallpaperplugin.cpp,
-    // returning ShaderLibrary::instance() so there's exactly one of us.
+    // No QML_SINGLETON / QML_ELEMENT: qmltyperegistrar would register a
+    // singleton built by Qt's default factory, a second instance beside
+    // instance(). ShaderLibrarySingleton is registered by hand and returns
+    // instance(), which is C++-owned.
 
     Q_PROPERTY(QString libraryPath READ libraryPath WRITE setLibraryPath NOTIFY libraryPathChanged)
     // Per-user writable root (GenericDataLocation/shaderwallpaper). Holds the

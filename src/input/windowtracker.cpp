@@ -1,11 +1,22 @@
 #include "windowtracker.h"
+#include <algorithm>
 #include <QDateTime>
+#include <QGuiApplication>
+#include <QScreen>
 #include <QSocketNotifier>
 #include <QVarLengthArray>
 #include <QDebug>
 
 #ifdef HAVE_XCB
 #include <xcb/xcb.h>
+#endif
+
+#ifdef HAVE_TASKMANAGER
+#include <KWindowSystem>
+#include <abstracttasksmodel.h>
+#include <activityinfo.h>
+#include <virtualdesktopinfo.h>
+#include <windowtasksmodel.h>
 #endif
 
 WindowTracker::WindowTracker(QObject *parent)
@@ -17,6 +28,15 @@ WindowTracker::WindowTracker(QObject *parent)
     m_pollTimer->setTimerType(Qt::PreciseTimer);
     connect(m_pollTimer, &QTimer::timeout, this, &WindowTracker::pollTick);
     connect(this, &WindowTracker::windowsChanged, this, [this]() { ++m_changeSerial; });
+#ifdef HAVE_TASKMANAGER
+    // A Wayland client sees no other client's windows; over XWayland only
+    // X11 clients. KWin grants plasmashell Plasma's window list.
+    if (KWindowSystem::isPlatformWayland()) {
+        m_logicalGeometry = true;
+        m_dbusAvailable = true;
+        return;
+    }
+#endif
 #ifdef HAVE_XCB
     initXcb();
 #endif
@@ -214,6 +234,76 @@ bool WindowTracker::ensureXcbConnection()
 }
 #endif
 
+#ifdef HAVE_TASKMANAGER
+void WindowTracker::createTasks()
+{
+    if (m_tasks) return;
+    using TaskManager::AbstractTasksModel;
+    m_tasks = new TaskManager::WindowTasksModel(this);
+    m_desktopInfo = new TaskManager::VirtualDesktopInfo(this);
+    m_activityInfo = new TaskManager::ActivityInfo(this);
+
+    // Roles that can change the tracked set or a rect. StackingOrder
+    // (every raise), IsActive, titles and icons cannot.
+    connect(m_tasks, &QAbstractItemModel::dataChanged, this,
+            [this](const QModelIndex &, const QModelIndex &, const QList<int> &roles) {
+        static const QList<int> tracked = {
+            AbstractTasksModel::Geometry,
+            AbstractTasksModel::ScreenGeometry,
+            AbstractTasksModel::IsMinimized,
+            AbstractTasksModel::IsShaded,
+            AbstractTasksModel::VirtualDesktops,
+            AbstractTasksModel::IsOnAllVirtualDesktops,
+            AbstractTasksModel::Activities,
+        };
+        if (roles.isEmpty()
+            || std::any_of(roles.cbegin(), roles.cend(), [](int role) { return tracked.contains(role); })) {
+            onTasksChanged();
+        }
+    });
+    connect(m_tasks, &QAbstractItemModel::rowsInserted, this, &WindowTracker::onTasksChanged);
+    connect(m_tasks, &QAbstractItemModel::rowsRemoved, this, &WindowTracker::onTasksChanged);
+    connect(m_tasks, &QAbstractItemModel::rowsMoved, this, &WindowTracker::onTasksChanged);
+    connect(m_tasks, &QAbstractItemModel::modelReset, this, &WindowTracker::onTasksChanged);
+    connect(m_tasks, &QAbstractItemModel::layoutChanged, this, &WindowTracker::onTasksChanged);
+    connect(m_desktopInfo, &TaskManager::VirtualDesktopInfo::currentDesktopChanged,
+            this, &WindowTracker::onTasksChanged);
+#ifdef HAVE_TASKMANAGER_SCREEN_DESKTOPS
+    connect(m_desktopInfo, &TaskManager::VirtualDesktopInfo::currentDesktopForScreenChanged,
+            this, &WindowTracker::onTasksChanged);
+#endif
+    connect(m_activityInfo, &TaskManager::ActivityInfo::currentActivityChanged,
+            this, &WindowTracker::onTasksChanged);
+    connect(KWindowSystem::self(), &KWindowSystem::showingDesktopChanged,
+            this, &WindowTracker::onTasksChanged);
+    qDebug() << "WindowTracker: Using Plasma's window list (Wayland)";
+}
+
+void WindowTracker::destroyTasks()
+{
+    if (!m_tasks) return;
+    disconnect(KWindowSystem::self(), nullptr, this, nullptr);
+    // Deferred: the model may be inside one of its own signal emissions.
+    for (QObject *object : std::initializer_list<QObject *>{m_tasks, m_desktopInfo, m_activityInfo}) {
+        disconnect(object, nullptr, this, nullptr);
+        object->deleteLater();
+    }
+    m_tasks = nullptr;
+    m_desktopInfo = nullptr;
+    m_activityInfo = nullptr;
+}
+
+// Mirrors onXcbReadable(): changes only flag work while the timer runs.
+void WindowTracker::onTasksChanged()
+{
+    m_listDirty = true;
+    if (!m_enabled || m_pollTimer->isActive()) return;
+    // First poll at once, the rest paced by the timer.
+    setPolling(true);
+    pollWindows();
+}
+#endif
+
 bool WindowTracker::available() const
 {
     return m_dbusAvailable;
@@ -226,6 +316,11 @@ void WindowTracker::setEnabled(bool enabled)
     
     if (m_enabled) {
         qDebug() << "WindowTracker: Enabled with poll interval" << m_pollInterval << "ms";
+#ifdef HAVE_TASKMANAGER
+        if (m_logicalGeometry) {
+            createTasks();
+        }
+#endif
         m_lastPollTime = QDateTime::currentMSecsSinceEpoch();
         // Window activity while disabled went unrecorded.
         m_listDirty = true;
@@ -234,6 +329,9 @@ void WindowTracker::setEnabled(bool enabled)
     } else {
         qDebug() << "WindowTracker: Disabled";
         setPolling(false);
+#ifdef HAVE_TASKMANAGER
+        destroyTasks();
+#endif
         m_windows.clear();
         m_hadMotion = false;
         Q_EMIT windowsChanged();
@@ -297,17 +395,28 @@ void WindowTracker::setScreenVirtualY(qreal y)
 
 QRectF WindowTracker::mapRectToShader(const QRectF &globalTopLeft) const
 {
-    // XCB geometry: global desktop coords, Y=0 at top.
+    // Window geometry: global desktop coords, Y=0 at top; device pixels on
+    // X11, logical pixels on Wayland.
     // Shader fragCoord / iMouse: this wallpaper's FBO, Y=0 at bottom, device pixels.
     const qreal dpr = m_devicePixelRatio > 0.0 ? m_devicePixelRatio : 1.0;
     const qreal refH = (m_referenceHeight > 0.0 ? m_referenceHeight : 1080.0) * dpr;
     const qreal originX = m_screenVirtualX * dpr;
     const qreal originY = m_screenVirtualY * dpr;
+    const qreal scale = m_logicalGeometry ? dpr : 1.0;
+    const QRectF global(globalTopLeft.topLeft() * scale, globalTopLeft.size() * scale);
 
-    const qreal localX = globalTopLeft.x() - originX;
-    const qreal localY = refH - (globalTopLeft.y() - originY) - globalTopLeft.height();
+    const qreal localX = global.x() - originX;
+    const qreal localY = refH - (global.y() - originY) - global.height();
 
-    return QRectF(localX, localY, globalTopLeft.width(), globalTopLeft.height());
+    return QRectF(localX, localY, global.width(), global.height());
+}
+
+// Velocity in global desktop coords (Y=0 at top) to shader space: device
+// pixels per second, Y up like the rects.
+QPointF WindowTracker::mapVelocityToShader(const QPointF &velocity) const
+{
+    const qreal scale = m_logicalGeometry ? (m_devicePixelRatio > 0.0 ? m_devicePixelRatio : 1.0) : 1.0;
+    return QPointF(velocity.x() * scale, -velocity.y() * scale);
 }
 
 void WindowTracker::refresh()
@@ -320,6 +429,17 @@ void WindowTracker::refresh()
 
 void WindowTracker::pollTick()
 {
+#ifdef HAVE_TASKMANAGER
+    if (m_tasks) {
+        if (!m_listDirty && !m_hadMotion) {
+            // Idle: the next model change restarts the timer.
+            setPolling(false);
+            return;
+        }
+        pollWindows();
+        return;
+    }
+#endif
 #ifdef HAVE_XCB
     if (xcbHealthy()) {
         processXcbEvents();
@@ -335,24 +455,9 @@ void WindowTracker::pollTick()
 #endif
 }
 
-void WindowTracker::pollWindows()
+// Seconds since the previous poll.
+qreal WindowTracker::pollDelta()
 {
-#ifdef HAVE_XCB
-    if (!ensureXcbConnection()) return;
-
-    // Replies read during the last poll may have queued events on the
-    // connection without waking the socket notifier — drain them here too.
-    processXcbEvents();
-
-    // Idle desktop: X reported no window activity and no tracked window
-    // still carries velocity that needs decaying. Skip entirely — zero
-    // round trips, zero allocations.
-    if (!m_windowsDirty && !m_listDirty && !m_hadMotion) return;
-    // Motion decay without X activity re-reads geometry only.
-    const bool full = m_listDirty || !m_clientsValid;
-    m_windowsDirty = false;
-    m_listDirty = false;
-
     qint64 now = QDateTime::currentMSecsSinceEpoch();
     // Clamp dt: after an idle stretch (skipped polls) the previous
     // timestamp is old, and dividing the first movement delta by minutes
@@ -360,12 +465,13 @@ void WindowTracker::pollWindows()
     // Movement that woke us happened within the last couple of intervals.
     qreal dt = qMin((now - m_lastPollTime) / 1000.0, m_pollInterval * 2 / 1000.0);
     m_lastPollTime = now;
+    return dt;
+}
 
-    const QList<WindowInfo> before = m_windows;
-    if (!(full ? queryClients() : queryGeometry())) {
-        // A vanished window or a broken connection: next poll starts over.
-        m_listDirty = true;
-    }
+// Velocities of m_windows against the same windows in `before`. True when
+// the list, a rect or a velocity changed. Sets m_hadMotion.
+bool WindowTracker::updateMotion(const QList<WindowInfo> &before, qreal dt)
+{
     for (WindowInfo &win : m_windows) {
         win.prevGeometry = win.geometry;
         for (const WindowInfo &old : before) {
@@ -392,7 +498,7 @@ void WindowTracker::pollWindows()
             }
         }
     }
-    // Keep polling (without X events) until all velocities have decayed
+    // Keep polling (without window events) until all velocities have decayed
     // to zero, so a window that just stopped still gets its final
     // zero-velocity update.
     m_hadMotion = false;
@@ -402,6 +508,52 @@ void WindowTracker::pollWindows()
             break;
         }
     }
+    return changed;
+}
+
+void WindowTracker::pollWindows()
+{
+#ifdef HAVE_TASKMANAGER
+    if (m_tasks) {
+        if (!m_listDirty && !m_hadMotion) return;
+        m_listDirty = false;
+        const qreal dt = pollDelta();
+        const QList<WindowInfo> before = m_windows;
+        queryTasks();
+        const bool changed = updateMotion(before, dt);
+        if (m_enabled && !m_pollTimer->isActive() && m_hadMotion) {
+            setPolling(true);
+        }
+        if (changed) {
+            Q_EMIT windowsChanged();
+        }
+        return;
+    }
+#endif
+#ifdef HAVE_XCB
+    if (!ensureXcbConnection()) return;
+
+    // Replies read during the last poll may have queued events on the
+    // connection without waking the socket notifier — drain them here too.
+    processXcbEvents();
+
+    // Idle desktop: X reported no window activity and no tracked window
+    // still carries velocity that needs decaying. Skip entirely — zero
+    // round trips, zero allocations.
+    if (!m_windowsDirty && !m_listDirty && !m_hadMotion) return;
+    // Motion decay without X activity re-reads geometry only.
+    const bool full = m_listDirty || !m_clientsValid;
+    m_windowsDirty = false;
+    m_listDirty = false;
+
+    const qreal dt = pollDelta();
+
+    const QList<WindowInfo> before = m_windows;
+    if (!(full ? queryClients() : queryGeometry())) {
+        // A vanished window or a broken connection: next poll starts over.
+        m_listDirty = true;
+    }
+    const bool changed = updateMotion(before, dt);
 
     // Events that arrived with the replies.
     processXcbEvents();
@@ -414,6 +566,14 @@ void WindowTracker::pollWindows()
         Q_EMIT windowsChanged();
     }
 #endif
+}
+
+// Skip tiny/thin windows (toolbars, popups, panels, etc.) and windows that
+// cover the whole screen (likely desktop/wallpaper).
+[[maybe_unused]] static bool trackedSize(const QRectF &geom, qreal screenWidth, qreal screenHeight)
+{
+    return geom.width() >= 150 && geom.height() >= 150
+        && !(geom.width() >= screenWidth * 0.95 && geom.height() >= screenHeight * 0.95);
 }
 
 #ifdef HAVE_XCB
@@ -511,14 +671,6 @@ static QRectF clientRect(const xcb_get_geometry_reply_t *geomReply,
         geom.adjust(qreal(gtkFrame[0]), qreal(gtkFrame[2]), -qreal(gtkFrame[1]), -qreal(gtkFrame[3]));
     }
     return geom;
-}
-
-// Skip tiny/thin windows (toolbars, popups, panels, etc.) and windows that
-// cover the whole screen (likely desktop/wallpaper).
-static bool trackedSize(const QRectF &geom, qreal screenWidth, qreal screenHeight)
-{
-    return geom.width() >= 150 && geom.height() >= 150
-        && !(geom.width() >= screenWidth * 0.95 && geom.height() >= screenHeight * 0.95);
 }
 #endif
 
@@ -761,6 +913,75 @@ bool WindowTracker::queryGeometry()
 }
 #endif
 
+#ifdef HAVE_TASKMANAGER
+// Wayland counterpart of queryClients(): the same windows the X11 path
+// counts, in the same order. KWin's frame geometry is the visible frame,
+// shadows excluded, in logical pixels.
+void WindowTracker::queryTasks()
+{
+    using TaskManager::AbstractTasksModel;
+    m_windows.clear();
+    // Show Desktop hides every window without minimizing it.
+    if (KWindowSystem::showingDesktop()) return;
+
+    // Size filter against the bounding box of all outputs, as the X root
+    // window spans them.
+    const QScreen *primary = QGuiApplication::primaryScreen();
+    const QRect desktop = primary ? primary->virtualGeometry() : QRect();
+    const QVariant currentDesktop = m_desktopInfo->currentDesktop();
+    const QString currentActivity = m_activityInfo->currentActivity();
+    static const QString allActivities = QStringLiteral("00000000-0000-0000-0000-000000000000");
+
+    const int rows = m_tasks->rowCount();
+    for (int row = 0; row < rows && m_windows.size() < MAX_WINDOWS; ++row) {
+        const QModelIndex idx = m_tasks->index(row, 0);
+        // A shaded window's client area is unmapped on X11.
+        if (idx.data(AbstractTasksModel::IsMinimized).toBool()
+            || idx.data(AbstractTasksModel::IsShaded).toBool()) {
+            continue;
+        }
+        // No desktops: on all of them.
+        const QVariantList desktops = idx.data(AbstractTasksModel::VirtualDesktops).toList();
+        if (!desktops.isEmpty() && !currentDesktop.toString().isEmpty()) {
+            QVariant shown = currentDesktop;
+#ifdef HAVE_TASKMANAGER_SCREEN_DESKTOPS
+            const QRect screenGeometry = idx.data(AbstractTasksModel::ScreenGeometry).toRect();
+            const QList<QScreen *> screens = QGuiApplication::screens();
+            for (const QScreen *screen : screens) {
+                if (screen->geometry() == screenGeometry) {
+                    shown = m_desktopInfo->currentDesktopByScreenName(screen->name());
+                    break;
+                }
+            }
+#endif
+            if (!desktops.contains(shown)) continue;
+        }
+        // No activities, or the null uuid: on all of them.
+        const QStringList activities = idx.data(AbstractTasksModel::Activities).toStringList();
+        if (!currentActivity.isEmpty() && !activities.isEmpty()
+            && !activities.contains(allActivities) && !activities.contains(currentActivity)) {
+            continue;
+        }
+        const QRectF geom = idx.data(AbstractTasksModel::Geometry).toRect();
+        if (!trackedSize(geom, desktop.width(), desktop.height())) continue;
+
+        WindowInfo info;
+        // WinIdList on Wayland: the window's uuid.
+        info.id = uint32_t(qHash(idx.data(AbstractTasksModel::WinIdList).toList().value(0).toString()));
+        info.geometry = geom;
+        info.isVisible = true;
+        m_windows.append(info);
+    }
+
+    static int lastReportedCount = -1;
+    if (m_windows.size() != lastReportedCount) {
+        lastReportedCount = m_windows.size();
+        qDebug() << "WindowTracker: now tracking" << m_windows.size()
+                 << "windows (out of" << rows << "total)";
+    }
+}
+#endif
+
 void WindowTracker::calculateVelocities(qreal dt)
 {
     if (dt <= 0) return;
@@ -786,7 +1007,7 @@ QVariantList WindowTracker::windowVelocities() const
 {
     QVariantList result;
     for (const auto &win : m_windows) {
-        result.append(QVariant::fromValue(win.velocity));
+        result.append(QVariant::fromValue(mapVelocityToShader(win.velocity)));
     }
     return result;
 }
@@ -822,8 +1043,9 @@ void WindowTracker::copyFlat(float rects[MAX_WINDOWS * 4], float velocities[MAX_
             rects[i * 4 + 1] = static_cast<float>(local.y());
             rects[i * 4 + 2] = static_cast<float>(local.width());
             rects[i * 4 + 3] = static_cast<float>(local.height());
-            velocities[i * 2 + 0] = static_cast<float>(m_windows[i].velocity.x());
-            velocities[i * 2 + 1] = static_cast<float>(m_windows[i].velocity.y());
+            const QPointF velocity = mapVelocityToShader(m_windows[i].velocity);
+            velocities[i * 2 + 0] = static_cast<float>(velocity.x());
+            velocities[i * 2 + 1] = static_cast<float>(velocity.y());
         } else {
             rects[i * 4 + 0] = rects[i * 4 + 1] = rects[i * 4 + 2] = rects[i * 4 + 3] = 0.0f;
             velocities[i * 2 + 0] = velocities[i * 2 + 1] = 0.0f;
@@ -837,9 +1059,9 @@ QVariantList WindowTracker::windowVelocitiesFlat() const
     
     for (int i = 0; i < MAX_WINDOWS; i++) {
         if (i < m_windows.size()) {
-            const auto &win = m_windows[i];
-            result.append(static_cast<float>(win.velocity.x()));
-            result.append(static_cast<float>(win.velocity.y()));
+            const QPointF velocity = mapVelocityToShader(m_windows[i].velocity);
+            result.append(static_cast<float>(velocity.x()));
+            result.append(static_cast<float>(velocity.y()));
         } else {
             result.append(0.0f);
             result.append(0.0f);

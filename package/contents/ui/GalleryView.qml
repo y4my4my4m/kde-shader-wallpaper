@@ -210,10 +210,14 @@ FocusScope {
         rebuildCategories()
         sync()
         // The closure outlives this item when the config dialog rebuilds the
-        // page; it captures the grid and index instead of looking them up.
+        // page or closes; it captures the grid and index instead of looking
+        // them up. A grid destroyed with its engine is no longer callable.
         const view = grid
         const i = indexOfPath(selectedRelPath)
-        if (i >= 0) Qt.callLater(function() { if (view) view.positionViewAtIndex(i, GridView.Center) })
+        if (i >= 0) Qt.callLater(function() {
+            if (view && typeof view.positionViewAtIndex === "function")
+                view.positionViewAtIndex(i, GridView.Center)
+        })
     }
 
     // ── layout ────────────────────────────────────────────────────────────
@@ -269,9 +273,11 @@ FocusScope {
                     visible: ShaderLibrarySingleton.newCount > 0 || gallery.newOnly
                     checkable: true
                     checked: gallery.newOnly
-                    // IconOnly: the style's background draws the text otherwise.
+                    // No text: the desktop style's background paints the text
+                    // of an icon-less button even in IconOnly mode, under the
+                    // content item.
                     display: QQC2.AbstractButton.IconOnly
-                    text: i18np("%1 new shader", "%1 new shaders", ShaderLibrarySingleton.newCount)
+                    Accessible.name: i18np("%1 new shader", "%1 new shaders", ShaderLibrarySingleton.newCount)
                     contentItem: RowLayout {
                         spacing: Kirigami.Units.smallSpacing
                         NewBadge {}
