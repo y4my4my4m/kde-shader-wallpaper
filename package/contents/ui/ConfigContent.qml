@@ -527,8 +527,16 @@ ColumnLayout {
         _refreshCurrentShader()
         refreshShaderUsage()
         if (!onboardSettings.onboarded) {
-            onboardSettings.onboarded = true
-            Qt.callLater(function() { onboardingDialog.open() })
+            // The config dialog builds this page twice and destroys the first
+            // instance before deferred calls run; the instance still alive
+            // shows the dialog and marks onboarding done.
+            const dialog = onboardingDialog
+            const settings = onboardSettings
+            Qt.callLater(function() {
+                if (!dialog || typeof dialog.open !== "function") return
+                settings.onboarded = true
+                dialog.open()
+            })
         }
     }
 

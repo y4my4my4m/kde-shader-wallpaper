@@ -156,6 +156,21 @@ private:
     QAbstractItemModel *m_tasks = nullptr;
     TaskManager::VirtualDesktopInfo *m_desktopInfo = nullptr;
     TaskManager::ActivityInfo *m_activityInfo = nullptr;
+    // Role ids looked up by name in the running library's roleNames().
+    // libtaskmanager renumbers AdditionalRoles between Plasma releases (6.8
+    // dropped IsShadeable and IsShaded), so compiled-in enum values read the
+    // wrong roles on another Plasma version. -1: role absent.
+    struct TaskRoles {
+        int geometry = -1;
+        int screenGeometry = -1;
+        int isMinimized = -1;
+        int isShaded = -1;
+        int virtualDesktops = -1;
+        int isOnAllVirtualDesktops = -1;
+        int activities = -1;
+        int winIdList = -1;
+    } m_roles;
+    QList<int> m_trackedRoles;    // roles whose change can alter the set or a rect
     void createTasks();
     void destroyTasks();
     void onTasksChanged();
