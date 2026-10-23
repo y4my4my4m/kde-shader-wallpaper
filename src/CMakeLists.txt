@@ -92,6 +92,15 @@ ecm_add_qml_module(shaderwallpaperplugin
     # Don't include QML files in the module - they stay in the package as regular files
 )
 
+# No install RPATH (Qt's QML macro sets $ORIGIN/../../../../lib). CMake pads
+# the build-tree RPATH with ':' to the install RPATH's length so an install
+# can patch it in place; the package ships the build-tree module, and glibc
+# reads empty RUNPATH entries as the current directory. plasmashell and the
+# module's libraries come from system paths.
+set_target_properties(shaderwallpaperplugin PROPERTIES
+    INSTALL_RPATH ""
+    INSTALL_RPATH_USE_LINK_PATH FALSE)
+
 target_include_directories(shaderwallpaperplugin PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/core
