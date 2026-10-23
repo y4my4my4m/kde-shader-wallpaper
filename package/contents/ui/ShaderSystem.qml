@@ -46,9 +46,32 @@ Item {
         ? String(wallpaperConfig.selectedShaderCode || "") : ""
     readonly property bool _inlineActive: _inlineCode.length > 0
 
+    // Shader Wallpaper 3.x stored compiled Qt shaders: "Shaders6/<Name>.frag.qsb"
+    // or an absolute .qsb path. Returns the bundled 4.x shader of the same base
+    // name, "" for none (bundled default), null for a path that is not 3.x.
+    function _legacyQsbTarget(path) {
+        const match = /([^\/]+)\.frag\.qsb$/i.exec(path)
+        if (!match) return null
+        const wanted = match[1].toLowerCase() + ".frag"
+        const shaders = ShaderLibrarySingleton.allShaders()
+        for (let i = 0; i < shaders.length; i++) {
+            const rel = ShaderLibrarySingleton.toRelativeShaderPath(String(shaders[i].shaderPath))
+            if (rel.substring(rel.lastIndexOf("/") + 1).toLowerCase() === wanted) return rel
+        }
+        return ""
+    }
+
     function _migrateConfig() {
         if (!wallpaperConfig || !_legacyConfig) return
         try {
+            const qsbTarget = _legacyQsbTarget(_shaderPath)
+            if (qsbTarget === "") {
+                wallpaperConfig.selectedShaderPath = ""
+            } else if (qsbTarget !== null) {
+                const state = ShaderApply.collect(wallpaperConfig, ShaderApply.TEXTURE_STATE_KEYS, "")
+                ShaderApply.applyMap(wallpaperConfig,
+                                     ShaderApply.withoutInputs(ShaderApply.forPath(ShaderLibrarySingleton, qsbTarget, state)), "")
+            }
             if (_shaderPath.length > 0 && String(wallpaperConfig.selectedShaderCode || "").length > 0) {
                 wallpaperConfig.selectedShaderCode = ""
                 wallpaperConfig.commonCode = ""
