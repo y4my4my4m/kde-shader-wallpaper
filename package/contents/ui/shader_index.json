@@ -5299,6 +5299,46 @@
             ],
             "thumbnailPath": "thumbnails/121b02ba-6a26-4031-a6b7-5668b20ae1c8.png",
             "views": 0
+        },
+        {
+            "addedIn": "4.2.3",
+            "author": "J-François Martin, nimitz",
+            "category": "Abstract",
+            "description": "nimitz's Ether, reworked to follow the music: bass speeds up the swirl and pushes the hue, mids widen the ripples, treble adds violet sparks. Silent, it drifts slowly in colour.",
+            "favorite": false,
+            "hasBuffers": false,
+            "id": "bd82655c-b868-467c-84bc-cfa968307143",
+            "likes": 0,
+            "name": "Nova Ether Audio",
+            "needsAudio": true,
+            "needsTextures": false,
+            "shaderPath": "Shaders/Nova_Ether_Audio.frag",
+            "source": "local",
+            "sourceId": "",
+            "tags": [
+            ],
+            "thumbnailPath": "thumbnails/bd82655c-b868-467c-84bc-cfa968307143.png",
+            "views": 0
+        },
+        {
+            "addedIn": "4.2.3",
+            "author": "J-François Martin",
+            "category": "Abstract",
+            "description": "A candle under a starry sky. The flame stretches and leans with the bass, flickers faster with the mids and throws sparks on the treble; big bass hits write a short French message above it that dissolves into particles.",
+            "favorite": false,
+            "hasBuffers": false,
+            "id": "87ba20c9-50db-4021-a9f8-fe746cd331e5",
+            "likes": 0,
+            "name": "Nova Bougie Texte",
+            "needsAudio": true,
+            "needsTextures": false,
+            "shaderPath": "Shaders/Nova_Bougie_texte.frag",
+            "source": "local",
+            "sourceId": "",
+            "tags": [
+            ],
+            "thumbnailPath": "thumbnails/87ba20c9-50db-4021-a9f8-fe746cd331e5.png",
+            "views": 0
         }
     ],
     "version": 1
