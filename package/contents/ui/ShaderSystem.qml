@@ -72,6 +72,15 @@ Item {
                                 Screen.width, Screen.height)
     }
 
+    // Output pixels per logical pixel: the FBO's own ratio; before the
+    // engine has a window, the item-attached Screen's. Under Wayland
+    // fractional scaling Screen.devicePixelRatio is the output scale rounded
+    // up and differs from the FBO's.
+    readonly property real _pixelRatio: shaderEngine.devicePixelRatio > 0 ? shaderEngine.devicePixelRatio
+                                      : shaderSystem.Screen.devicePixelRatio > 0
+                                          ? shaderSystem.Screen.devicePixelRatio : 1.0
+    on_PixelRatioChanged: _pushScreenUniforms()
+
     // Cursor tracker for global mouse position. `screen` is this wallpaper's
     // QScreen* (plasmashell's DesktopView is a C++ QQuickWindow), so the Y
     // flip follows this screen. It is undefined until the window is mapped,
@@ -88,11 +97,7 @@ Item {
         // Same pixel space as fragCoord / iResolution (ShaderEngine FBO).
         referenceWidth: shaderEngine.width
         referenceHeight: shaderEngine.height
-        // The FBO's own ratio; before the engine has a window, the
-        // item-attached Screen's.
-        devicePixelRatio: shaderEngine.devicePixelRatio > 0 ? shaderEngine.devicePixelRatio
-                        : shaderSystem.Screen.devicePixelRatio > 0
-                            ? shaderSystem.Screen.devicePixelRatio : 1.0
+        devicePixelRatio: shaderSystem._pixelRatio
         // Wayland: no global pointer; the desktop window's own pointer
         // events, in the same coordinates as mouseArea below.
         hoverItem: shaderSystem
@@ -218,7 +223,7 @@ Item {
             return
         }
         // Logical screen geometry to output pixels, GL origin (Y up).
-        const dpr = shaderSystem.Screen.devicePixelRatio || 1
+        const dpr = shaderSystem._pixelRatio
         const g = screenInfo.myGeom
         shaderEngine.screenOffset = Qt.vector2d(
             (g.x - screenInfo.virtualX0) * dpr,

@@ -91,7 +91,7 @@ uniform sampler2D iChannel3;
 // Window tracking (for window-reactive effects)
 // iWindowCount: number of active windows (0-16)
 // iWindowRects[i]: vec4(x, y, width, height) in pixels
-// iWindowVelocities[i]: vec2(vx, vy) velocity in pixels/second
+// iWindowVelocities[i]: vec2(vx, vy) in pixels/second, Y up like the rects
 uniform int iWindowCount;
 uniform vec4 iWindowRects[16];
 uniform vec4 iWindowRectsPrev[16];

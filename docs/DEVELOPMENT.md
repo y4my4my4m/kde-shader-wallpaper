@@ -218,7 +218,7 @@ Enable **Window Tracking** in settings.
 uniform int  iWindowCount;           // Number of windows (0-16)
 uniform vec4 iWindowRects[16];       // (x, y, w, h) in pixels, GL origin (bottom-left)
 uniform vec4 iWindowRectsPrev[16];   // The same rects one rendered frame earlier
-uniform vec2 iWindowVelocities[16];  // Pixels per second
+uniform vec2 iWindowVelocities[16];  // Pixels per second, Y up like the rects
 ```
 
 Each rect covers the visible window: a server-side title bar and border are

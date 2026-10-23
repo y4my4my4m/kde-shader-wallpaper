@@ -31,7 +31,6 @@ BuildRequires:  cmake(LibTaskManager)
 BuildRequires:  cmake(Plasma)
 BuildRequires:  cmake(PlasmaQuick)
 BuildRequires:  pkgconfig(libpipewire-0.3)
-BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(xcb)
 
 %if 0%{?suse_version}

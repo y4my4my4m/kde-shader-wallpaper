@@ -56,7 +56,6 @@ Item {
         plasma: i18n("Plasma 6 development files"),
         pipewire: i18n("PipeWire (sound-reactive shaders)"),
         xcb: i18n("XCB (mouse and windows on X11)"),
-        wayland: i18n("Wayland client (mouse on Wayland)"),
         taskmanager: i18n("Plasma task manager library (windows on Wayland)")
     })
 

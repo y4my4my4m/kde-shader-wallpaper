@@ -74,14 +74,6 @@ else()
     message(STATUS "LibTaskManager not found - window tracking on Wayland disabled")
 endif()
 
-# Wayland protocols for cursor tracking
-find_package(Wayland COMPONENTS Client)
-find_package(WaylandProtocols)
-if(Wayland_FOUND)
-    add_compile_definitions(HAVE_WAYLAND)
-    message(STATUS "Wayland found - Wayland cursor tracking enabled")
-endif()
-
 # Shader compilation (glslang or shaderc)
 pkg_check_modules(SHADERC shaderc)
 if(SHADERC_FOUND)

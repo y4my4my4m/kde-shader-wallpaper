@@ -411,11 +411,12 @@ QRectF WindowTracker::mapRectToShader(const QRectF &globalTopLeft) const
     return QRectF(localX, localY, global.width(), global.height());
 }
 
-// Velocity: device pixels per second, global Y=0 at top.
+// Velocity in global desktop coords (Y=0 at top) to shader space: device
+// pixels per second, Y up like the rects.
 QPointF WindowTracker::mapVelocityToShader(const QPointF &velocity) const
 {
-    if (!m_logicalGeometry) return velocity;
-    return velocity * (m_devicePixelRatio > 0.0 ? m_devicePixelRatio : 1.0);
+    const qreal scale = m_logicalGeometry ? (m_devicePixelRatio > 0.0 ? m_devicePixelRatio : 1.0) : 1.0;
+    return QPointF(velocity.x() * scale, -velocity.y() * scale);
 }
 
 void WindowTracker::refresh()
