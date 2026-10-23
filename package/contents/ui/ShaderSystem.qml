@@ -49,8 +49,9 @@ Item {
     // Shader Wallpaper 3.x stored compiled Qt shaders: "Shaders6/<Name>.frag.qsb"
     // or an absolute .qsb path. Returns the bundled 4.x shader of the same base
     // name, "" for none (bundled default), null for a path that is not 3.x.
-    // 3.x base names that 4.x ships rewritten under another name:
-    readonly property var _legacyQsbRenames: ({ "clouds": "2d_clouds", "dvd": "dvd_bounce", "ps3menu": "ps3_home" })
+    // 3.x base names that 4.x ships rewritten or superseded under another name:
+    readonly property var _legacyQsbRenames: ({ "clouds": "2d_clouds", "dvd": "dvd_bounce", "ps3menu": "ps3_home",
+                                                "wave_propagation": "water_ripple_windows" })
     function _legacyQsbTarget(path) {
         const match = /([^\/]+)\.frag\.qsb$/i.exec(path)
         if (!match) return null

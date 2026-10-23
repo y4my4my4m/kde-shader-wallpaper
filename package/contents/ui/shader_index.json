@@ -5091,7 +5091,7 @@
             "likes": 0,
             "name": "Interstellar",
             "needsAudio": false,
-            "needsTextures": true,
+            "needsTextures": false,
             "shaderPath": "Shaders/Interstellar.frag",
             "source": "local",
             "sourceId": "",
@@ -5258,26 +5258,6 @@
             "tags": [
             ],
             "thumbnailPath": "thumbnails/6eb8fda7-94ed-4a55-917a-c5e8ff46e5fb.png",
-            "views": 0
-        },
-        {
-            "addedIn": "4.2.1",
-            "author": "",
-            "category": "Nature",
-            "description": "",
-            "favorite": false,
-            "hasBuffers": true,
-            "id": "03220df6-0ca6-45a8-95d9-62c03b6fe2ac",
-            "likes": 0,
-            "name": "Wave Propagation",
-            "needsAudio": false,
-            "needsTextures": true,
-            "shaderPath": "Shaders/wave_propagation.frag",
-            "source": "local",
-            "sourceId": "",
-            "tags": [
-            ],
-            "thumbnailPath": "thumbnails/03220df6-0ca6-45a8-95d9-62c03b6fe2ac.png",
             "views": 0
         },
         {

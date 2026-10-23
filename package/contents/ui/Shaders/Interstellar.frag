@@ -1,8 +1,6 @@
 // Interstellar
 // Hazel Quantock
 // This code is licensed under the CC0 license http://creativecommons.org/publicdomain/zero/1.0/
-// @channels tex0
-// @texture0 Resources/Shadertoy_RGBA_Noise_Small.png
 
 const float tau = 6.28318530717958647692;
 
@@ -21,17 +19,21 @@ vec3 ToGamma( in vec3 col )
 	return pow( col, vec3(1.0/GAMMA) );
 }
 
+// One random vec4 per integer cell. The original reads texels of Shadertoy's
+// 256x256 RGBA noise texture on iChannel0; an integer hash gives the same
+// per-cell independence without the texture.
 vec4 Noise( in ivec2 x )
 {
-	return texture( iChannel0, (vec2(x)+0.5)/256.0, -100.0 );
+	uint n = (uint(x.x) * 1597334673u) ^ (uint(x.y) * 3812015801u);
+	n = (n ^ (n >> 16u)) * 2246822519u;
+	n = (n ^ (n >> 13u)) * 3266489917u;
+	uvec4 h = uvec4(n, n * 16807u, n * 48271u, n * 69621u);
+	return vec4(h >> 8u) / 16777215.0;
 }
 
 vec4 Rand( in int x )
 {
-	vec2 uv;
-	uv.x = (float(x)+0.5)/256.0;
-	uv.y = (floor(uv.x)+0.5)/256.0;
-	return texture( iChannel0, uv, -100.0 );
+	return Noise( ivec2(x, x >> 8) );
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
