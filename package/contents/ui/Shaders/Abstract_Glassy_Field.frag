@@ -1,5 +1,6 @@
 // https://www.shadertoy.com/view/4ttGDH
 // Credits to Shane
+// @channels tex0, tex1
 
 /*
 

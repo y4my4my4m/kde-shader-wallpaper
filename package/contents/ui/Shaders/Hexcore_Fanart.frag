@@ -1,5 +1,6 @@
 // url: https://www.shadertoy.com/view/stjyRR
 // credits: CyrilGhys
+// @channels audio
 
 // License :
 // 3.2 - https://www.riotgames.com/en/terms-of-service

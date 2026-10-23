@@ -1,5 +1,6 @@
 // https://www.shadertoy.com/view/ltj3zR
 // Credits to cabbibo
+// @channels none
 
 // Mostly taken from
 // http://www.iquilezles.org/www/index.htm

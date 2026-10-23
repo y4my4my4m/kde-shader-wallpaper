@@ -1,6 +1,7 @@
 // https://www.shadertoy.com/view/4s3SRN
 // Credits to Shane
 // @texture0 Shaders/Fractal_Flythrough_iChannel0.png
+// @channels tex0
 
 /*
 

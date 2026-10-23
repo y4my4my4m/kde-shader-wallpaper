@@ -12,6 +12,7 @@
 // http://srtuss.thrill-project.com/music/shader.ogg
 //
 // @texture0 Shaders/4ddfwx.png
+// @channels tex0
 
 
 vec2 rotate(vec2 p, float a)

@@ -2,6 +2,7 @@
 // Email:countfrolic@gmail.com Twitter:@The_ArtOfCode
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
 // @texture0 Resources/wallpaper.jpg
+// @channels tex0
 
 // I revisited the rain effect I did for another shader. This one is better in multiple ways:
 // 1. The glass gets foggy.
