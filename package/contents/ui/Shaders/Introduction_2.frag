@@ -1,3 +1,6 @@
+// by: kishimisu
+// url: https://www.shadertoy.com/view/mtyGWy
+
 //https://iquilezles.org/articles/palettes/
 
 vec3 palette( float t ) {
