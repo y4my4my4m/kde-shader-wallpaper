@@ -10,7 +10,7 @@
         "Id": "online.knowmad.shaderwallpaper",
         "License": "GPLv3+",
         "Name": "Shader Wallpaper",
-        "Version": "4.2.2",
+        "Version": "4.2.3",
         "Description": "Run GLSL shaders as your wallpaper with multi-pass rendering, audio reactivity, and Shadertoy import",
         "Website": "https://github.com/y4my4my4m/kde-shader-wallpaper"
     },
