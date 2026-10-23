@@ -1,5 +1,6 @@
 // https://www.shadertoy.com/view/lscczl
 // Credits to BigWings
+// @channels audio
 
 // The Universe Within - by Martijn Steinrucken aka BigWings 2018
 // Email:countfrolic@gmail.com Twitter:@The_ArtOfCode

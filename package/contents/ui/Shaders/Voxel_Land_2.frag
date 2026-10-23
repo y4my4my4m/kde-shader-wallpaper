@@ -2,6 +2,7 @@
 // Credits to Nrx
 // Modified to use texture instead of sound input
 // @texture0 Resources/Shadertoy_RGBA_Noise_Small.png
+// @channels audio
 
 
 // Parameters

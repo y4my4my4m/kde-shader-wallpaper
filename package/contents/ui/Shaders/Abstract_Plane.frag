@@ -1,6 +1,7 @@
 // from Shane
 // url https://www.shadertoy.com/view/4sGSRV
 // @texture0 Resources/Shadertoy_Organic_3.jpg
+// @channels tex0
 /*
   Abstract Plane
   --------------

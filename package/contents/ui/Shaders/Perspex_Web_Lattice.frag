@@ -1,6 +1,7 @@
 // https://www.shadertoy.com/view/Mld3Rn
 // Credits to Shane
 // @texture0 Resources/Shadertoy_London.jpg
+// @channels tex0
 
 /*
     Perspex Web Lattice

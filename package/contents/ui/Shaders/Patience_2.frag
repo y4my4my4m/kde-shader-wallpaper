@@ -1,5 +1,6 @@
 // URL: https://www.shadertoy.com/view/WtlXzM
 // By: Yusef28
+// @channels tex0, tex1, tex2
 
 #define PI 3.14159265358979323846
 

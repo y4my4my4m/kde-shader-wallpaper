@@ -1,6 +1,7 @@
 // https://www.shadertoy.com/view/XsfGDS
 // Credits to movAX13h
 // Modified to remove sound channel
+// @channels none
 
 // I/O fragment shader by movAX13h, August 2013
 

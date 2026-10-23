@@ -1,4 +1,5 @@
 // @texture0 Resources/Shadertoy_Rusty_Metal.jpg
+// @channels tex0
 
 // https://www.shadertoy.com/view/MsySWK
 // Credits to Shane
