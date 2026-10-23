@@ -273,9 +273,11 @@ FocusScope {
                     visible: ShaderLibrarySingleton.newCount > 0 || gallery.newOnly
                     checkable: true
                     checked: gallery.newOnly
-                    // IconOnly: the style's background draws the text otherwise.
+                    // No text: the desktop style's background paints the text
+                    // of an icon-less button even in IconOnly mode, under the
+                    // content item.
                     display: QQC2.AbstractButton.IconOnly
-                    text: i18np("%1 new shader", "%1 new shaders", ShaderLibrarySingleton.newCount)
+                    Accessible.name: i18np("%1 new shader", "%1 new shaders", ShaderLibrarySingleton.newCount)
                     contentItem: RowLayout {
                         spacing: Kirigami.Units.smallSpacing
                         NewBadge {}
