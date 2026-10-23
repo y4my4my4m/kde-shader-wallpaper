@@ -13,7 +13,6 @@
 
 #ifdef HAVE_TASKMANAGER
 #include <KWindowSystem>
-#include <abstracttasksmodel.h>
 #include <activityinfo.h>
 #include <virtualdesktopinfo.h>
 #include <windowtasksmodel.h>
@@ -238,26 +237,35 @@ bool WindowTracker::ensureXcbConnection()
 void WindowTracker::createTasks()
 {
     if (m_tasks) return;
-    using TaskManager::AbstractTasksModel;
     m_tasks = new TaskManager::WindowTasksModel(this);
     m_desktopInfo = new TaskManager::VirtualDesktopInfo(this);
     m_activityInfo = new TaskManager::ActivityInfo(this);
 
+    const QHash<int, QByteArray> names = m_tasks->roleNames();
+    const auto role = [&names](const char *name) { return names.key(QByteArray(name), -1); };
+    m_roles.geometry = role("Geometry");
+    m_roles.screenGeometry = role("ScreenGeometry");
+    m_roles.isMinimized = role("IsMinimized");
+    m_roles.isShaded = role("IsShaded");
+    m_roles.virtualDesktops = role("VirtualDesktops");
+    m_roles.isOnAllVirtualDesktops = role("IsOnAllVirtualDesktops");
+    m_roles.activities = role("Activities");
+    m_roles.winIdList = role("WinIdList");
+    if (m_roles.geometry < 0 || m_roles.isMinimized < 0 || m_roles.winIdList < 0) {
+        qWarning() << "WindowTracker: Plasma's window list has no Geometry, IsMinimized or WinIdList role";
+    }
+
     // Roles that can change the tracked set or a rect. StackingOrder
     // (every raise), IsActive, titles and icons cannot.
+    m_trackedRoles.clear();
+    for (int r : {m_roles.geometry, m_roles.screenGeometry, m_roles.isMinimized, m_roles.isShaded,
+                  m_roles.virtualDesktops, m_roles.isOnAllVirtualDesktops, m_roles.activities}) {
+        if (r >= 0) m_trackedRoles.append(r);
+    }
     connect(m_tasks, &QAbstractItemModel::dataChanged, this,
             [this](const QModelIndex &, const QModelIndex &, const QList<int> &roles) {
-        static const QList<int> tracked = {
-            AbstractTasksModel::Geometry,
-            AbstractTasksModel::ScreenGeometry,
-            AbstractTasksModel::IsMinimized,
-            AbstractTasksModel::IsShaded,
-            AbstractTasksModel::VirtualDesktops,
-            AbstractTasksModel::IsOnAllVirtualDesktops,
-            AbstractTasksModel::Activities,
-        };
         if (roles.isEmpty()
-            || std::any_of(roles.cbegin(), roles.cend(), [](int role) { return tracked.contains(role); })) {
+            || std::any_of(roles.cbegin(), roles.cend(), [this](int r) { return m_trackedRoles.contains(r); })) {
             onTasksChanged();
         }
     });
@@ -919,7 +927,6 @@ bool WindowTracker::queryGeometry()
 // shadows excluded, in logical pixels.
 void WindowTracker::queryTasks()
 {
-    using TaskManager::AbstractTasksModel;
     m_windows.clear();
     // Show Desktop hides every window without minimizing it.
     if (KWindowSystem::showingDesktop()) return;
@@ -935,17 +942,19 @@ void WindowTracker::queryTasks()
     const int rows = m_tasks->rowCount();
     for (int row = 0; row < rows && m_windows.size() < MAX_WINDOWS; ++row) {
         const QModelIndex idx = m_tasks->index(row, 0);
+        if (idx.data(m_roles.isMinimized).toBool()) {
+            continue;
+        }
         // A shaded window's client area is unmapped on X11.
-        if (idx.data(AbstractTasksModel::IsMinimized).toBool()
-            || idx.data(AbstractTasksModel::IsShaded).toBool()) {
+        if (m_roles.isShaded >= 0 && idx.data(m_roles.isShaded).toBool()) {
             continue;
         }
         // No desktops: on all of them.
-        const QVariantList desktops = idx.data(AbstractTasksModel::VirtualDesktops).toList();
+        const QVariantList desktops = idx.data(m_roles.virtualDesktops).toList();
         if (!desktops.isEmpty() && !currentDesktop.toString().isEmpty()) {
             QVariant shown = currentDesktop;
 #ifdef HAVE_TASKMANAGER_SCREEN_DESKTOPS
-            const QRect screenGeometry = idx.data(AbstractTasksModel::ScreenGeometry).toRect();
+            const QRect screenGeometry = idx.data(m_roles.screenGeometry).toRect();
             const QList<QScreen *> screens = QGuiApplication::screens();
             for (const QScreen *screen : screens) {
                 if (screen->geometry() == screenGeometry) {
@@ -957,17 +966,17 @@ void WindowTracker::queryTasks()
             if (!desktops.contains(shown)) continue;
         }
         // No activities, or the null uuid: on all of them.
-        const QStringList activities = idx.data(AbstractTasksModel::Activities).toStringList();
+        const QStringList activities = idx.data(m_roles.activities).toStringList();
         if (!currentActivity.isEmpty() && !activities.isEmpty()
             && !activities.contains(allActivities) && !activities.contains(currentActivity)) {
             continue;
         }
-        const QRectF geom = idx.data(AbstractTasksModel::Geometry).toRect();
+        const QRectF geom = idx.data(m_roles.geometry).toRect();
         if (!trackedSize(geom, desktop.width(), desktop.height())) continue;
 
         WindowInfo info;
         // WinIdList on Wayland: the window's uuid.
-        info.id = uint32_t(qHash(idx.data(AbstractTasksModel::WinIdList).toList().value(0).toString()));
+        info.id = uint32_t(qHash(idx.data(m_roles.winIdList).toList().value(0).toString()));
         info.geometry = geom;
         info.isVisible = true;
         m_windows.append(info);
