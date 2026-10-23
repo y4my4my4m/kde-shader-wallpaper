@@ -3,7 +3,7 @@
 # Builds the tagged release. After bumping pkgver, run updpkgsums.
 
 pkgname=plasma6-wallpapers-shader
-pkgver=4.2.0
+pkgver=4.2.1
 pkgrel=1
 pkgdesc="Run GLSL shaders as your KDE Plasma 6 wallpaper"
 arch=('x86_64' 'aarch64')
