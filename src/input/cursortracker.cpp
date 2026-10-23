@@ -5,6 +5,9 @@
 
 #include <QGuiApplication>
 #include <QCursor>
+#include <QMouseEvent>
+#include <QQuickItem>
+#include <QQuickWindow>
 #include <QScreen>
 
 #ifdef HAVE_XCB
@@ -93,6 +96,7 @@ void CursorTracker::setEnabled(bool enabled)
     } else {
         stopPolling();
     }
+    updateWindowFilter();
     
     Q_EMIT enabledChanged();
 }
@@ -156,9 +160,58 @@ void CursorTracker::setNormalizeCoordinates(bool normalize)
     Q_EMIT normalizeCoordinatesChanged();
 }
 
+void CursorTracker::setHoverItem(QQuickItem *item)
+{
+    if (m_hoverItem == item) return;
+    if (m_hoverItem) {
+        disconnect(m_hoverItem, &QQuickItem::windowChanged, this, &CursorTracker::updateWindowFilter);
+    }
+    m_hoverItem = item;
+    if (m_hoverItem) {
+        connect(m_hoverItem, &QQuickItem::windowChanged, this, &CursorTracker::updateWindowFilter);
+    }
+    updateWindowFilter();
+    Q_EMIT hoverItemChanged();
+}
+
+// Items above the wallpaper accept hover before it reaches the wallpaper's
+// MouseArea (Folder View's MouseEventListener covers the whole desktop). A
+// filter on the window sees every pointer event the desktop surface gets,
+// ahead of item delivery, and consumes none.
+void CursorTracker::updateWindowFilter()
+{
+    QQuickWindow *window = (m_isWayland && m_enabled && m_hoverItem) ? m_hoverItem->window() : nullptr;
+    if (window == m_filteredWindow) return;
+    if (m_filteredWindow) {
+        m_filteredWindow->removeEventFilter(this);
+    }
+    m_filteredWindow = window;
+    if (window) {
+        window->installEventFilter(this);
+    }
+}
+
+bool CursorTracker::eventFilter(QObject *watched, QEvent *event)
+{
+    const QEvent::Type type = event->type();
+    if (m_hoverItem && (type == QEvent::MouseMove || type == QEvent::MouseButtonPress
+                        || type == QEvent::MouseButtonRelease)) {
+        const auto *mouse = static_cast<QMouseEvent *>(event);
+        const QPointF local = m_hoverItem->mapFromScene(mouse->scenePosition());
+        if (type == QEvent::MouseMove) {
+            updatePosition(local.x(), local.y());
+        } else if (type == QEvent::MouseButtonPress) {
+            updateClick(local.x(), local.y(), true);
+        } else if (mouse->buttons() == Qt::NoButton) {
+            updatePressed(false);
+        }
+    }
+    return QObject::eventFilter(watched, event);
+}
+
 void CursorTracker::refresh()
 {
-    if (!m_enabled) return;
+    if (!m_enabled || m_isWayland) return;
     pollCursor();
 }
 
@@ -227,6 +280,11 @@ void CursorTracker::updatePressed(bool pressed)
 
 void CursorTracker::startPolling()
 {
+    // Wayland has no global pointer position, and QCursor::pos() mixes the
+    // coordinates of every plasmashell surface. The desktop window's pointer
+    // events (hoverItem) are the only source; the last position holds while
+    // the pointer is over other surfaces.
+    if (m_isWayland) return;
     if (!m_pollTimer->isActive()) {
         m_pollTimer->start(m_pollInterval);
     }

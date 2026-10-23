@@ -15,6 +15,7 @@ depends=(
     'kconfig'
     'ki18n'
     'kpackage'
+    'kwindowsystem'
     'libpipewire'
     'libplasma'
     'libxcb'

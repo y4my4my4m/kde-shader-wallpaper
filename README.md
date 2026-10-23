@@ -28,8 +28,8 @@
 - **Shadertoy Import** - Import shaders directly from shadertoy.com
 - **Multi-Pass Rendering** - Full buffer support (A, B, C, D) for complex effects
 - **Audio Reactive** - Shaders that respond to system audio via PipeWire
-- **Mouse Interaction** - Full iMouse support on X11 and Wayland
-- **Window Reactive** - Shaders react to your windows: water ripples and wakes, plasma arcs, a test-chamber HUD
+- **Mouse Interaction** - Full iMouse support on X11; on Wayland while the pointer is over the desktop (it keeps its last position over windows and panels)
+- **Window Reactive** - Shaders react to your windows on X11 and Wayland: water ripples and wakes, plasma arcs, a test-chamber HUD
 - **Automatic Shader Changes** - Rotate through a playlist, your favourites or the whole library, in order or shuffled
 - **Multi-Monitor** - Apply one configuration to every screen; screen offset uniforms for spanning shaders
 - **Performance Monitoring** - Real-time FPS, GPU frame time and power estimates
@@ -77,19 +77,19 @@ cd kde-shader-wallpaper
 
 ```bash
 # Arch Linux, Manjaro
-sudo pacman -S --needed base-devel cmake extra-cmake-modules qt6-base qt6-declarative kconfig ki18n kpackage libplasma libpipewire libxcb wayland
+sudo pacman -S --needed base-devel cmake extra-cmake-modules qt6-base qt6-declarative kconfig ki18n kpackage libplasma libpipewire libxcb wayland plasma-workspace
 
 # Fedora
-sudo dnf install gcc-c++ make cmake extra-cmake-modules 'cmake(Qt6Quick)' 'cmake(Qt6OpenGL)' 'cmake(KF6Config)' 'cmake(KF6I18n)' 'cmake(KF6Package)' 'cmake(Plasma)' 'cmake(PlasmaQuick)' 'pkgconfig(libpipewire-0.3)' 'pkgconfig(xcb)' 'pkgconfig(wayland-client)'
+sudo dnf install gcc-c++ make cmake extra-cmake-modules 'cmake(Qt6Quick)' 'cmake(Qt6OpenGL)' 'cmake(KF6Config)' 'cmake(KF6I18n)' 'cmake(KF6Package)' 'cmake(Plasma)' 'cmake(PlasmaQuick)' 'pkgconfig(libpipewire-0.3)' 'pkgconfig(xcb)' 'pkgconfig(wayland-client)' 'cmake(LibTaskManager)'
 
 # openSUSE
-sudo zypper install gcc-c++ make cmake kf6-extra-cmake-modules 'cmake(Qt6Quick)' 'cmake(Qt6OpenGL)' 'cmake(KF6Config)' 'cmake(KF6I18n)' 'cmake(KF6Package)' 'cmake(Plasma)' 'cmake(PlasmaQuick)' 'pkgconfig(libpipewire-0.3)' 'pkgconfig(xcb)' 'pkgconfig(wayland-client)'
+sudo zypper install gcc-c++ make cmake kf6-extra-cmake-modules 'cmake(Qt6Quick)' 'cmake(Qt6OpenGL)' 'cmake(KF6Config)' 'cmake(KF6I18n)' 'cmake(KF6Package)' 'cmake(Plasma)' 'cmake(PlasmaQuick)' 'pkgconfig(libpipewire-0.3)' 'pkgconfig(xcb)' 'pkgconfig(wayland-client)' 'cmake(LibTaskManager)'
 
 # Debian 13+, Ubuntu 25.04+, KDE neon
-sudo apt install build-essential cmake extra-cmake-modules pkg-config qt6-base-dev qt6-declarative-dev libkf6config-dev libkf6i18n-dev libkf6package-dev libkf6windowsystem-dev libkirigami-dev libplasma-dev libpipewire-0.3-dev libxcb1-dev libwayland-dev
+sudo apt install build-essential cmake extra-cmake-modules pkg-config qt6-base-dev qt6-declarative-dev libkf6config-dev libkf6i18n-dev libkf6package-dev libkf6windowsystem-dev libkirigami-dev libplasma-dev libpipewire-0.3-dev libxcb1-dev libwayland-dev plasma-workspace-dev
 ```
 
-PipeWire, XCB and Wayland are optional: without them the engine builds without sound reactivity, X11 mouse and window tracking, or Wayland mouse tracking.
+PipeWire, XCB and Plasma's task manager library (libtaskmanager, from plasma-workspace) are optional: without them the engine builds without sound reactivity, X11 mouse and window tracking, or window tracking on Wayland.
 </details>
 
 ### Uninstall

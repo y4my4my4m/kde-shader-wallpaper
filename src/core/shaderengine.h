@@ -144,6 +144,11 @@ class ShaderEngine : public QQuickFramebufferObject
     Q_PROPERTY(int screenIndex READ screenIndex WRITE setScreenIndex NOTIFY screenIndexChanged)
     Q_PROPERTY(int screenCount READ screenCount WRITE setScreenCount NOTIFY screenCountChanged)
 
+    // Output pixels per logical pixel: the window's effective ratio, which
+    // sizes the FBO. With Wayland fractional scaling it differs from
+    // Screen.devicePixelRatio (the output scale rounded up). 0 without a window.
+    Q_PROPERTY(qreal devicePixelRatio READ devicePixelRatio NOTIFY devicePixelRatioChanged)
+
     // Per-virtual-desktop uniforms (experimental):
     //   uniform int   iVirtualDesktop;       // current desktop index
     //   uniform int   iVirtualDesktopCount;  // total desktops
@@ -268,6 +273,7 @@ public:
     QVector2D desktopResolution() const { return m_desktopResolution; }
     int screenIndex() const { return m_screenIndex; }
     int screenCount() const { return m_screenCount; }
+    qreal devicePixelRatio() const;
     int virtualDesktop() const { return m_virtualDesktop; }
     int virtualDesktopCount() const { return m_virtualDesktopCount; }
     qreal virtualDesktopAnim() const { return m_virtualDesktopAnim; }
@@ -426,6 +432,7 @@ Q_SIGNALS:
     void desktopResolutionChanged();
     void screenIndexChanged();
     void screenCountChanged();
+    void devicePixelRatioChanged();
     void virtualDesktopChanged();
     void virtualDesktopCountChanged();
     void virtualDesktopAnimChanged();
@@ -454,6 +461,9 @@ public Q_SLOTS:
     // Queued from synchronize() once per rendered frame while frameSignals.
     // frameTimeMs < 0: no new GPU time this frame.
     void notifyFrameRendered(qreal frameTimeMs);
+
+protected:
+    void itemChange(ItemChange change, const ItemChangeData &value) override;
 
 private Q_SLOTS:
     void handleTimeout();

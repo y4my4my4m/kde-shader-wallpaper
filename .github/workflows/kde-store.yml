@@ -20,7 +20,8 @@ jobs:
       - name: Install build dependencies
         run: |
           pacman -Syu --noconfirm --needed git github-cli base-devel cmake extra-cmake-modules \
-            qt6-base qt6-declarative kconfig ki18n kpackage libplasma libpipewire libxcb wayland
+            qt6-base qt6-declarative kconfig ki18n kpackage libplasma libpipewire libxcb wayland \
+            plasma-workspace
 
       - uses: actions/checkout@v4
 

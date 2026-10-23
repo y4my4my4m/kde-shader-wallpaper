@@ -88,9 +88,14 @@ Item {
         // Same pixel space as fragCoord / iResolution (ShaderEngine FBO).
         referenceWidth: shaderEngine.width
         referenceHeight: shaderEngine.height
-        // Item-attached Screen: valid before the item has a window.
-        devicePixelRatio: shaderSystem.Screen.devicePixelRatio > 0
+        // The FBO's own ratio; before the engine has a window, the
+        // item-attached Screen's.
+        devicePixelRatio: shaderEngine.devicePixelRatio > 0 ? shaderEngine.devicePixelRatio
+                        : shaderSystem.Screen.devicePixelRatio > 0
                             ? shaderSystem.Screen.devicePixelRatio : 1.0
+        // Wayland: no global pointer; the desktop window's own pointer
+        // events, in the same coordinates as mouseArea below.
+        hoverItem: shaderSystem
 
         onIMouseChanged: {
             shaderEngine.iMouse = iMouse
@@ -112,8 +117,8 @@ Item {
         enabled: shaderSystem._allowWindows && shaderEngine.running
         // Poll at the shader's render cadence: a fixed 30Hz reads as visible
         // steps when dragging windows on high-refresh displays. The tracker
-        // polls only after X reports window activity, so the cost is during
-        // actual window motion.
+        // polls only after X (or Plasma's window list on Wayland) reports
+        // window activity, so the cost is during actual window motion.
         pollInterval: Math.max(4, Math.round(1000 / (shaderEngine.targetFps || 60)))
         referenceWidth: shaderEngine.width
         referenceHeight: shaderEngine.height
@@ -409,8 +414,10 @@ Item {
     // to render at display refresh, which defeats the FPS limit, and the
     // synchronous XCB window poll is too heavy to run per frame.
 
-    // Mouse tracking area (fallback for Wayland). Disabled on greeter
-    // surfaces, whose UI needs the events.
+    // Mouse tracking area, for hover and presses that no item above takes.
+    // X11 polls the global pointer and Wayland filters the window's events
+    // (CursorTracker.hoverItem). Disabled on greeter surfaces, whose UI
+    // needs the events.
     MouseArea {
         id: mouseArea
         anchors.fill: parent

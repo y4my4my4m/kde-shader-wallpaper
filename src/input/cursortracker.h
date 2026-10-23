@@ -8,6 +8,7 @@
 #include <QtQml/qqmlregistration.h>
 #include <QPoint>
 #include <QPointF>
+#include <QPointer>
 #include <QTimer>
 #include <QVector4D>
 #include <QScreen>
@@ -15,6 +16,9 @@
 #ifdef HAVE_XCB
 #include <xcb/xcb.h>
 #endif
+
+class QQuickItem;
+class QQuickWindow;
 
 /**
  * @brief Tracks global cursor position across X11 and Wayland
@@ -50,6 +54,9 @@ class CursorTracker : public QObject
     Q_PROPERTY(qreal referenceHeight READ referenceHeight WRITE setReferenceHeight NOTIFY referenceSizeChanged)
     Q_PROPERTY(qreal devicePixelRatio READ devicePixelRatio WRITE setDevicePixelRatio NOTIFY devicePixelRatioChanged)
     Q_PROPERTY(bool normalizeCoordinates READ normalizeCoordinates WRITE setNormalizeCoordinates NOTIFY normalizeCoordinatesChanged)
+    // Wayland: pointer events of this item's window, in this item's
+    // coordinates, are the position source.
+    Q_PROPERTY(QQuickItem *hoverItem READ hoverItem WRITE setHoverItem NOTIFY hoverItemChanged)
 
 public:
     explicit CursorTracker(QObject *parent = nullptr);
@@ -69,6 +76,7 @@ public:
     qreal referenceHeight() const { return m_referenceHeight; }
     qreal devicePixelRatio() const { return m_devicePixelRatio; }
     bool normalizeCoordinates() const { return m_normalizeCoordinates; }
+    QQuickItem *hoverItem() const { return m_hoverItem; }
 
     // Property setters
     void setEnabled(bool enabled);
@@ -79,6 +87,7 @@ public:
     void setReferenceHeight(qreal height);
     void setDevicePixelRatio(qreal ratio);
     void setNormalizeCoordinates(bool normalize);
+    void setHoverItem(QQuickItem *item);
 
     // Poll global cursor now (call once per render frame for smooth buffer effects).
     Q_INVOKABLE void refresh();
@@ -100,6 +109,10 @@ Q_SIGNALS:
     void referenceSizeChanged();
     void devicePixelRatioChanged();
     void normalizeCoordinatesChanged();
+    void hoverItemChanged();
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private Q_SLOTS:
     void pollCursor();
@@ -107,6 +120,7 @@ private Q_SLOTS:
 private:
     void startPolling();
     void stopPolling();
+    void updateWindowFilter();
     bool initX11();
     bool initWayland();
     QPoint getGlobalCursorPosition();
@@ -123,6 +137,8 @@ private:
     qreal m_referenceHeight = 0.0;
     qreal m_devicePixelRatio = 1.0;
     bool m_normalizeCoordinates = false;
+    QPointer<QQuickItem> m_hoverItem;
+    QPointer<QQuickWindow> m_filteredWindow;
     
     QTimer *m_pollTimer = nullptr;
     

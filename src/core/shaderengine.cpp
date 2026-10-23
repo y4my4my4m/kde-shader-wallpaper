@@ -317,6 +317,19 @@ ShaderEngine::ShaderEngine(QQuickItem *parent)
 
 ShaderEngine::~ShaderEngine() = default;
 
+qreal ShaderEngine::devicePixelRatio() const
+{
+    return window() ? window()->effectiveDevicePixelRatio() : 0.0;
+}
+
+void ShaderEngine::itemChange(ItemChange change, const ItemChangeData &value)
+{
+    QQuickFramebufferObject::itemChange(change, value);
+    if (change == ItemSceneChange || change == ItemDevicePixelRatioHasChanged) {
+        Q_EMIT devicePixelRatioChanged();
+    }
+}
+
 QQuickFramebufferObject::Renderer *ShaderEngine::createRenderer() const
 {
     return new ShaderEngineRenderer();

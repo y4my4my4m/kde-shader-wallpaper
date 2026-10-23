@@ -188,10 +188,11 @@ detect_family() {
 # match the find_package()/pkg_check_modules() calls in CMakeLists.txt exactly.
 # Debian entries list alternatives (a|b); the first one apt knows is used.
 PKGS_ARCH=(base-devel cmake extra-cmake-modules qt6-base qt6-declarative kconfig ki18n
-           kpackage libplasma libpipewire libxcb wayland)
+           kpackage libplasma libpipewire libxcb wayland plasma-workspace)
 PKGS_RPM_LIBS=('cmake(Qt6Quick)' 'cmake(Qt6OpenGL)' 'cmake(KF6Config)' 'cmake(KF6I18n)'
                'cmake(KF6Package)' 'cmake(Plasma)' 'cmake(PlasmaQuick)'
-               'pkgconfig(libpipewire-0.3)' 'pkgconfig(xcb)' 'pkgconfig(wayland-client)')
+               'pkgconfig(libpipewire-0.3)' 'pkgconfig(xcb)' 'pkgconfig(wayland-client)'
+               'cmake(LibTaskManager)')
 PKGS_FEDORA=(gcc-c++ make cmake extra-cmake-modules "${PKGS_RPM_LIBS[@]}")
 PKGS_OPENSUSE=(gcc-c++ make cmake kf6-extra-cmake-modules "${PKGS_RPM_LIBS[@]}")
 PKGS_DEBIAN=(build-essential cmake "extra-cmake-modules|kf6-extra-cmake-modules" "pkg-config|pkgconf"
@@ -199,7 +200,7 @@ PKGS_DEBIAN=(build-essential cmake "extra-cmake-modules|kf6-extra-cmake-modules"
              "libkf6config-dev|kf6-kconfig-dev" "libkf6i18n-dev|kf6-ki18n-dev"
              "libkf6package-dev|kf6-kpackage-dev" "libkf6windowsystem-dev|kf6-kwindowsystem-dev"
              "libkirigami-dev|kf6-kirigami-dev" libplasma-dev
-             libpipewire-0.3-dev libxcb1-dev libwayland-dev)
+             libpipewire-0.3-dev libxcb1-dev libwayland-dev plasma-workspace-dev)
 
 # Prints one package name per line.
 family_packages() {
@@ -291,6 +292,7 @@ OPTIONAL_DEPS=(
     "pipewire|PipeWire (sound-reactive shaders)|pc|libpipewire-0.3"
     "xcb|XCB (mouse and windows on X11)|pc|xcb"
     "wayland|Wayland client (mouse on Wayland)|pc|wayland-client"
+    "taskmanager|Plasma task manager library (windows on Wayland)|cmake|LibTaskManager"
 )
 
 dep_present() {

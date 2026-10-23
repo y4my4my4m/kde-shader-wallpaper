@@ -59,6 +59,21 @@ if(XCB_FOUND)
     message(STATUS "XCB found - X11 cursor tracking enabled")
 endif()
 
+# Optional: Plasma's window list (plasma-workspace's libtaskmanager) for
+# window tracking on Wayland. Without it the X11 path still builds.
+find_package(LibTaskManager CONFIG)
+if(LibTaskManager_FOUND)
+    add_compile_definitions(HAVE_TASKMANAGER)
+    # VirtualDesktopInfo::currentDesktopByScreenName (per-screen desktops)
+    # first ships in Plasma 6.7.
+    if(LibTaskManager_VERSION VERSION_GREATER_EQUAL 6.6.80)
+        add_compile_definitions(HAVE_TASKMANAGER_SCREEN_DESKTOPS)
+    endif()
+    message(STATUS "LibTaskManager ${LibTaskManager_VERSION} found - Wayland window tracking enabled")
+else()
+    message(STATUS "LibTaskManager not found - window tracking on Wayland disabled")
+endif()
+
 # Wayland protocols for cursor tracking
 find_package(Wayland COMPONENTS Client)
 find_package(WaylandProtocols)

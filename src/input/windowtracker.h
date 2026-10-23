@@ -10,12 +10,22 @@
 
 #include <array>
 
+class QAbstractItemModel;
 class QSocketNotifier;
+
+#ifdef HAVE_TASKMANAGER
+namespace TaskManager
+{
+class ActivityInfo;
+class VirtualDesktopInfo;
+}
+#endif
 
 /**
  * @brief Tracks window geometries from KWin for shader interaction
  * 
- * Uses KWin's D-Bus interface to get window positions and sizes.
+ * X11: XCB events on the root window. Wayland: Plasma's window list
+ * (libtaskmanager), which KWin grants to plasmashell.
  * Windows can be passed to shaders as uniform arrays, allowing
  * effects like ripples when windows move, particles bouncing off windows, etc.
  * 
@@ -92,7 +102,7 @@ private Q_SLOTS:
 
 private:
     struct WindowInfo {
-        uint32_t id = 0;  // X window id of the client
+        uint32_t id = 0;  // X window id of the client; hash of the Plasma window uuid on Wayland
         QRectF geometry;
         QRectF prevGeometry;
         QPointF velocity;
@@ -101,8 +111,11 @@ private:
 
     void pollWindows();
     void setPolling(bool on);
+    qreal pollDelta();
+    bool updateMotion(const QList<WindowInfo> &before, qreal dt);
     void calculateVelocities(qreal dt);
     QRectF mapRectToShader(const QRectF &globalTopLeft) const;
+    QPointF mapVelocityToShader(const QPointF &velocity) const;
 
     bool m_enabled = false;
     int m_pollInterval = 50;  // 20 Hz default - fast enough for smooth effects
@@ -121,6 +134,9 @@ private:
     qreal m_devicePixelRatio = 1.0;
     qreal m_screenVirtualX = 0.0;
     qreal m_screenVirtualY = 0.0;
+    // Window geometry is in logical pixels (Wayland) rather than device
+    // pixels (X11).
+    bool m_logicalGeometry = false;
 
     // Event-driven gating: X notifies us when a top-level window is
     // created/destroyed/moved/mapped (SubstructureNotify on the root), when a
@@ -132,6 +148,19 @@ private:
     bool m_windowsDirty = true;   // a top-level window was configured
     bool m_listDirty = true;      // windows, client list or attributes changed
     bool m_hadMotion = false;     // a tracked window still has nonzero velocity
+
+#ifdef HAVE_TASKMANAGER
+    // Wayland: Plasma's window list (org_kde_plasma_window_management), in
+    // window creation order. Exists while enabled. Every change it reports
+    // sets m_listDirty; polls read the model locally, without round trips.
+    QAbstractItemModel *m_tasks = nullptr;
+    TaskManager::VirtualDesktopInfo *m_desktopInfo = nullptr;
+    TaskManager::ActivityInfo *m_activityInfo = nullptr;
+    void createTasks();
+    void destroyTasks();
+    void onTasksChanged();
+    void queryTasks();
+#endif
 
 #ifdef HAVE_XCB
     // A _NET_CLIENT_LIST entry as of the last full poll, in list order.
