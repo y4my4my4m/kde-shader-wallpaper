@@ -24,7 +24,7 @@
 
 ## ✨ Features
 
-- **240+ Built-in Shaders** - Curated collection with previews, search, categories and favourites
+- **270+ Built-in Shaders** - Curated collection with previews, search, categories and favourites
 - **Shadertoy Import** - Import shaders directly from shadertoy.com
 - **Multi-Pass Rendering** - Full buffer support (A, B, C, D) for complex effects
 - **Audio Reactive** - Shaders that respond to system audio via PipeWire
