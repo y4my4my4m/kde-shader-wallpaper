@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://store.kde.org/p/1413010/">
+  <a href="https://store.kde.org/p/2143912/">
     <img src="https://img.shields.io/badge/KDE%20Store-Install-blue?style=for-the-badge&logo=kde" alt="KDE Store">
   </a>
   <a href="https://ko-fi.com/I2I525V5R">
