@@ -132,6 +132,10 @@ ShaderLibrary* ShaderLibrary::instance()
 {
     if (!s_instance) {
         s_instance = new ShaderLibrary();
+        // Every QML engine in the process wraps this one object. An engine
+        // deletes parentless JavaScript-owned objects on teardown, and the
+        // settings window destroys its own engine on close.
+        QQmlEngine::setObjectOwnership(s_instance, QQmlEngine::CppOwnership);
     }
     return s_instance;
 }

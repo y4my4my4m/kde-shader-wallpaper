@@ -210,10 +210,14 @@ FocusScope {
         rebuildCategories()
         sync()
         // The closure outlives this item when the config dialog rebuilds the
-        // page; it captures the grid and index instead of looking them up.
+        // page or closes; it captures the grid and index instead of looking
+        // them up. A grid destroyed with its engine is no longer callable.
         const view = grid
         const i = indexOfPath(selectedRelPath)
-        if (i >= 0) Qt.callLater(function() { if (view) view.positionViewAtIndex(i, GridView.Center) })
+        if (i >= 0) Qt.callLater(function() {
+            if (view && typeof view.positionViewAtIndex === "function")
+                view.positionViewAtIndex(i, GridView.Center)
+        })
     }
 
     // ── layout ────────────────────────────────────────────────────────────

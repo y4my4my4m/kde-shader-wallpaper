@@ -19,6 +19,8 @@
 #include "models/shaderlistmodel.h"
 #include "models/categorymodel.h"
 
+#include <QQmlEngine>
+
 void ShaderWallpaperPlugin::registerTypes(const char *uri)
 {
     Q_ASSERT(QLatin1String(uri) == QLatin1String("online.knowmad.shaderwallpaper"));
@@ -52,6 +54,8 @@ void ShaderWallpaperPlugin::registerTypes(const char *uri)
             Q_UNUSED(engine)
             Q_UNUSED(scriptEngine)
             static PlmGreeterSetup instance;
+            // Static storage, shared across engines: no engine may delete it.
+            QQmlEngine::setObjectOwnership(&instance, QQmlEngine::CppOwnership);
             return &instance;
         });
 
