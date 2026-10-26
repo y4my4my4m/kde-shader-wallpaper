@@ -17,6 +17,7 @@ BuildRequires:  kf6-extra-cmake-modules
 BuildRequires:  extra-cmake-modules
 %endif
 BuildRequires:  cmake(Qt6Core)
+BuildRequires:  cmake(KF6CoreAddons)
 BuildRequires:  cmake(Qt6DBus)
 BuildRequires:  cmake(Qt6Gui)
 BuildRequires:  cmake(Qt6Network)
@@ -52,7 +53,8 @@ Shadertoy import.
 # directory, which differs between the two distributions.
 %cmake \
     -DKDE_INSTALL_LIBEXECDIR=%{_libexecdir} \
-    -DKDE_INSTALL_QMLDIR=%{_libdir}/qt6/qml
+    -DKDE_INSTALL_QMLDIR=%{_libdir}/qt6/qml \
+    -DCMAKE_SKIP_RPATH:BOOL=TRUE
 %cmake_build
 
 %install
