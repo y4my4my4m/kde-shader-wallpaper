@@ -53,7 +53,7 @@ Shadertoy import.
 %build
 # Explicit directories: KDEInstallDirs derives libexec from the library
 # directory, which differs between the two distributions.
-%cmake \
+%cmake_kf6 \
     -DKDE_INSTALL_LIBEXECDIR=%{_libexecdir} \
     -DKDE_INSTALL_QMLDIR=%{_libdir}/qt6/qml \
     -DCMAKE_SKIP_RPATH:BOOL=TRUE
