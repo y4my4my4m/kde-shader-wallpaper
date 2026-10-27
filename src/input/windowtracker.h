@@ -151,7 +151,8 @@ private:
 
 #ifdef HAVE_TASKMANAGER
     // Wayland: Plasma's window list (org_kde_plasma_window_management), in
-    // window creation order. Exists while enabled. Every change it reports
+    // window creation order. Exists while enabled, from the event-loop pass
+    // after enabling (see createTasks()). Every change it reports
     // sets m_listDirty; polls read the model locally, without round trips.
     QAbstractItemModel *m_tasks = nullptr;
     TaskManager::VirtualDesktopInfo *m_desktopInfo = nullptr;
