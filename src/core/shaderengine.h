@@ -23,7 +23,6 @@
 #include "input/windowtracker.h"
 
 class QFileSystemWatcher;
-class QOpenGLTimerQuery;
 #include <memory>
 #include <array>
 #include <deque>
@@ -683,6 +682,9 @@ private:
     void bindChannelInput(int channelSlot, int inputType, int currentBuffer, int substep);
     void ensureLowResFBO();
     void blitLowResToOutput();
+    void drawQuad(const QSize &target);
+    int drawBandCount(const QSize &target) const;
+    void noteDrawWorkload();
     void beginFrameTiming();
     void endFrameTiming();
 
@@ -844,12 +846,13 @@ private:
     // Ping-pong state
     bool m_pingPong = false;
     
-    // Frame time: GL_TIME_ELAPSED queries read back once available, a few
-    // frames late. Without timer queries (GLES), CPU submit time.
+    // Frame time: GL_TIME_ELAPSED queries (desktop GL 3.3, ARB/EXT_timer_query,
+    // or GLES 3 with EXT_disjoint_timer_query) read back once available, a
+    // few frames late. Without them, CPU submit time.
     static constexpr int kTimerQueryCount = 4;
-#if !QT_CONFIG(opengles2)
-    std::array<std::unique_ptr<QOpenGLTimerQuery>, kTimerQueryCount> m_timerQueries;
-#endif
+    std::array<GLuint, kTimerQueryCount> m_timerQueries = {};
+    QFunctionPointer m_getQueryResult64 = nullptr;  // glGetQueryObjectui64v[EXT]
+    std::array<quint32, kTimerQueryCount> m_timerQuerySerials = {};  // m_drawWorkloadSerial at begin
     int m_timerQueryHead = 0;
     int m_timerQueryPending = 0;
     bool m_timerQueryActive = false;
@@ -858,6 +861,28 @@ private:
     QElapsedTimer m_perfTimer;
     qreal m_lastFrameTime = 0.0;
     bool m_frameTimeFresh = false;
+
+    // Each pass draws in horizontal bands. Intel Gen9 GPUs preempt 3D work
+    // only between draw calls (i915 WaDisable3DMidCmdPreemption); a draw
+    // that outlasts the preempt timeout (640 ms default) resets the engine
+    // and loses plasmashell's GL context (issue #129). Bands: GPU frame time
+    // over kDrawBandBudgetMs once measured for the current workload, else
+    // one per kDrawBandPixels.
+    static constexpr double kDrawBandBudgetMs = 25.0;
+    static constexpr qint64 kDrawBandPixels = 1 << 18;
+    static constexpr int kMaxDrawBands = 64;
+    static constexpr int kMinDrawBandRows = 8;
+    int m_timedDrawBands = 0;  // 0: no GPU time measured for this workload
+    // Programs (main, then buffers in use) and target sizes.
+    struct DrawWorkload {
+        std::array<const QOpenGLShaderProgram *, 5> programs = {};
+        QSize output;
+        QSize lowRes;
+        QSize bufferSim;
+        bool operator==(const DrawWorkload &) const = default;
+    };
+    DrawWorkload m_drawWorkload;
+    quint32 m_drawWorkloadSerial = 0;
 
     // Cached pointer to the ShaderEngine for queued cross-thread invocations
     // (compile log reporting). Set in synchronize().
