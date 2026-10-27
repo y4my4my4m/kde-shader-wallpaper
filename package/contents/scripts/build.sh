@@ -186,18 +186,21 @@ detect_family() {
 
 # Package lists. RPM distributions resolve CMake and pkg-config names, which
 # match the find_package()/pkg_check_modules() calls in CMakeLists.txt exactly.
+# KF6CoreAddons is a find_dependency of KF6Package that Fedora's
+# kf6-kpackage-devel does not require.
 # Debian entries list alternatives (a|b); the first one apt knows is used.
 PKGS_ARCH=(base-devel cmake extra-cmake-modules qt6-base qt6-declarative kconfig ki18n
            kpackage libplasma libpipewire libxcb plasma-workspace)
 PKGS_RPM_LIBS=('cmake(Qt6Quick)' 'cmake(Qt6OpenGL)' 'cmake(KF6Config)' 'cmake(KF6I18n)'
-               'cmake(KF6Package)' 'cmake(Plasma)' 'cmake(PlasmaQuick)'
+               'cmake(KF6Package)' 'cmake(KF6CoreAddons)' 'cmake(Plasma)' 'cmake(PlasmaQuick)'
                'pkgconfig(libpipewire-0.3)' 'pkgconfig(xcb)' 'cmake(LibTaskManager)')
 PKGS_FEDORA=(gcc-c++ make cmake extra-cmake-modules "${PKGS_RPM_LIBS[@]}")
 PKGS_OPENSUSE=(gcc-c++ make cmake kf6-extra-cmake-modules "${PKGS_RPM_LIBS[@]}")
 PKGS_DEBIAN=(build-essential cmake "extra-cmake-modules|kf6-extra-cmake-modules" "pkg-config|pkgconf"
              qt6-base-dev qt6-declarative-dev
              "libkf6config-dev|kf6-kconfig-dev" "libkf6i18n-dev|kf6-ki18n-dev"
-             "libkf6package-dev|kf6-kpackage-dev" "libkf6windowsystem-dev|kf6-kwindowsystem-dev"
+             "libkf6package-dev|kf6-kpackage-dev" "libkf6coreaddons-dev|kf6-kcoreaddons-dev"
+             "libkf6windowsystem-dev|kf6-kwindowsystem-dev"
              "libkirigami-dev|kf6-kirigami-dev" libplasma-dev
              libpipewire-0.3-dev libxcb1-dev plasma-workspace-dev)
 
@@ -284,7 +287,7 @@ REQUIRED_DEPS=(
     "pkgconfig|pkg-config|cmd|pkg-config pkgconf"
     "ecm|Extra CMake Modules|cmake|ECM"
     "qt|Qt 6 development files|cmake|Qt6Quick Qt6OpenGL"
-    "kf6|KDE Frameworks 6 development files|cmake|KF6Config KF6I18n KF6Package"
+    "kf6|KDE Frameworks 6 development files|cmake|KF6Config KF6I18n KF6Package KF6CoreAddons"
     "plasma|Plasma 6 development files|cmake|Plasma PlasmaQuick"
 )
 OPTIONAL_DEPS=(
