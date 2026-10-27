@@ -24,7 +24,9 @@ BuildRequires:  cmake(Qt6OpenGL)
 BuildRequires:  cmake(Qt6Qml)
 BuildRequires:  cmake(Qt6Quick)
 BuildRequires:  cmake(KF6Config)
+BuildRequires:  cmake(KF6CoreAddons)
 BuildRequires:  cmake(KF6I18n)
+BuildRequires:  cmake(KF6ItemModels)
 BuildRequires:  cmake(KF6Package)
 BuildRequires:  cmake(KF6WindowSystem)
 BuildRequires:  cmake(LibTaskManager)
@@ -50,9 +52,10 @@ Shadertoy import.
 %build
 # Explicit directories: KDEInstallDirs derives libexec from the library
 # directory, which differs between the two distributions.
-%cmake \
+%cmake_kf6 \
     -DKDE_INSTALL_LIBEXECDIR=%{_libexecdir} \
-    -DKDE_INSTALL_QMLDIR=%{_libdir}/qt6/qml
+    -DKDE_INSTALL_QMLDIR=%{_libdir}/qt6/qml \
+    -DCMAKE_SKIP_RPATH:BOOL=TRUE
 %cmake_build
 
 %install
