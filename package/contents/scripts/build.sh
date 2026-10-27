@@ -186,14 +186,15 @@ detect_family() {
 
 # Package lists. RPM distributions resolve CMake and pkg-config names, which
 # match the find_package()/pkg_check_modules() calls in CMakeLists.txt exactly.
-# KF6CoreAddons is a find_dependency of KF6Package that Fedora's
-# kf6-kpackage-devel does not require.
+# KF6CoreAddons and KF6ItemModels are find_dependency()s of KF6Package and
+# LibTaskManager that Fedora's kf6-kpackage-devel and plasma-workspace-devel
+# do not require.
 # Debian entries list alternatives (a|b); the first one apt knows is used.
 PKGS_ARCH=(base-devel cmake extra-cmake-modules qt6-base qt6-declarative kconfig ki18n
            kpackage libplasma libpipewire libxcb plasma-workspace)
 PKGS_RPM_LIBS=('cmake(Qt6Quick)' 'cmake(Qt6OpenGL)' 'cmake(KF6Config)' 'cmake(KF6I18n)'
                'cmake(KF6Package)' 'cmake(KF6CoreAddons)' 'cmake(Plasma)' 'cmake(PlasmaQuick)'
-               'pkgconfig(libpipewire-0.3)' 'pkgconfig(xcb)' 'cmake(LibTaskManager)')
+               'pkgconfig(libpipewire-0.3)' 'pkgconfig(xcb)' 'cmake(LibTaskManager)' 'cmake(KF6ItemModels)')
 PKGS_FEDORA=(gcc-c++ make cmake extra-cmake-modules "${PKGS_RPM_LIBS[@]}")
 PKGS_OPENSUSE=(gcc-c++ make cmake kf6-extra-cmake-modules "${PKGS_RPM_LIBS[@]}")
 PKGS_DEBIAN=(build-essential cmake "extra-cmake-modules|kf6-extra-cmake-modules" "pkg-config|pkgconf"
@@ -202,7 +203,7 @@ PKGS_DEBIAN=(build-essential cmake "extra-cmake-modules|kf6-extra-cmake-modules"
              "libkf6package-dev|kf6-kpackage-dev" "libkf6coreaddons-dev|kf6-kcoreaddons-dev"
              "libkf6windowsystem-dev|kf6-kwindowsystem-dev"
              "libkirigami-dev|kf6-kirigami-dev" libplasma-dev
-             libpipewire-0.3-dev libxcb1-dev plasma-workspace-dev)
+             libpipewire-0.3-dev libxcb1-dev plasma-workspace-dev "libkf6itemmodels-dev|kf6-kitemmodels-dev")
 
 # Prints one package name per line.
 family_packages() {
@@ -293,7 +294,7 @@ REQUIRED_DEPS=(
 OPTIONAL_DEPS=(
     "pipewire|PipeWire (sound-reactive shaders)|pc|libpipewire-0.3"
     "xcb|XCB (mouse and windows on X11)|pc|xcb"
-    "taskmanager|Plasma task manager library (windows on Wayland)|cmake|LibTaskManager"
+    "taskmanager|Plasma task manager library (windows on Wayland)|cmake|LibTaskManager KF6ItemModels"
 )
 
 dep_present() {
