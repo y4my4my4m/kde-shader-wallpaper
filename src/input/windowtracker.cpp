@@ -234,9 +234,13 @@ bool WindowTracker::ensureXcbConnection()
 #endif
 
 #ifdef HAVE_TASKMANAGER
+// Runs from the event loop, never inside a window-list signal: the new
+// proxy attaches to the shared source model, and one attached between
+// rowsAboutToBeRemoved and rowsRemoved gets the second without the first.
+// Its endRemoveRows() then pops an empty change stack (issue #140).
 void WindowTracker::createTasks()
 {
-    if (m_tasks) return;
+    if (m_tasks || !m_enabled) return;
     m_tasks = new TaskManager::WindowTasksModel(this);
     m_desktopInfo = new TaskManager::VirtualDesktopInfo(this);
     m_activityInfo = new TaskManager::ActivityInfo(this);
@@ -285,6 +289,10 @@ void WindowTracker::createTasks()
     connect(KWindowSystem::self(), &KWindowSystem::showingDesktopChanged,
             this, &WindowTracker::onTasksChanged);
     qDebug() << "WindowTracker: Using Plasma's window list (Wayland)";
+
+    m_listDirty = true;
+    setPolling(true);
+    pollWindows();
 }
 
 void WindowTracker::destroyTasks()
@@ -324,16 +332,20 @@ void WindowTracker::setEnabled(bool enabled)
     
     if (m_enabled) {
         qDebug() << "WindowTracker: Enabled with poll interval" << m_pollInterval << "ms";
-#ifdef HAVE_TASKMANAGER
-        if (m_logicalGeometry) {
-            createTasks();
-        }
-#endif
         m_lastPollTime = QDateTime::currentMSecsSinceEpoch();
         // Window activity while disabled went unrecorded.
         m_listDirty = true;
-        setPolling(true);
-        pollWindows();  // Initial poll
+#ifdef HAVE_TASKMANAGER
+        if (m_logicalGeometry) {
+            // A closing window un-pauses the shader from inside the window
+            // list's rowsAboutToBeRemoved; see createTasks().
+            QMetaObject::invokeMethod(this, &WindowTracker::createTasks, Qt::QueuedConnection);
+        }
+#endif
+        if (!m_logicalGeometry) {
+            setPolling(true);
+            pollWindows();  // Initial poll
+        }
     } else {
         qDebug() << "WindowTracker: Disabled";
         setPolling(false);
@@ -438,8 +450,8 @@ void WindowTracker::refresh()
 void WindowTracker::pollTick()
 {
 #ifdef HAVE_TASKMANAGER
-    if (m_tasks) {
-        if (!m_listDirty && !m_hadMotion) {
+    if (m_logicalGeometry) {
+        if (!m_tasks || (!m_listDirty && !m_hadMotion)) {
             // Idle: the next model change restarts the timer.
             setPolling(false);
             return;
@@ -522,8 +534,9 @@ bool WindowTracker::updateMotion(const QList<WindowInfo> &before, qreal dt)
 void WindowTracker::pollWindows()
 {
 #ifdef HAVE_TASKMANAGER
-    if (m_tasks) {
-        if (!m_listDirty && !m_hadMotion) return;
+    // Until createTasks() runs there is nothing to read; X is not consulted.
+    if (m_logicalGeometry) {
+        if (!m_tasks || (!m_listDirty && !m_hadMotion)) return;
         m_listDirty = false;
         const qreal dt = pollDelta();
         const QList<WindowInfo> before = m_windows;

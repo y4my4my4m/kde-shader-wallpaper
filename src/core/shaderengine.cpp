@@ -14,13 +14,18 @@
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
 #include <QOpenGLExtraFunctions>
-#if !QT_CONFIG(opengles2)
-#include <QOpenGLTimerQuery>
-#endif
 #include <QImage>
 #include <QQuickItemGrabResult>
 #include <QRegularExpression>
 #include <cmath>
+
+// GLES 3 headers lack the desktop name; EXT_disjoint_timer_query values.
+#ifndef GL_TIME_ELAPSED
+#define GL_TIME_ELAPSED 0x88BF
+#endif
+#ifndef GL_GPU_DISJOINT_EXT
+#define GL_GPU_DISJOINT_EXT 0x8FBB
+#endif
 
 // Fragment and vertex sources are assembled per context:
 //   version line, hoisted #extension lines, GLES precision block,
@@ -1445,11 +1450,6 @@ void ShaderEngineRenderer::releaseGLResources(bool abandon)
         drop(texture);
     }
     drop(m_lowResFBO);
-#if !QT_CONFIG(opengles2)
-    for (auto &query : m_timerQueries) {
-        drop(query);
-    }
-#endif
 
     QOpenGLContext *ctx = QOpenGLContext::currentContext();
     if (!abandon && ctx && ctx->isValid() && ctx == m_glContext.data()) {
@@ -1463,10 +1463,14 @@ void ShaderEngineRenderer::releaseGLResources(bool abandon)
         if (m_audioTexId) {
             f->glDeleteTextures(1, &m_audioTexId);
         }
+        if (m_timerQueriesSupported) {
+            f->glDeleteQueries(kTimerQueryCount, m_timerQueries.data());
+        }
     }
     m_vao = 0;
     m_vbo = 0;
     m_audioTexId = 0;
+    m_timerQueries.fill(0);
 
     m_mainCompile = PassCompileState();
     m_bufferCompile.fill(PassCompileState());
@@ -1486,6 +1490,8 @@ void ShaderEngineRenderer::releaseGLResources(bool abandon)
     m_timerQueryActive = false;
     m_timerQueriesProbed = false;
     m_timerQueriesSupported = false;
+    m_getQueryResult64 = nullptr;
+    m_timedDrawBands = 0;
     m_initialized = false;
 }
 
@@ -2145,8 +2151,7 @@ void ShaderEngineRenderer::renderBuffer(int bufferIndex, int substep)
             bindChannelInput(i, m_bufferChannelMapping[bufferIndex][i], bufferIndex, substep);
         }
 
-        f->glBindVertexArray(m_vao);
-        f->glDrawArrays(GL_TRIANGLES, 0, 6);
+        drawQuad(bufSize);
     } else {
         static int warnCount = 0;
         if (warnCount++ < 5) {
@@ -2168,19 +2173,19 @@ void ShaderEngineRenderer::renderMainPass()
     // Bind the main pass output: either Qt's output FBO at native resolution,
     // or the intermediate low-res FBO when resolution-scale is active. In
     // the low-res case render() does the glBlit upscale afterwards.
+    QSize target;
     if (m_lowResFBO && m_lowResFBO->isValid()) {
         m_lowResFBO->bind();
-        f->glViewport(0, 0, m_lowResSize.width(), m_lowResSize.height());
-        // iResolution must match what the shader actually rasterizes onto
-        // so fragCoord / iResolution stays in [0,1] like the user expects.
-        m_iResolution = QVector3D(m_lowResSize.width(), m_lowResSize.height(),
-                                  (float)m_lowResSize.width() / m_lowResSize.height());
+        target = m_lowResSize;
     } else {
         framebufferObject()->bind();
-        f->glViewport(0, 0, m_fboSize.width(), m_fboSize.height());
-        m_iResolution = QVector3D(m_fboSize.width(), m_fboSize.height(),
-                                  (float)m_fboSize.width() / m_fboSize.height());
+        target = m_fboSize;
     }
+    f->glViewport(0, 0, target.width(), target.height());
+    // iResolution must match what the shader actually rasterizes onto
+    // so fragCoord / iResolution stays in [0,1] like the user expects.
+    m_iResolution = QVector3D(target.width(), target.height(),
+                              (float)target.width() / target.height());
 
     if (!m_shaderProgram || !m_shaderProgram->isLinked()) {
         static bool warned = false;
@@ -2198,8 +2203,56 @@ void ShaderEngineRenderer::renderMainPass()
         bindChannelInput(i, m_effectiveImageMapping[i], -1, m_bufferSubSteps - 1);  // -1 = image pass
     }
 
+    drawQuad(target);
+}
+
+void ShaderEngineRenderer::drawQuad(const QSize &target)
+{
+    auto *f = QOpenGLContext::currentContext()->extraFunctions();
     f->glBindVertexArray(m_vao);
-    f->glDrawArrays(GL_TRIANGLES, 0, 6);
+    const int bands = drawBandCount(target);
+    if (bands == 1) {
+        f->glDrawArrays(GL_TRIANGLES, 0, 6);
+        return;
+    }
+    // Scissor also clips glClear and glBlitFramebuffer: off again before
+    // either runs.
+    f->glEnable(GL_SCISSOR_TEST);
+    for (int band = 0; band < bands; ++band) {
+        const int y0 = target.height() * band / bands;
+        const int y1 = target.height() * (band + 1) / bands;
+        f->glScissor(0, y0, target.width(), y1 - y0);
+        f->glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+    f->glDisable(GL_SCISSOR_TEST);
+}
+
+int ShaderEngineRenderer::drawBandCount(const QSize &target) const
+{
+    int bands = m_timedDrawBands;
+    if (bands == 0) {
+        const qint64 pixels = qint64(target.width()) * target.height();
+        bands = int(std::min<qint64>((pixels + kDrawBandPixels - 1) / kDrawBandPixels, kMaxDrawBands));
+    }
+    return std::clamp(bands, 1, std::max(1, target.height() / kMinDrawBandRows));
+}
+
+// A timing taken before a program or target size changed describes other
+// work: until a query begun after the change returns, bands follow pixels.
+void ShaderEngineRenderer::noteDrawWorkload()
+{
+    DrawWorkload workload;
+    workload.programs[0] = m_shaderProgram.get();
+    for (int i = 0; i < 4; ++i) {
+        workload.programs[i + 1] = m_useBuffers[i] ? m_bufferPrograms[i].get() : nullptr;
+    }
+    workload.output = m_fboSize;
+    workload.lowRes = m_lowResSize;
+    workload.bufferSim = m_bufferSimSize;
+    if (workload == m_drawWorkload) return;
+    m_drawWorkload = workload;
+    ++m_drawWorkloadSerial;
+    m_timedDrawBands = 0;
 }
 
 void ShaderEngineRenderer::uploadAudioTexture()
@@ -2215,57 +2268,86 @@ void ShaderEngineRenderer::uploadAudioTexture()
     f->glActiveTexture(GL_TEXTURE0);
 }
 
+// 64-bit result getter of GL_TIME_ELAPSED queries on this context, or null.
+static const char *timerQueryResultGetter(QOpenGLContext *ctx)
+{
+    if (ctx->isOpenGLES()) {
+        return ctx->format().majorVersion() >= 3
+                && ctx->hasExtension(QByteArrayLiteral("GL_EXT_disjoint_timer_query"))
+            ? "glGetQueryObjectui64vEXT" : nullptr;
+    }
+    if (ctx->format().version() >= qMakePair(3, 3) || ctx->hasExtension(QByteArrayLiteral("GL_ARB_timer_query"))) {
+        return "glGetQueryObjectui64v";
+    }
+    return ctx->hasExtension(QByteArrayLiteral("GL_EXT_timer_query")) ? "glGetQueryObjectui64vEXT" : nullptr;
+}
+
+using GetQueryObjectui64v = void (QOPENGLF_APIENTRYP)(GLuint, GLenum, GLuint64 *);
+
 void ShaderEngineRenderer::beginFrameTiming()
 {
     m_perfTimer.start();
-#if !QT_CONFIG(opengles2)
+    QOpenGLContext *ctx = QOpenGLContext::currentContext();
+    auto *f = ctx->extraFunctions();
     if (!m_timerQueriesProbed) {
         m_timerQueriesProbed = true;
-        // QOpenGLTimerQuery warns and fails on GLES; skip it there.
-        m_timerQueriesSupported = !m_isGles;
-        for (auto &query : m_timerQueries) {
-            if (!m_timerQueriesSupported) break;
-            query = std::make_unique<QOpenGLTimerQuery>();
-            m_timerQueriesSupported = query->create();
-        }
-        if (!m_timerQueriesSupported) {
-            for (auto &query : m_timerQueries) {
-                query.reset();
-            }
+        const char *getter = timerQueryResultGetter(ctx);
+        m_getQueryResult64 = getter ? ctx->getProcAddress(getter) : nullptr;
+        m_timerQueriesSupported = m_getQueryResult64 != nullptr;
+        if (m_timerQueriesSupported) {
+            f->glGenQueries(kTimerQueryCount, m_timerQueries.data());
         }
         qInfo() << "ShaderEngine: frame time source:"
                 << (m_timerQueriesSupported ? "GPU timer queries" : "CPU submit time");
     }
     if (!m_timerQueriesSupported) return;
 
+    if (m_isGles && m_timerQueryPending > 0) {
+        // EXT_disjoint_timer_query: a disjoint event (reset, clock change)
+        // voids every query in flight. Checked before reading: a result
+        // available now ended before any event the flag does not yet show.
+        // Reading the flag clears it.
+        GLint disjoint = 0;
+        f->glGetIntegerv(GL_GPU_DISJOINT_EXT, &disjoint);
+        if (disjoint) {
+            m_timerQueryPending = 0;
+        }
+    }
+
     // Read back finished queries oldest first; never wait on one.
+    const auto getResult = reinterpret_cast<GetQueryObjectui64v>(m_getQueryResult64);
     while (m_timerQueryPending > 0) {
         const int oldest = (m_timerQueryHead - m_timerQueryPending + kTimerQueryCount) % kTimerQueryCount;
-        QOpenGLTimerQuery *query = m_timerQueries[oldest].get();
-        if (!query->isResultAvailable()) break;
-        m_lastFrameTime = query->waitForResult() / 1.0e6;  // ns -> ms
-        m_frameTimeFresh = true;
+        GLuint available = 0;
+        f->glGetQueryObjectuiv(m_timerQueries[oldest], GL_QUERY_RESULT_AVAILABLE, &available);
+        if (!available) break;
+        GLuint64 elapsedNs = 0;
+        getResult(m_timerQueries[oldest], GL_QUERY_RESULT, &elapsedNs);
         --m_timerQueryPending;
+        m_lastFrameTime = elapsedNs / 1.0e6;  // ns -> ms
+        m_frameTimeFresh = true;
+        if (m_timerQuerySerials[oldest] == m_drawWorkloadSerial) {
+            m_timedDrawBands = std::clamp(int(std::ceil(m_lastFrameTime / kDrawBandBudgetMs)),
+                                          1, kMaxDrawBands);
+        }
     }
     if (m_timerQueryPending < kTimerQueryCount) {
-        m_timerQueries[m_timerQueryHead]->begin();
+        m_timerQuerySerials[m_timerQueryHead] = m_drawWorkloadSerial;
+        f->glBeginQuery(GL_TIME_ELAPSED, m_timerQueries[m_timerQueryHead]);
         m_timerQueryActive = true;
     }
-#endif
 }
 
 void ShaderEngineRenderer::endFrameTiming()
 {
-#if !QT_CONFIG(opengles2)
     if (m_timerQueryActive) {
-        m_timerQueries[m_timerQueryHead]->end();
+        QOpenGLContext::currentContext()->extraFunctions()->glEndQuery(GL_TIME_ELAPSED);
         m_timerQueryActive = false;
         m_timerQueryHead = (m_timerQueryHead + 1) % kTimerQueryCount;
         ++m_timerQueryPending;
         return;
     }
     if (m_timerQueriesSupported) return;  // ring full: this frame goes unmeasured
-#endif
     m_lastFrameTime = m_perfTimer.nsecsElapsed() / 1.0e6;  // ns -> ms
     m_frameTimeFresh = true;
 }
@@ -2280,6 +2362,7 @@ void ShaderEngineRenderer::render()
         compileFallbackProgram();
     }
 
+    noteDrawWorkload();
     beginFrameTiming();
 
     auto *f = QOpenGLContext::currentContext()->extraFunctions();

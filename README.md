@@ -80,16 +80,16 @@ cd kde-shader-wallpaper
 sudo pacman -S --needed base-devel cmake extra-cmake-modules qt6-base qt6-declarative kconfig ki18n kpackage libplasma libpipewire libxcb plasma-workspace
 
 # Fedora
-sudo dnf install gcc-c++ make cmake extra-cmake-modules 'cmake(Qt6Quick)' 'cmake(Qt6OpenGL)' 'cmake(KF6Config)' 'cmake(KF6I18n)' 'cmake(KF6Package)' 'cmake(Plasma)' 'cmake(PlasmaQuick)' 'pkgconfig(libpipewire-0.3)' 'pkgconfig(xcb)' 'cmake(LibTaskManager)'
+sudo dnf install gcc-c++ make cmake extra-cmake-modules 'cmake(Qt6Quick)' 'cmake(Qt6OpenGL)' 'cmake(KF6Config)' 'cmake(KF6I18n)' 'cmake(KF6Package)' 'cmake(KF6CoreAddons)' 'cmake(Plasma)' 'cmake(PlasmaQuick)' 'pkgconfig(libpipewire-0.3)' 'pkgconfig(xcb)' 'cmake(LibTaskManager)' 'cmake(KF6ItemModels)'
 
 # openSUSE
-sudo zypper install gcc-c++ make cmake kf6-extra-cmake-modules 'cmake(Qt6Quick)' 'cmake(Qt6OpenGL)' 'cmake(KF6Config)' 'cmake(KF6I18n)' 'cmake(KF6Package)' 'cmake(Plasma)' 'cmake(PlasmaQuick)' 'pkgconfig(libpipewire-0.3)' 'pkgconfig(xcb)' 'cmake(LibTaskManager)'
+sudo zypper install gcc-c++ make cmake kf6-extra-cmake-modules 'cmake(Qt6Quick)' 'cmake(Qt6OpenGL)' 'cmake(KF6Config)' 'cmake(KF6I18n)' 'cmake(KF6Package)' 'cmake(KF6CoreAddons)' 'cmake(Plasma)' 'cmake(PlasmaQuick)' 'pkgconfig(libpipewire-0.3)' 'pkgconfig(xcb)' 'cmake(LibTaskManager)' 'cmake(KF6ItemModels)'
 
 # Debian 13+, Ubuntu 25.04+, KDE neon
-sudo apt install build-essential cmake extra-cmake-modules pkg-config qt6-base-dev qt6-declarative-dev libkf6config-dev libkf6i18n-dev libkf6package-dev libkf6windowsystem-dev libkirigami-dev libplasma-dev libpipewire-0.3-dev libxcb1-dev plasma-workspace-dev
+sudo apt install build-essential cmake extra-cmake-modules pkg-config qt6-base-dev qt6-declarative-dev libkf6config-dev libkf6i18n-dev libkf6package-dev libkf6coreaddons-dev libkf6windowsystem-dev libkirigami-dev libplasma-dev libpipewire-0.3-dev libxcb1-dev plasma-workspace-dev libkf6itemmodels-dev
 ```
 
-PipeWire, XCB and Plasma's task manager library (libtaskmanager, from plasma-workspace) are optional: without them the engine builds without sound reactivity, X11 mouse and window tracking, or window tracking on Wayland.
+PipeWire, XCB and Plasma's task manager library (libtaskmanager, from plasma-workspace, which needs KF6ItemModels) are optional: without them the engine builds without sound reactivity, X11 mouse and window tracking, or window tracking on Wayland.
 </details>
 
 ### Uninstall
