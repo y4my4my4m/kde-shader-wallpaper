@@ -476,6 +476,7 @@ class Renderer:
         self.per_frame = {l: per_frame(c) for l, c in passes.items()}
         self.latest = {l: 1 for l in passes}
         self.time = 0.0
+        self.global_time = 0.0
         self.frame = 0
         self.prev_mouse = None
         self.prev_rects = [0.0] * (MAX_WINDOWS * 4)
@@ -543,6 +544,7 @@ class Renderer:
             return self._loc(prog, n)
         GL.glUniform3f(loc("iResolution"), res[0], res[1], res[0] / res[1])
         GL.glUniform1f(loc("iTime"), self.time)
+        GL.glUniform1f(loc("iGlobalTime"), self.global_time if self.args.global_time is None else self.args.global_time)
         GL.glUniform1f(loc("iTimeDelta"), dt)
         GL.glUniform1f(loc("iFrameRate"), float(self.args.fps))
         GL.glUniform1i(loc("iFrame"), self.frame)
@@ -562,10 +564,12 @@ class Renderer:
         GL.glUniform4fv(loc("iWindowRects"), MAX_WINDOWS, np.array(rects, np.float32))
         GL.glUniform4fv(loc("iWindowRectsPrev"), MAX_WINDOWS, np.array(rects_prev, np.float32))
         GL.glUniform2fv(loc("iWindowVelocities"), MAX_WINDOWS, np.array(vels, np.float32))
-        GL.glUniform2f(loc("iScreenOffset"), 0.0, 0.0)
-        GL.glUniform2f(loc("iDesktopResolution"), float(res[0]), float(res[1]))
+        sx, sy = res[0] / self.w, res[1] / self.h
+        GL.glUniform2f(loc("iScreenOffset"), self.args.screen_offset[0] * sx, self.args.screen_offset[1] * sy)
+        desktop = self.args.desktop_size or (self.w, self.h)
+        GL.glUniform2f(loc("iDesktopResolution"), desktop[0] * sx, desktop[1] * sy)
         GL.glUniform1i(loc("iScreenIndex"), 0)
-        GL.glUniform1i(loc("iScreenCount"), 1)
+        GL.glUniform1i(loc("iScreenCount"), self.args.screen_count)
         GL.glUniform1i(loc("iVirtualDesktop"), 0)
         GL.glUniform1i(loc("iVirtualDesktopCount"), 1)
         GL.glUniform1f(loc("iVirtualDesktopAnim"), 0.0)
@@ -616,6 +620,7 @@ class Renderer:
         """One engine frame: accumulateFrame + synchronize + render."""
         a = self.args
         self.time += dt * a.speed
+        self.global_time += dt
         sdt = dt * a.speed
         w, h = self.w, self.h
 
@@ -778,6 +783,10 @@ def main():
     ap.add_argument("--check", metavar="DIR", help="compile every shader under DIR and exit")
     ap.add_argument("--gles", action="store_true", help="OpenGL ES 3.0 context with the engine's GLES header")
     ap.add_argument("--size", default="960x540")
+    ap.add_argument("--desktop-size", default="", help="whole desktop WxH in output pixels, before --scale")
+    ap.add_argument("--screen-offset", default="0,0", help="this output's bottom-left x,y within the desktop")
+    ap.add_argument("--screen-count", type=int, default=1)
+    ap.add_argument("--global-time", type=float, help="fixed iGlobalTime for deterministic spanning captures")
     ap.add_argument("--fps", type=float, default=60.0)
     ap.add_argument("--speed", type=float, default=1.0)
     ap.add_argument("--at", default="", help="comma list of times (s) to capture")
@@ -810,6 +819,14 @@ def main():
     if not a.shader:
         ap.error("shader path required")
     a.width, a.height = (int(v) for v in a.size.lower().split("x"))
+    try:
+        a.desktop_size = tuple(int(v) for v in a.desktop_size.lower().split("x")) if a.desktop_size else None
+        a.screen_offset = tuple(float(v) for v in a.screen_offset.split(","))
+        if ((a.desktop_size and (len(a.desktop_size) != 2 or min(a.desktop_size) <= 0))
+                or len(a.screen_offset) != 2 or a.screen_count < 1):
+            raise ValueError
+    except ValueError:
+        ap.error("expected positive desktop WxH, screen offset x,y, and screen count >= 1")
     for span in filter(None, a.press.split(";")):
         pos = None
         if "@" in span:

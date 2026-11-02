@@ -2362,7 +2362,7 @@
         {
             "author": "maxiarat1",
             "category": "Abstract",
-            "description": "Flowing clear-glass ribbons with soft teal and violet colors. Includes 22 live controls and an optional refracted background image on Image 1; works without textures or buffer passes.",
+            "description": "Flowing clear-glass ribbons with soft teal and violet colors. Includes 22 live controls, an optional refracted background image on Image 1, and synchronized multi-monitor spanning; works without textures or buffer passes.",
             "favorite": false,
             "hasBuffers": false,
             "id": "d0413991-4f12-45f9-95c0-22a56107d11b",

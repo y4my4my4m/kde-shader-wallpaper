@@ -7,6 +7,8 @@
 // Image 1 is optional: without it, the glass refracts an analytical gradient.
 // Select a background in Inputs -> Images -> Image 1 and enable that slot.
 // Customize the annotated constants through Gallery -> Tweak this shader.
+// To span monitors, enable Advanced -> Experimental -> Span all screens on
+// each screen and use the same shader controls and background image.
 
 /*
 MIT License
@@ -55,6 +57,16 @@ const vec3 COLOR_B = vec3(0.40, 0.30, 0.78); // @color @label("Ambient second ti
 const vec3 BACKGROUND = vec3(0.008, 0.013, 0.027); // @color @label("Background")
 const vec3 HIGHLIGHT = vec3(0.78, 0.91, 1.0); // @color @label("Reflection tint")
 
+bool spansDesktop()
+{
+    return iScreenCount > 1 && iDesktopResolution.x > 0.0 && iDesktopResolution.y > 0.0;
+}
+
+vec2 canvasSize()
+{
+    return spansDesktop() ? iDesktopResolution : iResolution.xy;
+}
+
 vec3 backdrop(vec2 p)
 {
     vec2 a = (p - vec2(-0.85, 0.45)) * vec2(0.85, 1.3);
@@ -62,7 +74,8 @@ vec3 backdrop(vec2 p)
     vec3 color = BACKGROUND + 0.28 * COLOR_A / (1.0 + 2.0 * dot(a, a))
                             + 0.24 * COLOR_B / (1.0 + 2.0 * dot(b, b));
     if (IMAGE_BLEND > 0.0 && iChannelResolution[0].x > 0.0 && iChannelResolution[0].y > 0.0) {
-        float screenAspect = iResolution.x / iResolution.y;
+        vec2 canvas = canvasSize();
+        float screenAspect = canvas.x / canvas.y;
         float imageAspect = iChannelResolution[0].x / iChannelResolution[0].y;
         vec2 crop = min(vec2(1.0), vec2(screenAspect / imageAspect, imageAspect / screenAspect));
         vec2 uv = 0.5 + 0.5 * p / vec2(screenAspect, 1.0) * crop / IMAGE_ZOOM;
@@ -79,8 +92,16 @@ vec3 backdrop(vec2 p)
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
-    vec2 p = (2.0 * fragCoord - iResolution.xy) / iResolution.y;
-    float t = iTime * SPEED;
+    vec2 canvas = canvasSize();
+    vec2 position = fragCoord + (spansDesktop() ? iScreenOffset : vec2(0.0));
+    vec2 p = (2.0 * position - canvas) / canvas.y;
+    float clock = iTime;
+#ifdef SHADER_WALLPAPER_GLOBAL_TIME
+    // A resumed or newly created monitor rejoins the other screens' phase.
+    // Flow speed remains adjustable; single-screen playback keeps iTime.
+    if (spansDesktop()) clock = iGlobalTime;
+#endif
+    float t = clock * SPEED;
     float c = cos(ANGLE), s = sin(ANGLE);
     vec2 q = mat2(c, s, -s, c) * p;
     vec2 gx = vec2(c, -s), gy = vec2(s, c);
@@ -104,7 +125,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     float halfWidth = WIDTH * inversesqrt(sqrt(1.0 + ratioSquared * ratioSquared));
     float distanceInside = halfWidth - abs(band) / gradientLength;
     // A circular pixel footprint keeps filtering smooth as a ribbon turns.
-    float aa = 2.4 / iResolution.y * (0.7 + SOFTNESS);
+    float aa = 2.4 / canvas.y * (0.7 + SOFTNESS);
     float coverage = smoothstep(-aa, aa, distanceInside);
     gradient *= -sign(band) / gradientLength;
     float bevelWidth = 0.018 + 0.055 * REFRACTION;
