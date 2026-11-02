@@ -2360,6 +2360,28 @@
             "views": 0
         },
         {
+            "author": "maxiarat1",
+            "category": "Abstract",
+            "description": "Flowing clear-glass ribbons with soft teal and violet colors. Includes 22 live controls and an optional refracted background image on Image 1; works without textures or buffer passes.",
+            "favorite": false,
+            "hasBuffers": false,
+            "id": "d0413991-4f12-45f9-95c0-22a56107d11b",
+            "likes": 0,
+            "name": "Nacre",
+            "needsAudio": false,
+            "needsTextures": false,
+            "shaderPath": "Shaders/Nacre.frag",
+            "source": "local",
+            "sourceId": "",
+            "tags": [
+                "2D",
+                "glass",
+                "ribbons"
+            ],
+            "thumbnailPath": "thumbnails/d0413991-4f12-45f9-95c0-22a56107d11b.png",
+            "views": 0
+        },
+        {
             "author": "Drakyen",
             "category": "Abstract",
             "description": "",
