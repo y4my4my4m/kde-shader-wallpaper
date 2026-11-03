@@ -160,6 +160,8 @@ ColumnLayout {
     property int    cfg_targetFps: wallpaperConfiguration ? (wallpaperConfiguration.targetFps || 60) : 60
     property double cfg_resolutionScale: wallpaperConfiguration ? (wallpaperConfiguration.resolutionScale || 1.0) : 1.0
     property int    cfg_pauseMode: wallpaperConfiguration ? (wallpaperConfiguration.pauseMode ?? 0) : 0
+    property int    cfg_pauseCoverage: wallpaperConfiguration ? (wallpaperConfiguration.pauseCoverage ?? 60) : 60
+    property int    cfg_pauseMinWindows: wallpaperConfiguration ? (wallpaperConfiguration.pauseMinWindows ?? 0) : 0
     property bool   cfg_checkActiveScreen: wallpaperConfiguration ? (wallpaperConfiguration.checkActiveScreen ?? true) : true
     property bool   cfg_showPauseIndicator: wallpaperConfiguration ? (wallpaperConfiguration.showPauseIndicator ?? false) : false
     // List-typed keys are NOT bound to wallpaperConfiguration (see _syncListKey):
@@ -279,7 +281,7 @@ ColumnLayout {
     readonly property var _cfgKeys: [
         "cfg_selectedShaderPath", "cfg_selectedShaderCode", "cfg_selectedShaderIndex", "cfg_configVersion",
         "cfg_running", "cfg_shaderSpeed", "cfg_targetFps", "cfg_resolutionScale",
-        "cfg_pauseMode", "cfg_checkActiveScreen", "cfg_excludeWindows", "cfg_showPauseIndicator",
+        "cfg_pauseMode", "cfg_pauseCoverage", "cfg_pauseMinWindows", "cfg_checkActiveScreen", "cfg_excludeWindows", "cfg_showPauseIndicator",
         "cfg_mouseEnabled", "cfg_mouseBias",
         "cfg_audioEnabled", "cfg_audioChannel", "cfg_audioSensitivity",
         "cfg_windowsEnabled",

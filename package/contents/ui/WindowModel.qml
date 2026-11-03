@@ -33,7 +33,14 @@ Item {
     property bool maximizedExists: false
     property bool visibleExists: false
     property bool activeExists: false
+    // Pause mode 4: share of the screen covered by windows, or window count.
+    property int pauseCoverage: config ? (config.pauseCoverage ?? 60) : 60
+    property int pauseMinWindows: config ? (config.pauseMinWindows ?? 0) : 0
+    property real coveredFraction: 0
+    property int visibleWindowCount: 0
+    property bool coverageExceeded: false
     property var abstractTasksModel: TaskManager.AbstractTasksModel
+    property var geometryRole: abstractTasksModel.Geometry
     property var appId: abstractTasksModel.AppId
     property var isWindow: abstractTasksModel.IsWindow
     property var isMinimized: abstractTasksModel.IsMinimized
@@ -81,8 +88,51 @@ Item {
             break;
         case 3:
             shouldRun = true;
+            break;
+        case 4:
+            shouldRun = !coverageExceeded;
         }
         runShader = shouldRun;
+    }
+
+    onPauseCoverageChanged: updateWindowsInfo()
+    onPauseMinWindowsChanged: updateWindowsInfo()
+    onScreenGeometryChanged: updateWindowsInfo()
+
+    // Area of the union of rects, clipped to the screen, as a fraction of it.
+    // Coordinate compression: fine for the handful of windows on a desktop.
+    function unionFraction(rects, scr) {
+        if (!scr || scr.width <= 0 || scr.height <= 0 || rects.length === 0)
+            return 0;
+        const clipped = [];
+        for (const r of rects) {
+            const x1 = Math.max(r.x, scr.x), y1 = Math.max(r.y, scr.y);
+            const x2 = Math.min(r.x + r.width, scr.x + scr.width);
+            const y2 = Math.min(r.y + r.height, scr.y + scr.height);
+            if (x2 > x1 && y2 > y1)
+                clipped.push([x1, y1, x2, y2]);
+        }
+        if (clipped.length === 0)
+            return 0;
+        // Plain loops: Plasma's JS engine has no Array.prototype.flatMap.
+        const xs = [], ys = [];
+        for (const c of clipped) {
+            if (xs.indexOf(c[0]) < 0) xs.push(c[0]);
+            if (xs.indexOf(c[2]) < 0) xs.push(c[2]);
+            if (ys.indexOf(c[1]) < 0) ys.push(c[1]);
+            if (ys.indexOf(c[3]) < 0) ys.push(c[3]);
+        }
+        xs.sort((a, b) => a - b);
+        ys.sort((a, b) => a - b);
+        let area = 0;
+        for (let i = 0; i + 1 < xs.length; i++) {
+            for (let j = 0; j + 1 < ys.length; j++) {
+                const cx = (xs[i] + xs[i + 1]) / 2, cy = (ys[j] + ys[j + 1]) / 2;
+                if (clipped.some(c => cx > c[0] && cx < c[2] && cy > c[1] && cy < c[3]))
+                    area += (xs[i + 1] - xs[i]) * (ys[j + 1] - ys[j]);
+            }
+        }
+        return area / (scr.width * scr.height);
     }
 
     TaskManager.VirtualDesktopInfo {
@@ -121,6 +171,7 @@ Item {
         let activeCount = 0;
         let visibleCount = 0;
         let maximizedCount = 0;
+        const rects = [];
 
         if (!KWindowSystem.showingDesktop) {
             for (var i = 0; i < tasksModel.count; i++) {
@@ -137,6 +188,9 @@ Item {
                     continue;
 
                 visibleCount += 1;
+                const g = tasksModel.data(currentTask, geometryRole);
+                if (g && g.width > 0 && g.height > 0)
+                    rects.push(g);
                 if (tasksModel.data(currentTask, isMaximized) || tasksModel.data(currentTask, isFullScreen))
                     maximizedCount += 1;
                 if (tasksModel.data(currentTask, isActive))
@@ -147,6 +201,11 @@ Item {
         visibleExists = visibleCount > 0;
         maximizedExists = maximizedCount > 0;
         activeExists = activeCount > 0;
+        visibleWindowCount = visibleCount;
+        // A maximized or full-screen window always counts as covering the screen.
+        coveredFraction = maximizedCount > 0 ? 1 : unionFraction(rects, screenGeometry);
+        coverageExceeded = (pauseCoverage > 0 && coveredFraction * 100 >= pauseCoverage)
+                        || (pauseMinWindows > 0 && visibleCount >= pauseMinWindows);
         updateRun();
     }
 }

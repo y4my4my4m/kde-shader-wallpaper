@@ -142,9 +142,10 @@ TabScroll {
                 i18n("A window is maximized or full screen"),
                 i18n("Any window is focused"),
                 i18n("Any window is open"),
-                i18n("Never")
+                i18n("Never"),
+                i18n("Windows cover part of the screen")
             ]
-            currentIndex: Math.max(0, Math.min(3, tab.root.cfg_pauseMode))
+            currentIndex: Math.max(0, Math.min(4, tab.root.cfg_pauseMode))
             onActivated: function(index) { tab.root.cfg_pauseMode = index }
             description: {
                 switch (tab.root.cfg_pauseMode) {
@@ -153,10 +154,29 @@ TabScroll {
                     return i18n("Saves the most power. This Settings window counts as a window too, so the desktop pauses while it is in front.")
                 case 3:
                     return i18n("The shader always runs, even behind other windows.")
+                case 4:
+                    return i18n("Pauses once open windows cover the set share of the screen (overlaps count once), or once enough windows are open. Maximized windows always pause it.")
                 default:
                     return i18n("Saves power when the desktop is covered.")
                 }
             }
+        }
+        SpinBoxDelegate {
+            visible: tab.root.cfg_pauseMode === 4
+            label: i18n("Pause when windows cover at least (%, 0 = off)")
+            from: 0
+            to: 100
+            stepSize: 5
+            value: tab.root.cfg_pauseCoverage
+            onValueModified: function(v) { tab.root.cfg_pauseCoverage = v }
+        }
+        SpinBoxDelegate {
+            visible: tab.root.cfg_pauseMode === 4
+            label: i18n("…or when at least this many windows are open (0 = off)")
+            from: 0
+            to: 20
+            value: tab.root.cfg_pauseMinWindows
+            onValueModified: function(v) { tab.root.cfg_pauseMinWindows = v }
         }
         FormCard.FormSwitchDelegate {
             text: i18n("Only count windows on this screen")

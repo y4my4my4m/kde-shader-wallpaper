@@ -427,6 +427,7 @@ Item {
                 case 0: return !windowModel.maximizedExists
                 case 1: return !windowModel.activeExists
                 case 2: return !windowModel.visibleExists
+                case 4: return !windowModel.coverageExceeded
                 case 3:
                 default: return true
             }
