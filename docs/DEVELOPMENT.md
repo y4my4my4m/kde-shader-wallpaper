@@ -287,12 +287,52 @@ bool hasImage = iChannelResolution[1].x > 0.0;
 | Uniform | Type | Description |
 |---------|------|-------------|
 | `iMousePrev` | vec2 | Cursor position one rendered frame earlier |
+| `iGlobalTime` | float | Monotonic seconds shared by all engines in the same process, independent of playback speed and per-screen pause/reset. Use for stateless spanning animations so a resumed or newly created screen rejoins the same phase. `SHADER_WALLPAPER_GLOBAL_TIME` is defined when available; use `#ifdef` for compatibility with older engines. Screens still present frames at their own refresh cadence |
 | `iWindowCount`, `iWindowRects[16]`, `iWindowRectsPrev[16]`, `iWindowVelocities[16]` | | See [Window Reactive Shaders](#window-reactive-shaders) |
 | `iSubstep`, `iSubsteps` | int | Buffer passes run several substeps per frame (about 240 steps per second). Index of the current substep and the count this frame; 0 and 1 in the image pass and in a `@substeps 1` buffer pass |
 | `iScreenOffset`, `iDesktopResolution` | vec2 | Multi-monitor (experimental setting): this screen's bottom-left within the bounding box of all screens, and that box's size, in output pixels with the GL origin. `fragCoord + iScreenOffset` is a desktop-wide pixel position; `iDesktopResolution` equals `iResolution.xy` on a single screen |
 | `iScreenIndex`, `iScreenCount` | int | Screen ordinal and count |
 | `iVirtualDesktop`, `iVirtualDesktopCount` | int | Current virtual desktop and count |
 | `iVirtualDesktopAnim` | float | 0..1 progress of a desktop switch |
+
+### Spanning Stateless Animations
+
+Enable **Advanced → Experimental → Span all screens** on each screen and use
+matching shader settings and image inputs. Normalize `fragCoord + iScreenOffset`
+against `iDesktopResolution` to position the shader and its background across
+the combined desktop. Keep the pass's local `iResolution` for local pixel work.
+
+Use `iGlobalTime` for a shared animation phase. Each renderer samples the same
+monotonic process clock, including after an individual screen pauses, resets
+or starts later. The clock is independent of playback speed; shaders such as
+Nacre expose their own flow-speed control. A paused screen stops rendering and
+rejoins the current phase when it resumes. This does not synchronize physical
+scanout across monitors, and does not synchronize simulation buffers.
+
+Nacre uses ordinary `iTime` when spanning is disabled. Its `#ifdef
+SHADER_WALLPAPER_GLOBAL_TIME` guard lets it compile on older engines, where
+spanning uses the older independent playback clocks.
+
+Check the Nacre output against a single desktop-sized reference, with and
+without a background and with intentionally different per-screen playback
+times:
+
+```sh
+python3 scripts/dev/check_nacre_spanning.py
+python3 scripts/dev/check_nacre_spanning.py --gles --out build/nacre-spanning-gles
+```
+
+After building the engine, check the native shared clock across staggered
+starts, different FPS caps, pause/resume and a time reset in a desktop session:
+
+```sh
+python3 scripts/dev/check_global_time.py
+```
+
+For other layouts, the headless renderer accepts `--desktop-size WxH`,
+`--screen-offset x,y` (bottom-left origin), `--screen-count N` and
+`--global-time SECONDS` (fixed for deterministic captures). Geometry is in
+output pixels before `--scale`, just as in the engine.
 
 ### Header Directives
 
