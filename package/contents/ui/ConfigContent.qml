@@ -51,6 +51,8 @@ ColumnLayout {
     property int    cfg_targetFps: 60
     property int    cfg_pauseMode: 0
     property real   cfg_resolutionScale: 1.0
+    property int    cfg_pauseCoverage: 60
+    property int    cfg_pauseMinWindows: 0
     property bool   cfg_checkActiveScreen: true
     property var    cfg_excludeWindows: []
     property bool   cfg_showPauseIndicator: false

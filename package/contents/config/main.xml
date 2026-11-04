@@ -52,6 +52,14 @@
       <label>Show a "Paused" badge on the desktop while the shader is paused by window activity</label>
       <default>false</default>
     </entry>
+    <entry name="pauseCoverage" type="Int">
+      <label>Pause mode 4: pause when visible windows cover at least this percentage of the screen (overlaps counted once; 0 disables)</label>
+      <default>60</default>
+    </entry>
+    <entry name="pauseMinWindows" type="Int">
+      <label>Pause mode 4: also pause when at least this many windows are visible (0 disables)</label>
+      <default>0</default>
+    </entry>
     <entry name="checkActiveScreen" type="Bool">
       <label>Only check for windows on the active screen</label>
       <default>true</default>
