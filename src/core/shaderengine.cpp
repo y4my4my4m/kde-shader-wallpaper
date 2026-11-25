@@ -6,6 +6,7 @@
 #include "data/shaderlibrary.h"
 
 #include <algorithm>
+#include <chrono>
 
 #include <QFile>
 #include <QFileSystemWatcher>
@@ -50,6 +51,7 @@ precision highp sampler2D;
 // Shadertoy defines HW_PERFORMANCE (1 on desktop); GLSL ES rejects an
 // undefined macro in #if.
 static const char *shadertoyDefines = R"(#define HW_PERFORMANCE 1
+#define SHADER_WALLPAPER_GLOBAL_TIME 1
 )";
 
 // Default vertex shader for fullscreen quad
@@ -75,6 +77,9 @@ out vec4 fragColor;
 
 uniform vec3 iResolution;
 uniform float iTime;
+// Monotonic seconds shared by all engines in this process. Independent of
+// playback speed, pause, source reload and per-screen renderer creation.
+uniform float iGlobalTime;
 uniform float iTimeDelta;
 uniform float iFrameRate;
 uniform int iFrame;
@@ -1572,6 +1577,7 @@ ShaderEngineRenderer::UniformLocations ShaderEngineRenderer::locateUniforms(QOpe
     auto at = [program](const char *name) { return GLint(program->uniformLocation(name)); };
     loc.iResolution = at("iResolution");
     loc.iTime = at("iTime");
+    loc.iGlobalTime = at("iGlobalTime");
     loc.iTimeDelta = at("iTimeDelta");
     loc.iFrameRate = at("iFrameRate");
     loc.iFrame = at("iFrame");
@@ -1880,6 +1886,7 @@ void ShaderEngineRenderer::updateUniforms(QOpenGLShaderProgram *program, const U
     // a glGetUniformLocation per call.
     program->setUniformValue(loc.iResolution, resolution);
     program->setUniformValue(loc.iTime, (float)m_iTime);
+    program->setUniformValue(loc.iGlobalTime, (float)m_iGlobalTime);
     // A substepped buffer pass advances 1/substeps of the frame's delta, so
     // simulations step at a fixed rate regardless of render FPS.
     const float passDelta = forBufferPass
@@ -2550,6 +2557,11 @@ void ShaderEngineRenderer::synchronize(QQuickFramebufferObject *item)
 
     // Pull updated timing/mouse uniforms into the renderer copy.
     m_iTime = engine->iTime();
+    // A function-local static has thread-safe initialization: Qt can render
+    // separate wallpaper windows on separate render threads. Sampling one
+    // monotonic epoch keeps resumed and newly created screens in phase.
+    static const auto globalEpoch = std::chrono::steady_clock::now();
+    m_iGlobalTime = std::chrono::duration<double>(std::chrono::steady_clock::now() - globalEpoch).count();
     m_iTimeDelta = engine->lastTimeDelta();
     m_iFrameRate = engine->currentFps() > 0
         ? float(engine->currentFps())

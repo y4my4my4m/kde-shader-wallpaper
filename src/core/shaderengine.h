@@ -630,6 +630,7 @@ private:
     struct UniformLocations {
         GLint iResolution = -1;
         GLint iTime = -1;
+        GLint iGlobalTime = -1;
         GLint iTimeDelta = -1;
         GLint iFrameRate = -1;
         GLint iFrame = -1;
@@ -803,6 +804,7 @@ private:
     QVector3D m_iResolution;
     qreal m_iTime = 0.0;
     qreal m_iTimeDelta = 1.0 / 60.0;
+    qreal m_iGlobalTime = 0.0;
     // Buffer-pass substeps this frame (set in render()): holds simulations
     // at a fixed ~240 steps/sec independent of render FPS.
     int m_bufferSubSteps = 1;
